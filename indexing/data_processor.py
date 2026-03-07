@@ -1,27 +1,27 @@
 """
-数据处理模块，包含不同类型文件的处理器
-每个处理器都继承自DataProcessor基类，并实现process方法来处理特定类型的文件。
+Data processing module containing processors for different file types.
+Each processor inherits from the DataProcessor base class and implements the process method to handle specific file types.
 
-当前实现了PdfProcessor来处理PDF文件，使用PyPDFLoader加载PDF内容，并进行文本清洗以去除换行符和连字符换行。
+Currently implements PdfProcessor for PDF files, using PyPDFLoader to load PDF content with text cleaning to remove line breaks and hyphenated line breaks.
 """
 
 from abc import ABC, abstractmethod
 from langchain_core.documents import Document
 import re
-from langchain_community.document_loaders import (
-    PyPDFLoader, 
-)
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
+
 
 class DataProcessor(ABC):
     """Base class for all data processors"""
+
     @abstractmethod
     def process(self, file_path: str) -> list[Document]:
         """
-        处理文件并返回文档列表
+        Process file and return document list
         Args:
-            file_path (str): 文件路径
+            file_path (str): File path
         Returns:
-            List[Document]: 处理后的文档列表
+            List[Document]: Processed document list
         """
         pass
 
@@ -37,19 +37,35 @@ class PdfProcessor(DataProcessor):
             return pages
         except Exception as e:
             raise ValueError(f"PdfProcessor error: {e}")
-        
+
+
+class TextProcessor(DataProcessor):
+    """Plain text / markdown loader."""
+
+    def __init__(self, encoding: str = "utf-8"):
+        self.encoding = encoding
+
+    def process(self, file_path: str) -> list[Document]:
+        try:
+            loader = TextLoader(file_path, encoding=self.encoding)
+            docs = loader.load()
+            for d in docs:
+                d.page_content = clean_text(d.page_content)
+            return docs
+        except Exception as e:
+            raise ValueError(f"TextProcessor error: {e}")
 
 
 def clean_text(text: str) -> str:
     """
-    文本清洗函数：
-    1. 合并被换行断开的单词（如 xxx-\nxxx → xxxxxx）
-    2. 将换行符转换为空格
+    Text cleaning function:
+    1. Merge words broken by line breaks (e.g., xxx-\nxxx → xxxxxx)
+    2. Convert line breaks to spaces
     """
-    # 第一步：处理连字符换行
-    text = re.sub(r'-\n', '', text)
-    
-    # 第二步：处理普通换行
-    text = re.sub(r'\n', ' ', text)
-    
+    # Step 1: Handle hyphenated line breaks
+    text = re.sub(r"-\n", "", text)
+
+    # Step 2: Handle normal line breaks
+    text = re.sub(r"\n", " ", text)
+
     return text.strip()
