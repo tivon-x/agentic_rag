@@ -1,7 +1,7 @@
 [project]
 name = "agentic-rag"
 version = "0.1.0"
-description = "Add your description here"
+description = "Agentic RAG system with LangGraph-based agent, hybrid BM25+vector retrieval, and Gradio UI"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -15,11 +15,23 @@ dependencies = [
     "pymupdf>=1.27.1",
     "pymupdf-layout>=1.27.1",
     "pymupdf4llm>=0.3.4",
+    "pypdf>=5.6.0",
     "rank-bm25>=0.2.2",
     "tiktoken>=0.12.0",
+    "gradio>=6.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.9.0",
 ]
 
 
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
