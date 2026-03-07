@@ -23,14 +23,20 @@ from langgraph.types import Command
 
 from agent.prompts import get_fallback_response_prompt, get_orchestrator_prompt
 from agent.graph_state import OrchestratorState
-from config import MAX_ITERATIONS, MAX_TOOL_CALLS, MAX_CONTEXT_TOKENS, KEEP_MESSAGES
+from core.config import (
+    MAX_ITERATIONS,
+    MAX_TOOL_CALLS,
+    MAX_CONTEXT_TOKENS,
+    KEEP_MESSAGES,
+)
 
 
 class FallbackMiddleware(AgentMiddleware):
     """
-    这个中间件负责监控代理的迭代次数和工具调用次数，以防止代理陷入无限循环或过度依赖工具。
+    This middleware monitors agent iteration and tool call counts to prevent infinite loops or excessive tool reliance.
 
-    当达到预设的迭代或工具调用限制时，它会触发一个回退机制，生成一个最终的回答，告诉用户代理无法继续，并提供之前的研究信息，以便用户可以手动进行后续操作。
+    When preset iteration or tool call limits are reached, it triggers a fallback mechanism that generates a final answer,
+    informing the user that the agent cannot continue and providing previous research information for manual follow-up.
     """
 
     def __init__(self, model: BaseChatModel, max_iterations: int, max_tool_calls: int):
@@ -134,7 +140,7 @@ class FallbackMiddleware(AgentMiddleware):
 
 
 @after_agent
-def collect_answer(state: OrchestratorState, runtime: Runtime) -> dict | None:
+def collect_answer(state: AgentState, runtime: Runtime) -> dict | None:
     last_message = state["messages"][-1]
     is_valid = (
         isinstance(last_message, AIMessage)
@@ -168,7 +174,7 @@ def create_orchestrator_agent(llm, tools):
         model=llm,
         tools=tools,
         system_prompt=get_orchestrator_prompt(),
-        middleware=[summarization_middleware, fallback_middleware],
+        middleware=[summarization_middleware, fallback_middleware, collect_answer],
         state_schema=OrchestratorState,
     )
 

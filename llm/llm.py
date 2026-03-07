@@ -5,7 +5,7 @@ ChatModel: TypeAlias = ChatOpenAI
 
 
 def get_llm(config: dict) -> ChatModel | None:
-    """获取LLM实例（OpenAI兼容模式）"""
+    """Get an LLM instance (OpenAI-compatible mode)."""
     model = config.get("model", "")
     api_key = config.get("api_key", None)
     api_base = config.get("api_base", None)

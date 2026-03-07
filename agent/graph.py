@@ -1,3 +1,4 @@
+import logging
 from langgraph.graph import START, END, StateGraph
 from langgraph.checkpoint.memory import InMemorySaver
 
@@ -12,6 +13,7 @@ from agent.nodes import aggregate_answers
 
 
 def create_agent_graph(llm, tools_list):
+    logger = logging.getLogger(__name__)
     agent_subgraph = create_orchestrator_agent(llm, tools_list)
     checkpointer = InMemorySaver()
 
@@ -33,5 +35,5 @@ def create_agent_graph(llm, tools_list):
         checkpointer=checkpointer, interrupt_before=["request_clarification"]
     )
 
-    print("✓ Agent graph compiled successfully.")
+    logger.info("Agent graph compiled successfully")
     return agent_graph

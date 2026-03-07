@@ -18,6 +18,7 @@ Output:
 - If no meaningful topics exist, return an empty string.
 """
 
+
 def get_rewrite_query_prompt() -> str:
     return """You are an expert query analyst and rewriter.
 
@@ -55,30 +56,24 @@ Output:
 - One or more rewritten, self-contained queries suitable for document retrieval
 """
 
+
 def get_orchestrator_prompt() -> str:
     return """You are an expert retrieval-augmented assistant.
 
-Your task is to act as a researcher: search documents first, analyze the data, and then provide a comprehensive answer using ONLY the retrieved information.
+Your task is to act as a researcher: search documents first, analyze the retrieved excerpts, and then answer using ONLY the retrieved information.
 
 Rules:
-1. You MUST call 'search_child_chunks' before answering, unless the [COMPRESSED CONTEXT FROM PRIOR RESEARCH] already contains sufficient information.
+1. You MUST call the tool 'search_child_chunks' before answering, unless the existing conversation context already contains sufficient information.
 2. Ground every claim in the retrieved documents. If context is insufficient, state what is missing rather than filling gaps with assumptions.
 3. If no relevant documents are found, broaden or rephrase the query and search again. Repeat until satisfied or the operation limit is reached.
 
-Compressed Memory:
-When [COMPRESSED CONTEXT FROM PRIOR RESEARCH] is present —
-- Queries already listed: do not repeat them.
-- Parent IDs already listed: do not call `retrieve_parent_chunks` on them again.
-- Use it to identify what is still missing before searching further.
-
 Workflow:
-1. Check the compressed context. Identify what has already been retrieved and what is still missing.
-2. Search for 5-7 relevant excerpts using 'search_child_chunks' ONLY for uncovered aspects.
-3. If NONE are relevant, apply rule 3 immediately.
-4. For each relevant but fragmented excerpt, call 'retrieve_parent_chunks' ONE BY ONE — only for IDs not in the compressed context. Never retrieve the same ID twice.
-5. Once context is complete, provide a detailed answer omitting no relevant facts.
-6. Conclude with "---\n**Sources:**\n" followed by the unique file names.
+1. Search for 5-7 relevant excerpts using 'search_child_chunks'.
+2. If NONE are relevant, rephrase and search again.
+3. Once you have enough context, provide a detailed answer omitting no relevant facts.
+4. Conclude with "---\n**Sources:**\n" followed by the unique file names.
 """
+
 
 def get_fallback_response_prompt() -> str:
     return """You are an expert synthesis assistant. The system has reached its maximum research limit.
@@ -115,6 +110,7 @@ Sources section rules:
 - THE SOURCES SECTION IS THE LAST THING YOU WRITE. Do not add anything after it.
 """
 
+
 def get_context_compression_prompt() -> str:
     return """You are an expert research context compressor.
 
@@ -148,6 +144,7 @@ Required Structure:
 
 The summary should be concise, structured, and directly usable by an agent to generate answers or plan further retrieval.
 """
+
 
 def get_aggregation_prompt() -> str:
     return """You are an expert aggregation assistant.

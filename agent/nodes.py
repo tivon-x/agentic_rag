@@ -59,19 +59,32 @@ def rewrite_query(state: State, llm):
     llm_with_structure = llm.with_config(temperature=0.1).with_structured_output(
         QueryAnalysis
     )
-    response = llm_with_structure.invoke(
-        [
-            SystemMessage(content=get_rewrite_query_prompt()),
-            HumanMessage(content=context_section),
-        ]
-    )
+
+    try:
+        response = llm_with_structure.invoke(
+            [
+                SystemMessage(content=get_rewrite_query_prompt()),
+                HumanMessage(content=context_section),
+            ]
+        )
+    except Exception:
+        # Some OpenAI-compatible endpoints don't support JSON mode / structured outputs.
+        # Fall back to a deterministic rewrite that keeps retrieval functional.
+        return {
+            "questionIsClear": True,
+            "messages": [],
+            "originalQuery": last_message.content,
+            "rewrittenQuestions": [last_message.content],
+        }
 
     if response.questions and response.is_clear:
-        delete_all = [
-            RemoveMessage(id=m.id)  # type: ignore
-            for m in state["messages"]
-            if not isinstance(m, SystemMessage)
-        ]
+        delete_all = []
+        for m in state["messages"]:
+            if isinstance(m, SystemMessage):
+                continue
+            msg_id = getattr(m, "id", None)
+            if isinstance(msg_id, str) and msg_id:
+                delete_all.append(RemoveMessage(id=msg_id))
         return {
             "questionIsClear": True,
             "messages": delete_all,
