@@ -1,0 +1,16 @@
+services:
+  agentic-rag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentic-rag
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

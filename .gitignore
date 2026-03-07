@@ -33,6 +33,9 @@ pip-delete-this-directory.txt
 /venv
 /env
 
+# Local indexes
+data/
+
 # IDE
 .vscode/
 .idea/
