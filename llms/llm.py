@@ -14,6 +14,8 @@ _TASK_ALIASES = {
     "summarize_history": "summarize",
     "decide_retrieval": "decision",
     "rewrite_query": "rewrite",
+    "direct_answer": "direct",
+    "out_of_scope_answer": "out_of_scope",
     "aggregate_answers": "aggregate",
 }
 
@@ -43,6 +45,7 @@ def _validate_base_config(config: dict[str, Any]) -> tuple[str, str, str, dict]:
     return model, api_key, api_base, model_config
 
 
+
 def get_llm(config: dict) -> ChatModel | None:
     """Get an LLM instance (OpenAI-compatible mode)."""
     model, api_key, api_base, model_config = _validate_base_config(config)
@@ -63,11 +66,15 @@ def _task_model_map_from_env() -> dict[str, str]:
         "summarize_history": os.getenv("LLM_MODEL_SUMMARIZE_HISTORY", "").strip(),
         "decide_retrieval": os.getenv("LLM_MODEL_DECIDE_RETRIEVAL", "").strip(),
         "rewrite_query": os.getenv("LLM_MODEL_REWRITE_QUERY", "").strip(),
+        "direct_answer": os.getenv("LLM_MODEL_DIRECT_ANSWER", "").strip(),
+        "out_of_scope_answer": os.getenv("LLM_MODEL_OUT_OF_SCOPE_ANSWER", "").strip(),
         "research_search": os.getenv("LLM_MODEL_RESEARCH_SEARCH", "").strip(),
         "aggregate_answers": os.getenv("LLM_MODEL_AGGREGATE_ANSWERS", "").strip(),
         "summarize": os.getenv("LLM_MODEL_SUMMARIZE", "").strip(),
         "decision": os.getenv("LLM_MODEL_DECISION", "").strip(),
         "rewrite": os.getenv("LLM_MODEL_REWRITE", "").strip(),
+        "direct": os.getenv("LLM_MODEL_DIRECT", "").strip(),
+        "out_of_scope": os.getenv("LLM_MODEL_OUT_OF_SCOPE", "").strip(),
         "aggregate": os.getenv("LLM_MODEL_AGGREGATE", "").strip(),
     }
     return {k: v for k, v in mapping.items() if v}

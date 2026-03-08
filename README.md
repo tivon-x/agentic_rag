@@ -16,7 +16,7 @@
 
 - 混合检索：BM25 + FAISS 融合召回。
 - Agent 编排：基于 LangGraph 的显式节点与边。
-- 多模型路由：不同任务可使用不同模型，例如 `decide_retrieval`、`rewrite_query`、`summarize_history`、`aggregate_answers`、`research_search`。
+- 多模型路由：不同任务可使用不同模型，例如 `decide_retrieval`、`rewrite_query`、`direct_answer`、`out_of_scope_answer`、`summarize_history`、`aggregate_answers`、`research_search`。
 - 知识库画像：支持为当前索引维护 `corpus_profile.json`，描述知识库名称、内容摘要、覆盖范围和使用说明。
 - 三态路由：用户问题会被路由为 `retrieve`、`direct_answer` 或 `out_of_scope`。
 - Gradio 工作台：UI 包含“知识库构建”和“智能问答”两个视图，适合演示企业知识库场景。
@@ -128,6 +128,7 @@ summarize_history
 
 - `decide_retrieval` 只负责路由决策，不再负责 query rewrite。
 - `rewrite_query` 只负责把用户问题改写成适合检索的 self-contained queries。
+- `direct_answer` 和 `out_of_scope_answer` 分别使用自己的独立模型路由，不再复用 `aggregate_answers`。
 - `out_of_scope_answer` 会基于知识库画像提示用户当前知识库的边界。
 
 ## 配置参考
@@ -148,10 +149,14 @@ summarize_history
 | LLM_MODEL_RESEARCH_SEARCH | 检索子图模型 | 同 `LLM_MODEL` |
 | LLM_MODEL_DECIDE_RETRIEVAL | 路由决策模型 | 同 `LLM_MODEL` |
 | LLM_MODEL_REWRITE_QUERY | 查询改写模型 | 同 `LLM_MODEL` |
+| LLM_MODEL_DIRECT_ANSWER | 直接回答模型 | 同 `LLM_MODEL` |
+| LLM_MODEL_OUT_OF_SCOPE_ANSWER | 超出范围提示模型 | 同 `LLM_MODEL` |
 | LLM_MODEL_SUMMARIZE_HISTORY | 对话摘要模型 | 同 `LLM_MODEL` |
 | LLM_MODEL_AGGREGATE_ANSWERS | 聚合回答模型 | 同 `LLM_MODEL` |
 | LLM_MODEL_DECISION | 路由决策兼容别名 | 可选 |
 | LLM_MODEL_REWRITE | 查询改写兼容别名 | 可选 |
+| LLM_MODEL_DIRECT | 直接回答兼容别名 | 可选 |
+| LLM_MODEL_OUT_OF_SCOPE | 超出范围提示兼容别名 | 可选 |
 | LLM_MODEL_SUMMARIZE | 摘要兼容别名 | 可选 |
 | LLM_MODEL_AGGREGATE | 聚合兼容别名 | 可选 |
 

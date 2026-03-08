@@ -141,7 +141,7 @@ def direct_answer(state: GraphState):
         else ""
     ) + f"Latest User Message:\n{last_message.content}"
 
-    llm = get_llm_by_type("aggregate_answers")
+    llm = get_llm_by_type("direct_answer")
     response = llm.invoke(
         [
             SystemMessage(content=get_direct_answer_prompt()),
@@ -165,7 +165,7 @@ def out_of_scope_answer(state: GraphState):
     sections.append(f"Latest User Message:\n{last_message.content}")
     user_input = "\n\n".join(sections)
 
-    llm = get_llm_by_type("aggregate_answers")
+    llm = get_llm_by_type("out_of_scope_answer")
     response = llm.invoke(
         [
             SystemMessage(content=get_out_of_scope_prompt()),
