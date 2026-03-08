@@ -41,7 +41,7 @@ def build_graph(settings: AppSettings):
     """Build the agent graph. Raises RuntimeError if no index is loaded."""
     from agent.graph import create_agent_graph
     from agent.tools import ToolFactory
-    from llm.llm import get_llm
+    from llms.llm import get_llm
 
     llm = get_llm(settings.llm_config())
     retriever = build_retriever(settings)
