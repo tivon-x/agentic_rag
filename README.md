@@ -16,7 +16,7 @@
 
 - 🔄 **混合检索**：结合 BM25 关键词匹配与 FAISS 向量语义检索，通过倒数秩融合（RRF）算法提升检索精准度。
 - 🤖 **智能 Agent**：基于 LangGraph 构建多步推理图，支持查询分解、意图识别、长文本摘要和缺失信息澄清。
-- 🧠 **多模型驱动**：各节点按任务类型动态选择 LLM（如 `rewrite_query`、`summarize_history`、`aggregate_answers`、`orchestrate`），复杂任务可用强模型，简单任务可用轻模型。
+- 🧠 **多模型驱动**：各节点按任务类型动态选择 LLM（如 `rewrite_query`、`summarize_history`、`aggregate_answers`、`research_search`），复杂任务可用强模型，简单任务可用轻模型。
 - 📊 **流式响应**：基于 Gradio 和 astream_events 实现低延迟流式输出，提供极致的用户交互体验。
 - 💬 **会话管理**：内置多轮对话历史管理，支持独立会话线程，确保上下文连贯性。
 - 📄 **PDF 处理**：采用 PDF → Markdown → 智能分块流程，支持递归分块、Token 分块及语义分块策略。
@@ -100,7 +100,7 @@ agentic_rag/
 │   ├── graph.py           # 图组装：节点 + 边
 │   ├── nodes.py           # 节点逻辑：摘要/重写/聚合
 │   ├── edges.py           # 路由逻辑
-│   ├── orchestrator_agent.py  # Agent 创建 + 中间件
+│   ├── research_search_agent.py  # Research Search 子图 Agent + 中间件
 │   ├── prompts.py         # 提示词模板（集中管理）
 │   ├── tools.py           # 工具工厂（检索工具）
 │   ├── schemas.py         # Pydantic 输出 Schema
@@ -163,7 +163,7 @@ agentic_rag/
 | OPENAI_API_KEY | LLM API 密钥 | (必填) |
 | OPENAI_API_BASE | LLM API 地址 | (必填) |
 | LLM_MODEL | 默认模型名称 | (必填) |
-| LLM_MODEL_ORCHESTRATE | Orchestrator 子图模型（复杂推理/工具调用） | 同 LLM_MODEL |
+| LLM_MODEL_RESEARCH_SEARCH | Research Search 子图模型（复杂推理/工具调用） | 同 LLM_MODEL |
 | LLM_MODEL_REWRITE_QUERY | rewrite_query 节点模型（查询改写） | 同 LLM_MODEL |
 | LLM_MODEL_SUMMARIZE_HISTORY | summarize_history 节点模型（对话摘要） | 同 LLM_MODEL |
 | LLM_MODEL_AGGREGATE_ANSWERS | aggregate_answers 节点模型（答案聚合） | 同 LLM_MODEL |
@@ -212,4 +212,5 @@ docker compose build --no-cache
 ## License
 
 MIT License
+
 

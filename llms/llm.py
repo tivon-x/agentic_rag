@@ -59,7 +59,7 @@ def _task_model_map_from_env() -> dict[str, str]:
     mapping = {
         "summarize_history": os.getenv("LLM_MODEL_SUMMARIZE_HISTORY", "").strip(),
         "rewrite_query": os.getenv("LLM_MODEL_REWRITE_QUERY", "").strip(),
-        "orchestrate": os.getenv("LLM_MODEL_ORCHESTRATE", "").strip(),
+        "research_search": os.getenv("LLM_MODEL_RESEARCH_SEARCH", "").strip(),
         "aggregate_answers": os.getenv("LLM_MODEL_AGGREGATE_ANSWERS", "").strip(),
         "summarize": os.getenv("LLM_MODEL_SUMMARIZE", "").strip(),
         "rewrite": os.getenv("LLM_MODEL_REWRITE", "").strip(),

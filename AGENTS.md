@@ -21,7 +21,7 @@ agentic_rag/
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| Agent orchestration | agent/orchestrator_agent.py | LangChain agent + middleware limits |
+| Agent orchestration | agent/research_search_agent.py | LangChain agent + middleware limits |
 | Graph wiring | agent/graph.py | Node/edge graph assembly |
 | Node logic | agent/nodes.py | summarize/rewrite/aggregate flow |
 | Retrieval tools | agent/tools.py | ToolFactory exposes search tool |
@@ -55,3 +55,4 @@ python main.py
 ## NOTES
 - No CI workflows or test suites are present; add pytest/CI if needed.
 - `llm/llm.py` requires API key/base URL; see `.env.example`.
+

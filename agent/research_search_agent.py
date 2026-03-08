@@ -21,19 +21,14 @@ from langgraph.prebuilt.tool_node import ToolCallRequest
 from langgraph.runtime import Runtime
 from langgraph.types import Command
 
-from agent.prompts import get_fallback_response_prompt, get_orchestrator_prompt
-from agent.states import OrchestratorState
+from agent.prompts import get_fallback_response_prompt, get_research_search_prompt
+from agent.states import ResearchSearchState
 from core.config import KEEP_MESSAGES, MAX_CONTEXT_TOKENS, MAX_ITERATIONS, MAX_TOOL_CALLS
 from llms.llm import get_llm_by_type
 
 
 class FallbackMiddleware(AgentMiddleware):
-    """
-    This middleware monitors agent iteration and tool call counts to prevent infinite loops or excessive tool reliance.
-
-    When preset iteration or tool call limits are reached, it triggers a fallback mechanism that generates a final answer,
-    informing the user that the agent cannot continue and providing previous research information for manual follow-up.
-    """
+    """Guardrails for iteration/tool-call limits with a fallback final answer."""
 
     def __init__(self, model: BaseChatModel, max_iterations: int, max_tool_calls: int):
         self.max_iterations = max_iterations
@@ -90,7 +85,7 @@ class FallbackMiddleware(AgentMiddleware):
                 "The agent has reached its iteration or tool call limit and cannot continue.\n\n"
                 f"User Query: {user_query}\n\n"
                 f"Conversation History:\n{formatted_messages}\n\n"
-                f"INSTRUCTION:\nProvide the best possible answer using only the data above."
+                "INSTRUCTION:\nProvide the best possible answer using only the data above."
             )
 
             response = self.model.invoke(
@@ -120,7 +115,7 @@ class FallbackMiddleware(AgentMiddleware):
                 "The agent has reached its iteration or tool call limit and cannot continue.\n\n"
                 f"User Query: {user_query}\n\n"
                 f"Conversation History:\n{formatted_messages}\n\n"
-                f"INSTRUCTION:\nProvide the best possible answer using only the data above."
+                "INSTRUCTION:\nProvide the best possible answer using only the data above."
             )
 
             response = await self.model.ainvoke(
@@ -156,8 +151,8 @@ def collect_answer(state: AgentState, runtime: Runtime) -> dict | None:
     }
 
 
-def create_orchestrator_agent(tools):
-    llm = get_llm_by_type("orchestrate")
+def create_research_search_agent(tools):
+    llm = get_llm_by_type("research_search")
 
     summarization_middleware = SummarizationMiddleware(
         model=llm,
@@ -168,12 +163,10 @@ def create_orchestrator_agent(tools):
         model=llm, max_iterations=MAX_ITERATIONS, max_tool_calls=MAX_TOOL_CALLS
     )
 
-    agent = create_agent(
+    return create_agent(
         model=llm,
         tools=tools,
-        system_prompt=get_orchestrator_prompt(),
+        system_prompt=get_research_search_prompt(),
         middleware=[summarization_middleware, fallback_middleware, collect_answer],
-        state_schema=OrchestratorState,
+        state_schema=ResearchSearchState,
     )
-
-    return agent

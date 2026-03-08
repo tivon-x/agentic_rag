@@ -5,14 +5,14 @@ from langgraph.graph import END, START, StateGraph
 
 from agent.edges import route_after_rewrite
 from agent.nodes import aggregate_answers, request_clarification, rewrite_query, summarize_history
-from agent.orchestrator_agent import create_orchestrator_agent
+from agent.research_search_agent import create_research_search_agent
 from agent.states import GraphState
 
 
 def create_agent_graph(tools_list):
     logger = logging.getLogger(__name__)
 
-    agent_subgraph = create_orchestrator_agent(tools_list)
+    agent_subgraph = create_research_search_agent(tools_list)
     checkpointer = InMemorySaver()
 
     graph_builder = StateGraph(GraphState)
@@ -35,3 +35,4 @@ def create_agent_graph(tools_list):
 
     logger.info("Agent graph compiled successfully")
     return agent_graph
+

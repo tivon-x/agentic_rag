@@ -57,7 +57,7 @@ Output:
 """
 
 
-def get_orchestrator_prompt() -> str:
+def get_research_search_prompt() -> str:
     return """You are an expert retrieval-augmented assistant.
 
 Your task is to act as a researcher: search documents first, analyze the retrieved excerpts, and then answer using ONLY the retrieved information.
@@ -176,3 +176,4 @@ Sources section rules:
 
 If there's no useful information available, simply say: "I couldn't find any information to answer your question in the available sources."
 """
+
