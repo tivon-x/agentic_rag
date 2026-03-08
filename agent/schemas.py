@@ -1,13 +1,17 @@
-from typing import List
+from typing import List, Literal
 from pydantic import BaseModel, Field
 
-class QueryAnalysis(BaseModel):
-    is_clear: bool = Field(
-        description="Indicates if the user's question is clear and answerable."
+
+class RetrievalDecision(BaseModel):
+    decision: Literal["retrieve", "direct_answer", "out_of_scope"] = Field(
+        description="Routing decision for the latest user message."
     )
+    reason: str = Field(
+        description="Short explanation for the routing decision."
+    )
+
+
+class QueryAnalysis(BaseModel):
     questions: List[str] = Field(
         description="List of rewritten, self-contained questions."
-    )
-    clarification_needed: str = Field(
-        description="Explanation if the question is unclear."
     )

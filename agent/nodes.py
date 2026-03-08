@@ -1,14 +1,26 @@
-from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from agent.prompts import (
     get_aggregation_prompt,
     get_conversation_summary_prompt,
+    get_direct_answer_prompt,
+    get_out_of_scope_prompt,
+    get_retrieval_decision_prompt,
     get_rewrite_query_prompt,
 )
 from llms.llm import get_llm_by_type
 
-from .schemas import QueryAnalysis
+from .schemas import QueryAnalysis, RetrievalDecision
 from .states import GraphState
+
+
+
+def inject_corpus_profile(corpus_profile: str):
+    def _inject(_: GraphState):
+        return {"corpusProfile": corpus_profile}
+
+    return _inject
+
 
 
 def summarize_history(state: GraphState):
@@ -43,6 +55,46 @@ def summarize_history(state: GraphState):
     }
 
 
+
+def decide_retrieval(state: GraphState):
+    last_message = state["messages"][-1]
+    conversation_summary = state.get("conversation_summary", "")
+    corpus_profile = state.get("corpusProfile", "")
+
+    sections = []
+    if corpus_profile.strip():
+        sections.append(f"Knowledge Base Profile:\n{corpus_profile}")
+    if conversation_summary.strip():
+        sections.append(f"Conversation Summary:\n{conversation_summary}")
+    sections.append(f"Latest User Message:\n{last_message.content}")
+    decision_input = "\n\n".join(sections) + "\n"
+
+    llm = get_llm_by_type("decide_retrieval")
+    structured_llm = llm.with_config(temperature=0).with_structured_output(
+        RetrievalDecision
+    )
+
+    try:
+        response = structured_llm.invoke(
+            [
+                SystemMessage(content=get_retrieval_decision_prompt()),
+                HumanMessage(content=decision_input),
+            ]
+        )
+        decision = response.decision
+        reason = response.reason.strip()
+    except Exception:
+        decision = "retrieve"
+        reason = "Fallback to retrieval because the routing decision could not be parsed."
+
+    return {
+        "routingDecision": decision,
+        "routingReason": reason,
+        "originalQuery": last_message.content,
+    }
+
+
+
 def rewrite_query(state: GraphState):
     last_message = state["messages"][-1]
     conversation_summary = state.get("conversation_summary", "")
@@ -65,42 +117,63 @@ def rewrite_query(state: GraphState):
                 HumanMessage(content=context_section),
             ]
         )
+        questions = [q.strip() for q in response.questions if q and q.strip()]
     except Exception:
-        # Some OpenAI-compatible endpoints don't support JSON mode / structured outputs.
-        # Fall back to a deterministic rewrite that keeps retrieval functional.
-        return {
-            "questionIsClear": True,
-            "messages": [],
-            "originalQuery": last_message.content,
-            "rewrittenQuestions": [last_message.content],
-        }
+        questions = []
 
-    if response.questions and response.is_clear:
-        delete_all = []
-        for m in state["messages"]:
-            if isinstance(m, SystemMessage):
-                continue
-            msg_id = getattr(m, "id", None)
-            if isinstance(msg_id, str) and msg_id:
-                delete_all.append(RemoveMessage(id=msg_id))
-        return {
-            "questionIsClear": True,
-            "messages": delete_all,
-            "originalQuery": last_message.content,
-            "rewrittenQuestions": response.questions,
-        }
+    if not questions:
+        questions = [last_message.content]
 
-    clarification = (
-        response.clarification_needed
-        if response.clarification_needed
-        and len(response.clarification_needed.strip()) > 10
-        else "I need more information to understand your question."
+    return {
+        "rewrittenQuestions": questions[:3],
+        "originalQuery": last_message.content,
+    }
+
+
+
+def direct_answer(state: GraphState):
+    last_message = state["messages"][-1]
+    conversation_summary = state.get("conversation_summary", "")
+
+    user_input = (
+        f"Conversation Summary:\n{conversation_summary}\n\n"
+        if conversation_summary.strip()
+        else ""
+    ) + f"Latest User Message:\n{last_message.content}"
+
+    llm = get_llm_by_type("aggregate_answers")
+    response = llm.invoke(
+        [
+            SystemMessage(content=get_direct_answer_prompt()),
+            HumanMessage(content=user_input),
+        ]
     )
-    return {"questionIsClear": False, "messages": [AIMessage(content=clarification)]}
+    return {"messages": [AIMessage(content=response.content)]}
 
 
-def request_clarification(state: GraphState):
-    return {}
+
+def out_of_scope_answer(state: GraphState):
+    last_message = state["messages"][-1]
+    corpus_profile = state.get("corpusProfile", "")
+    routing_reason = state.get("routingReason", "")
+
+    sections = []
+    if corpus_profile.strip():
+        sections.append(f"Knowledge Base Profile:\n{corpus_profile}")
+    if routing_reason.strip():
+        sections.append(f"Routing Reason:\n{routing_reason}")
+    sections.append(f"Latest User Message:\n{last_message.content}")
+    user_input = "\n\n".join(sections)
+
+    llm = get_llm_by_type("aggregate_answers")
+    response = llm.invoke(
+        [
+            SystemMessage(content=get_out_of_scope_prompt()),
+            HumanMessage(content=user_input),
+        ]
+    )
+    return {"messages": [AIMessage(content=response.content)]}
+
 
 
 def aggregate_answers(state: GraphState):

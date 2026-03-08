@@ -5,10 +5,12 @@ from langchain.agents import AgentState
 from langgraph.graph import MessagesState
 
 
+
 def accumulate_or_reset(existing: list[dict], new: list[dict]) -> list[dict]:
     if new and any(item.get('__reset__') for item in new):
         return []
     return existing + new
+
 
 
 def set_union(a: set[str], b: set[str]) -> set[str]:
@@ -18,7 +20,9 @@ def set_union(a: set[str], b: set[str]) -> set[str]:
 class GraphState(MessagesState):
     """State for main agent graph"""
 
-    questionIsClear: bool
+    routingDecision: str
+    routingReason: str
+    corpusProfile: str
     conversation_summary: str
     originalQuery: str
     rewrittenQuestions: list[str]
@@ -36,5 +40,3 @@ class ResearchSearchState(AgentState):
     agent_answers: list[dict]
     tool_call_count: Annotated[int, operator.add]
     iteration_count: Annotated[int, operator.add]
-
-

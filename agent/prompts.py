@@ -19,42 +19,86 @@ Output:
 """
 
 
+
+def get_retrieval_decision_prompt() -> str:
+    return """You are an expert assistant deciding how to handle the latest user message.
+
+Your task is to inspect the latest user message, the conversation summary, and the knowledge-base profile, then choose exactly one routing decision:
+- retrieve
+- direct_answer
+- out_of_scope
+
+Decision meanings:
+- retrieve: The message should be answered by searching the indexed knowledge base.
+- direct_answer: The message does not require searching the indexed knowledge base and can be answered directly.
+- out_of_scope: The message is a knowledge request, but it does not fit the coverage of the indexed knowledge base.
+
+Use the knowledge-base profile carefully:
+- Treat the profile as the best description of what the indexed content is about.
+- If the user asks a factual question that clearly matches the profile, prefer retrieve.
+- If the user asks for casual chat, rewriting, translation, summarization, brainstorming, or simple conversational help, prefer direct_answer.
+- If the user asks for factual information that appears unrelated to the profile or beyond its declared coverage, prefer out_of_scope.
+
+Rules:
+- Prefer retrieve when grounded search would materially improve correctness.
+- Prefer direct_answer only when retrieval is clearly unnecessary.
+- Prefer out_of_scope when retrieval would likely waste time because the answer is outside the knowledge-base boundary.
+- Return ONLY the structured decision.
+"""
+
+
+
 def get_rewrite_query_prompt() -> str:
-    return """You are an expert query analyst and rewriter.
+    return """You are an expert query rewriter.
 
 Your task is to rewrite the current user query for optimal document retrieval, incorporating conversation context only when necessary.
 
 Rules:
-1. Self-contained queries:
-   - Always rewrite the query to be clear and self-contained
-   - If the query is a follow-up (e.g., "what about X?", "and for Y?"), integrate minimal necessary context from the summary
-   - Do not add information not present in the query or conversation summary
-
-2. Domain-specific terms:
-   - Product names, brands, proper nouns, or technical terms are treated as domain-specific
-   - For domain-specific queries, use conversation context minimally or not at all
-   - Use the summary only to disambiguate vague queries
-
-3. Grammar and clarity:
-   - Fix grammar, spelling errors, and unclear abbreviations
-   - Remove filler words and conversational phrases
-   - Preserve concrete keywords and named entities
-
-4. Multiple information needs:
-   - If the query contains multiple distinct, unrelated questions, split into separate queries (maximum 3)
-   - Each sub-query must remain semantically equivalent to its part of the original
-   - Do not expand, enrich, or reinterpret the meaning
-
-5. Failure handling:
-   - If the query intent is unclear or unintelligible, mark as "unclear"
+1. Always output 1 to 3 rewritten queries.
+2. Make each query clear, concise, and self-contained.
+3. If the query is a follow-up, integrate only the minimal context needed from the conversation summary.
+4. Preserve the user's original intent, named entities, product names, technical terms, and constraints.
+5. Fix grammar, spelling, unclear abbreviations, and filler words without changing meaning.
+6. If the user asks multiple distinct things, split them into separate retrieval queries.
+7. Do not add facts, assumptions, or interpretations that are not present in the user query or conversation summary.
 
 Input:
 - conversation_summary: A concise summary of prior conversation
 - current_query: The user's current query
 
 Output:
-- One or more rewritten, self-contained queries suitable for document retrieval
+- Return ONLY the rewritten retrieval queries.
 """
+
+
+
+def get_direct_answer_prompt() -> str:
+    return """You are a helpful assistant.
+
+Your task is to answer the user's latest message directly without retrieving documents.
+
+Rules:
+1. Use the conversation summary only as supporting context for follow-up questions.
+2. If the message is ambiguous, answer as helpfully as possible using the most likely interpretation.
+3. Keep the answer natural, direct, and concise unless the user asks for more detail.
+4. Do not mention retrieval, internal routing, or system decisions.
+"""
+
+
+
+def get_out_of_scope_prompt() -> str:
+    return """You are a helpful assistant for a bounded knowledge base.
+
+Your task is to explain that the user's request appears outside the current knowledge-base scope.
+
+Rules:
+1. Briefly state that the question seems outside the indexed knowledge-base coverage.
+2. Use the knowledge-base profile to describe what the current knowledge base is intended to cover.
+3. Invite the user to ask a narrower question that matches the available knowledge base.
+4. Do not pretend you searched documents when you did not.
+5. Keep the answer concise, practical, and polite.
+"""
+
 
 
 def get_research_search_prompt() -> str:
@@ -73,6 +117,7 @@ Workflow:
 3. Once you have enough context, provide a detailed answer omitting no relevant facts.
 4. Conclude with "---\n**Sources:**\n" followed by the unique file names.
 """
+
 
 
 def get_fallback_response_prompt() -> str:
@@ -111,6 +156,7 @@ Sources section rules:
 """
 
 
+
 def get_context_compression_prompt() -> str:
     return """You are an expert research context compressor.
 
@@ -146,6 +192,7 @@ The summary should be concise, structured, and directly usable by an agent to ge
 """
 
 
+
 def get_aggregation_prompt() -> str:
     return """You are an expert aggregation assistant.
 
@@ -176,4 +223,3 @@ Sources section rules:
 
 If there's no useful information available, simply say: "I couldn't find any information to answer your question in the available sources."
 """
-

@@ -5,12 +5,14 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from core.corpus_profile import build_corpus_profile_context, load_corpus_profile
 from core.persistence import load_bm25_bundle
 from core.settings import AppSettings
 from indexing.indexer import Indexer
 from indexing.retriever import FusionRetriever
 
 logger = logging.getLogger(__name__)
+
 
 
 def build_retriever(settings: AppSettings) -> FusionRetriever | None:
@@ -37,6 +39,7 @@ def build_retriever(settings: AppSettings) -> FusionRetriever | None:
     )
 
 
+
 def build_graph(settings: AppSettings):
     """Build the agent graph. Raises RuntimeError if no index is loaded."""
     from agent.graph import create_agent_graph
@@ -50,5 +53,9 @@ def build_graph(settings: AppSettings):
         raise RuntimeError(
             "No index loaded. Run `python main.py index <path>` first or use the UI to index documents."
         )
+
+    corpus_profile = load_corpus_profile(settings.index_dir)
+    corpus_profile_context = build_corpus_profile_context(corpus_profile)
+
     tools = ToolFactory(retriever).create_tools()
-    return create_agent_graph(tools)
+    return create_agent_graph(tools, corpus_profile=corpus_profile_context)

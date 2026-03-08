@@ -12,6 +12,7 @@ _LLM_CACHE: dict[str, ChatModel] = {}
 
 _TASK_ALIASES = {
     "summarize_history": "summarize",
+    "decide_retrieval": "decision",
     "rewrite_query": "rewrite",
     "aggregate_answers": "aggregate",
 }
@@ -48,6 +49,7 @@ def get_llm(config: dict) -> ChatModel | None:
     return _build_chat_model(model, api_key, api_base, model_config)
 
 
+
 def configure_llm_router(config: dict) -> None:
     """Configure global routing config for task-type model selection."""
     global _LLM_ROUTER_CONFIG
@@ -55,17 +57,21 @@ def configure_llm_router(config: dict) -> None:
     _LLM_CACHE.clear()
 
 
+
 def _task_model_map_from_env() -> dict[str, str]:
     mapping = {
         "summarize_history": os.getenv("LLM_MODEL_SUMMARIZE_HISTORY", "").strip(),
+        "decide_retrieval": os.getenv("LLM_MODEL_DECIDE_RETRIEVAL", "").strip(),
         "rewrite_query": os.getenv("LLM_MODEL_REWRITE_QUERY", "").strip(),
         "research_search": os.getenv("LLM_MODEL_RESEARCH_SEARCH", "").strip(),
         "aggregate_answers": os.getenv("LLM_MODEL_AGGREGATE_ANSWERS", "").strip(),
         "summarize": os.getenv("LLM_MODEL_SUMMARIZE", "").strip(),
+        "decision": os.getenv("LLM_MODEL_DECISION", "").strip(),
         "rewrite": os.getenv("LLM_MODEL_REWRITE", "").strip(),
         "aggregate": os.getenv("LLM_MODEL_AGGREGATE", "").strip(),
     }
     return {k: v for k, v in mapping.items() if v}
+
 
 
 def _resolve_router_config(config: dict | None) -> dict[str, Any]:
@@ -79,6 +85,7 @@ def _resolve_router_config(config: dict | None) -> dict[str, Any]:
     existing_task_models = cfg.get("task_models", {}) or {}
     cfg["task_models"] = {**_task_model_map_from_env(), **existing_task_models}
     return cfg
+
 
 
 def get_llm_by_type(task_type: str, config: dict | None = None) -> ChatModel | None:
