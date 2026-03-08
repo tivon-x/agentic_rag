@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from indexing.indexer import Indexer
-from indexing.retriever import FusionRetriever
 from core.persistence import load_bm25_bundle
 from core.settings import AppSettings
+from indexing.indexer import Indexer
+from indexing.retriever import FusionRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +41,14 @@ def build_graph(settings: AppSettings):
     """Build the agent graph. Raises RuntimeError if no index is loaded."""
     from agent.graph import create_agent_graph
     from agent.tools import ToolFactory
-    from llms.llm import get_llm
+    from llms.llm import configure_llm_router
 
-    llm = get_llm(settings.llm_config())
+    configure_llm_router(settings.llm_config())
+
     retriever = build_retriever(settings)
     if retriever is None:
         raise RuntimeError(
             "No index loaded. Run `python main.py index <path>` first or use the UI to index documents."
         )
     tools = ToolFactory(retriever).create_tools()
-    return create_agent_graph(llm, tools)
+    return create_agent_graph(tools)

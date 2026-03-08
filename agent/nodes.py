@@ -1,21 +1,17 @@
-from langchain_core.messages import (
-    SystemMessage,
-    HumanMessage,
-    RemoveMessage,
-    AIMessage,
-)
-
+from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage, SystemMessage
 
 from agent.prompts import (
     get_aggregation_prompt,
     get_conversation_summary_prompt,
     get_rewrite_query_prompt,
 )
-from .states import GraphState
+from llms.llm import get_llm_by_type
+
 from .schemas import QueryAnalysis
+from .states import GraphState
 
 
-def summarize_history(state: GraphState, llm):
+def summarize_history(state: GraphState):
     if len(state["messages"]) < 4:
         return {"conversation_summary": ""}
 
@@ -34,6 +30,7 @@ def summarize_history(state: GraphState, llm):
         role = "User" if isinstance(msg, HumanMessage) else "Assistant"
         conversation += f"{role}: {msg.content}\n"
 
+    llm = get_llm_by_type("summarize_history")
     summary_response = llm.with_config(temperature=0.2).invoke(
         [
             SystemMessage(content=get_conversation_summary_prompt()),
@@ -46,7 +43,7 @@ def summarize_history(state: GraphState, llm):
     }
 
 
-def rewrite_query(state: GraphState, llm):
+def rewrite_query(state: GraphState):
     last_message = state["messages"][-1]
     conversation_summary = state.get("conversation_summary", "")
 
@@ -56,6 +53,7 @@ def rewrite_query(state: GraphState, llm):
         else ""
     ) + f"User Query:\n{last_message.content}\n"
 
+    llm = get_llm_by_type("rewrite_query")
     llm_with_structure = llm.with_config(temperature=0.1).with_structured_output(
         QueryAnalysis
     )
@@ -105,7 +103,7 @@ def request_clarification(state: GraphState):
     return {}
 
 
-def aggregate_answers(state: GraphState, llm):
+def aggregate_answers(state: GraphState):
     if not state.get("agent_answers"):
         return {"messages": [AIMessage(content="No answers were generated.")]}
 
@@ -118,6 +116,7 @@ def aggregate_answers(state: GraphState, llm):
     user_message = HumanMessage(
         content=f"""Original user question: {state["originalQuery"]}\nRetrieved answers:{formatted_answers}"""
     )
+    llm = get_llm_by_type("aggregate_answers")
     synthesis_response = llm.invoke(
         [SystemMessage(content=get_aggregation_prompt()), user_message]
     )

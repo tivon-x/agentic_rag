@@ -2,6 +2,12 @@ from collections.abc import Awaitable
 from typing import Any, Callable
 
 from langchain.agents import AgentState, create_agent
+from langchain.agents.middleware import (
+    AgentMiddleware,
+    SummarizationMiddleware,
+    after_agent,
+    hook_config,
+)
 from langchain.agents.middleware.types import ModelRequest, ModelResponse
 from langchain.chat_models import BaseChatModel
 from langchain_core.messages import (
@@ -12,23 +18,13 @@ from langchain_core.messages import (
     get_buffer_string,
 )
 from langgraph.prebuilt.tool_node import ToolCallRequest
-from langchain.agents.middleware import (
-    SummarizationMiddleware,
-    AgentMiddleware,
-    after_agent,
-    hook_config,
-)
 from langgraph.runtime import Runtime
 from langgraph.types import Command
 
 from agent.prompts import get_fallback_response_prompt, get_orchestrator_prompt
 from agent.states import OrchestratorState
-from core.config import (
-    MAX_ITERATIONS,
-    MAX_TOOL_CALLS,
-    MAX_CONTEXT_TOKENS,
-    KEEP_MESSAGES,
-)
+from core.config import KEEP_MESSAGES, MAX_CONTEXT_TOKENS, MAX_ITERATIONS, MAX_TOOL_CALLS
+from llms.llm import get_llm_by_type
 
 
 class FallbackMiddleware(AgentMiddleware):
@@ -160,7 +156,9 @@ def collect_answer(state: AgentState, runtime: Runtime) -> dict | None:
     }
 
 
-def create_orchestrator_agent(llm, tools):
+def create_orchestrator_agent(tools):
+    llm = get_llm_by_type("orchestrate")
+
     summarization_middleware = SummarizationMiddleware(
         model=llm,
         trigger=("tokens", MAX_CONTEXT_TOKENS),

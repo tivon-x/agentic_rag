@@ -1,28 +1,26 @@
 import logging
-from langgraph.graph import START, END, StateGraph
+
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.graph import END, START, StateGraph
 
-from functools import partial
-
-from agent.orchestrator_agent import create_orchestrator_agent
 from agent.edges import route_after_rewrite
+from agent.nodes import aggregate_answers, request_clarification, rewrite_query, summarize_history
+from agent.orchestrator_agent import create_orchestrator_agent
 from agent.states import GraphState
 
-from agent.nodes import summarize_history, rewrite_query, request_clarification
-from agent.nodes import aggregate_answers
 
-
-def create_agent_graph(llm, tools_list):
+def create_agent_graph(tools_list):
     logger = logging.getLogger(__name__)
-    agent_subgraph = create_orchestrator_agent(llm, tools_list)
+
+    agent_subgraph = create_orchestrator_agent(tools_list)
     checkpointer = InMemorySaver()
 
     graph_builder = StateGraph(GraphState)
-    graph_builder.add_node("summarize_history", partial(summarize_history, llm=llm))
-    graph_builder.add_node("rewrite_query", partial(rewrite_query, llm=llm))
+    graph_builder.add_node("summarize_history", summarize_history)
+    graph_builder.add_node("rewrite_query", rewrite_query)
     graph_builder.add_node(request_clarification)
     graph_builder.add_node("agent", agent_subgraph)
-    graph_builder.add_node("aggregate_answers", partial(aggregate_answers, llm=llm))
+    graph_builder.add_node("aggregate_answers", aggregate_answers)
 
     graph_builder.add_edge(START, "summarize_history")
     graph_builder.add_edge("summarize_history", "rewrite_query")
