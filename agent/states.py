@@ -11,7 +11,7 @@ def accumulate_or_reset(existing: list[dict], new: list[dict]) -> list[dict]:
 def set_union(a: set[str], b: set[str]) -> set[str]:
     return a | b
 
-class State(MessagesState):
+class GraphState(MessagesState):
     """State for main agent graph"""
     questionIsClear: bool
     conversation_summary: str

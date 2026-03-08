@@ -11,11 +11,11 @@ from agent.prompts import (
     get_conversation_summary_prompt,
     get_rewrite_query_prompt,
 )
-from .graph_state import State
+from .states import GraphState
 from .schemas import QueryAnalysis
 
 
-def summarize_history(state: State, llm):
+def summarize_history(state: GraphState, llm):
     if len(state["messages"]) < 4:
         return {"conversation_summary": ""}
 
@@ -46,7 +46,7 @@ def summarize_history(state: State, llm):
     }
 
 
-def rewrite_query(state: State, llm):
+def rewrite_query(state: GraphState, llm):
     last_message = state["messages"][-1]
     conversation_summary = state.get("conversation_summary", "")
 
@@ -101,11 +101,11 @@ def rewrite_query(state: State, llm):
     return {"questionIsClear": False, "messages": [AIMessage(content=clarification)]}
 
 
-def request_clarification(state: State):
+def request_clarification(state: GraphState):
     return {}
 
 
-def aggregate_answers(state: State, llm):
+def aggregate_answers(state: GraphState, llm):
     if not state.get("agent_answers"):
         return {"messages": [AIMessage(content="No answers were generated.")]}
 

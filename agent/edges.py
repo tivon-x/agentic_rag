@@ -1,8 +1,8 @@
 from typing import Literal
 from langgraph.types import Send
-from .graph_state import State
+from .states import GraphState
 
-def route_after_rewrite(state: State) -> Literal["request_clarification", "agent"] | list[Send]:
+def route_after_rewrite(state: GraphState) -> Literal["request_clarification", "agent"] | list[Send]:
     if not state.get("questionIsClear", False):
         return "request_clarification"
     else:

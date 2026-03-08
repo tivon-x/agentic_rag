@@ -1,6 +1,6 @@
 """Tests for graph_state module."""
 
-from agent.graph_state import accumulate_or_reset, set_union
+from agent.states import accumulate_or_reset, set_union
 
 
 def test_accumulate_or_reset_accumulate():

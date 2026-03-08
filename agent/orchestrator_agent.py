@@ -22,7 +22,7 @@ from langgraph.runtime import Runtime
 from langgraph.types import Command
 
 from agent.prompts import get_fallback_response_prompt, get_orchestrator_prompt
-from agent.graph_state import OrchestratorState
+from agent.states import OrchestratorState
 from core.config import (
     MAX_ITERATIONS,
     MAX_TOOL_CALLS,

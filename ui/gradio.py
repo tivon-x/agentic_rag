@@ -9,7 +9,7 @@ import gradio as gr
 import gradio.themes as themes
 from langchain_core.messages import HumanMessage
 
-from agent.graph_state import State
+from agent.states import GraphState
 from core.factory import build_retriever, build_graph
 from indexing.indexer import Indexer
 from core.settings import AppSettings
@@ -245,7 +245,7 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
 
                                 streamed = ""
                                 async for event in graph.astream_events(  # type: ignore[attr-defined,arg-type]
-                                    cast(State, input_state),
+                                    cast(GraphState, input_state),
                                     config=config,  # type: ignore[arg-type]
                                     version="v2",
                                 ):
@@ -264,7 +264,7 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                                 # Fallback if no streaming occurred
                                 if not streamed:
                                     result = graph.invoke(  # type: ignore[attr-defined,arg-type]
-                                        cast(State, input_state),
+                                        cast(GraphState, input_state),
                                         config=config,  # type: ignore[arg-type]
                                     )
                                     messages = (

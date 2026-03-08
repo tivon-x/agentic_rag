@@ -6,7 +6,7 @@ from functools import partial
 
 from agent.orchestrator_agent import create_orchestrator_agent
 from agent.edges import route_after_rewrite
-from agent.graph_state import State
+from agent.states import GraphState
 
 from agent.nodes import summarize_history, rewrite_query, request_clarification
 from agent.nodes import aggregate_answers
@@ -17,7 +17,7 @@ def create_agent_graph(llm, tools_list):
     agent_subgraph = create_orchestrator_agent(llm, tools_list)
     checkpointer = InMemorySaver()
 
-    graph_builder = StateGraph(State)
+    graph_builder = StateGraph(GraphState)
     graph_builder.add_node("summarize_history", partial(summarize_history, llm=llm))
     graph_builder.add_node("rewrite_query", partial(rewrite_query, llm=llm))
     graph_builder.add_node(request_clarification)

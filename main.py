@@ -7,7 +7,7 @@ from typing import cast
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 
-from agent.graph_state import State
+from agent.states import GraphState
 from core.factory import build_graph, build_retriever
 from indexing.indexer import Indexer
 from core.settings import configure_logging, load_settings
@@ -58,7 +58,7 @@ def cmd_ask(args: argparse.Namespace) -> int:
     graph = build_graph(settings)
     input_state = {"messages": [HumanMessage(content=args.question)]}
     result = graph.invoke(
-        cast(State, input_state),
+        cast(GraphState, input_state),
         config={"configurable": {"thread_id": "cli"}},
     )
     messages = result.get("messages", []) if isinstance(result, dict) else []
