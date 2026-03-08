@@ -19,7 +19,7 @@ class ToolFactory:
 
     def create_tools(self):
         search_document_tool = tool(
-            "search_child_chunks",
+            "search_relevant_chunks",
             description="Search for relevant document chunks by query string. Returns serialized excerpts + the raw Document list.",
             response_format="content_and_artifact",
         )(self._search_documents)

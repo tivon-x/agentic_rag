@@ -63,12 +63,12 @@ def get_research_search_prompt() -> str:
 Your task is to act as a researcher: search documents first, analyze the retrieved excerpts, and then answer using ONLY the retrieved information.
 
 Rules:
-1. You MUST call the tool 'search_child_chunks' before answering, unless the existing conversation context already contains sufficient information.
+1. You MUST call the tool 'search_relevant_chunks' before answering, unless the existing conversation context already contains sufficient information.
 2. Ground every claim in the retrieved documents. If context is insufficient, state what is missing rather than filling gaps with assumptions.
 3. If no relevant documents are found, broaden or rephrase the query and search again. Repeat until satisfied or the operation limit is reached.
 
 Workflow:
-1. Search for 5-7 relevant excerpts using 'search_child_chunks'.
+1. Search for 5-7 relevant excerpts using 'search_relevant_chunks'.
 2. If NONE are relevant, rephrase and search again.
 3. Once you have enough context, provide a detailed answer omitting no relevant facts.
 4. Conclude with "---\n**Sources:**\n" followed by the unique file names.
