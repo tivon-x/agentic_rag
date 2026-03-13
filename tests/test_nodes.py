@@ -1,7 +1,15 @@
+import importlib
+
 from langchain_core.messages import HumanMessage
 
 from agent.nodes import aggregate_answers, decide_retrieval, plan_query, rewrite_query
 from agent.schemas import GroundedAnswer, QueryAnalysis, QueryPlan
+
+
+decide_retrieval_module = importlib.import_module("agent.nodes.decide_retrieval")
+plan_query_module = importlib.import_module("agent.nodes.plan_query")
+rewrite_query_module = importlib.import_module("agent.nodes.rewrite_query")
+aggregate_answers_module = importlib.import_module("agent.nodes.aggregate_answers")
 
 
 class _StructuredLLM:
@@ -46,7 +54,7 @@ def test_decide_retrieval_does_not_short_circuit_on_single_generic_overlap(
             {"decision": "retrieve", "reason": "Coverage keywords match the query."},
         )()
     )
-    monkeypatch.setattr("agent.nodes.get_llm_by_type", lambda _: fake_llm)
+    monkeypatch.setattr(decide_retrieval_module, "get_llm_by_type", lambda _: fake_llm)
 
     result = decide_retrieval(
         {
@@ -71,7 +79,7 @@ def test_plan_query_applies_profile_priors(monkeypatch):
             preferred_node_types=["section"],
         )
     )
-    monkeypatch.setattr("agent.nodes.get_llm_by_type", lambda _: fake_llm)
+    monkeypatch.setattr(plan_query_module, "get_llm_by_type", lambda _: fake_llm)
 
     result = plan_query(
         {
@@ -96,7 +104,7 @@ def test_rewrite_query_expands_with_profile_priors(monkeypatch):
             clarification_needed="",
         )
     )
-    monkeypatch.setattr("agent.nodes.get_llm_by_type", lambda _: fake_llm)
+    monkeypatch.setattr(rewrite_query_module, "get_llm_by_type", lambda _: fake_llm)
 
     result = rewrite_query(
         {
@@ -140,7 +148,11 @@ def test_aggregate_answers_passes_preferred_answer_style(monkeypatch):
             limitations="Test only.",
         )
     )
-    monkeypatch.setattr("agent.nodes.get_llm_by_type", lambda _: fake_llm)
+    monkeypatch.setattr(
+        aggregate_answers_module,
+        "get_llm_by_type",
+        lambda _: fake_llm,
+    )
 
     result = aggregate_answers(
         {

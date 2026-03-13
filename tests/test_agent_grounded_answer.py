@@ -1,6 +1,12 @@
+import importlib
+
 from langchain_core.messages import HumanMessage
 
 from agent.nodes import aggregate_answers, out_of_scope_answer
+
+
+aggregate_answers_module = importlib.import_module("agent.nodes.aggregate_answers")
+out_of_scope_answer_module = importlib.import_module("agent.nodes.out_of_scope_answer")
 
 
 class _FakeStructuredInvoker:
@@ -44,7 +50,9 @@ def test_aggregate_answers_renders_grounded_payload(monkeypatch):
         limitations="This answer reflects the currently retrieved task spec only.",
     )
     monkeypatch.setattr(
-        "agent.nodes.get_llm_by_type", lambda _task: _FakeStructuredLLM(response)
+        aggregate_answers_module,
+        "get_llm_by_type",
+        lambda _task: _FakeStructuredLLM(response),
     )
     state = {
         "originalQuery": "Milestone 3 要做什么？",
@@ -81,7 +89,9 @@ def test_out_of_scope_answer_renders_structured_response(monkeypatch):
         next_action="Upload documents about the missing topic.",
     )
     monkeypatch.setattr(
-        "agent.nodes.get_llm_by_type", lambda _task: _FakeStructuredLLM(response)
+        out_of_scope_answer_module,
+        "get_llm_by_type",
+        lambda _task: _FakeStructuredLLM(response),
     )
     state = {
         "messages": [HumanMessage(content="请解释量子计算的最新突破")],

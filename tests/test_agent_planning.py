@@ -1,6 +1,11 @@
+import importlib
+
 from langchain_core.messages import HumanMessage
 
 from agent.nodes import plan_query
+
+
+plan_query_module = importlib.import_module("agent.nodes.plan_query")
 
 
 class _FakeStructuredPlanner:
@@ -23,7 +28,7 @@ class _FakePlanner:
 
 
 def test_plan_query_uses_llm_when_available(monkeypatch):
-    monkeypatch.setattr("agent.nodes.get_llm_by_type", lambda _task: _FakePlanner())
+    monkeypatch.setattr(plan_query_module, "get_llm_by_type", lambda _task: _FakePlanner())
     state = {"messages": [HumanMessage(content="请总结检索链路的工作流程")]}
 
     result = plan_query(state)
@@ -34,7 +39,8 @@ def test_plan_query_uses_llm_when_available(monkeypatch):
 
 def test_plan_query_falls_back_to_default_plan_on_llm_errors(monkeypatch):
     monkeypatch.setattr(
-        "agent.nodes.get_llm_by_type",
+        plan_query_module,
+        "get_llm_by_type",
         lambda _task: (_ for _ in ()).throw(RuntimeError("llm unavailable")),
     )
     state = {"messages": [HumanMessage(content="请总结检索链路的工作流程")]}
