@@ -12,12 +12,21 @@ from dataclasses import dataclass
 from langchain_core.documents import Document
 from rank_bm25 import BM25Okapi
 
+from indexing.stores.lexical_store import LexicalStore
+
 
 @dataclass
 class BM25Bundle:
+    """BM25-backed lexical store adapter."""
+
     documents: list[Document]
     tokenized_corpus: list[list[str]]
     _bm25: BM25Okapi | None = None
+
+    def build(self, documents: list[Document]) -> None:
+        self.documents = [doc for doc in documents if (doc.page_content or "").strip()]
+        self.tokenized_corpus = [doc.page_content.split() for doc in self.documents]
+        self.rebuild_index()
 
     def rebuild_index(self) -> None:
         if not self.tokenized_corpus:
@@ -46,16 +55,27 @@ class BM25Bundle:
 
 
 def create_bm25_bundle(documents: list[Document]) -> BM25Bundle:
-    corpus = [doc.page_content for doc in documents]
-    tokenized_corpus = [text.split() for text in corpus if (text or "").strip()]
-    kept_docs: list[Document] = [
-        doc for doc in documents if (doc.page_content or "").strip()
-    ]
-    bundle = BM25Bundle(documents=kept_docs, tokenized_corpus=tokenized_corpus)
-    bundle.rebuild_index()
+    bundle = BM25Bundle(documents=[], tokenized_corpus=[])
+    bundle.build(documents)
     return bundle
 
 
 def create_bm25_index(documents: list[Document]) -> BM25Okapi:
     """Backward-compatible helper: return only BM25Okapi."""
     return create_bm25_bundle(documents).bm25_index
+
+
+def create_lexical_store(
+    backend: str,
+    *,
+    documents: list[Document] | None = None,
+    bundle: BM25Bundle | None = None,
+) -> LexicalStore:
+    normalized_backend = backend.strip().lower()
+    if normalized_backend != "bm25":
+        raise ValueError(f"Unsupported lexical backend: {backend}")
+    if bundle is not None:
+        return bundle
+    if documents is None:
+        raise ValueError("documents are required when creating a BM25 lexical store")
+    return create_bm25_bundle(documents)

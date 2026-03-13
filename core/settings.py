@@ -78,6 +78,9 @@ class AppSettings:
     embedding_dimensions: int | None = None
     embedding_timeout: float | None = None
 
+    vector_backend: str = "faiss"
+    lexical_backend: str = "bm25"
+    node_backend: str = "json"
     chunker_type: str = "recursive"
     chunker_params: dict[str, object] = field(default_factory=dict)
     index_mode: str = "flat"
@@ -128,6 +131,9 @@ class AppSettings:
         return {
             "embedding": embedding_cfg,
             "chunker": {"type": self.chunker_type, "params": self.chunker_params},
+            "vector_backend": self.vector_backend,
+            "lexical_backend": self.lexical_backend,
+            "node_backend": self.node_backend,
             "index_mode": self.index_mode,
             "leaf_node_type": self.leaf_node_type,
             "parent_embed_pooling": self.parent_embed_pooling,
@@ -217,6 +223,9 @@ def load_settings(
     )
     embedding_dimensions = _get_env_int("EMBEDDING_DIMENSION", "EMBEDDING_DIMENSIONS")
     embedding_timeout = _get_env_float("EMBEDDING_TIMEOUT")
+    vector_backend = _get_env("VECTOR_BACKEND", default="faiss") or "faiss"
+    lexical_backend = _get_env("LEXICAL_BACKEND", default="bm25") or "bm25"
+    node_backend = _get_env("NODE_BACKEND", default="json") or "json"
 
     chunker_type = _get_env("CHUNKER_TYPE", default="recursive") or "recursive"
     index_mode = _get_env("INDEX_MODE", default="flat") or "flat"
@@ -268,6 +277,9 @@ def load_settings(
         embedding_api_base=embedding_api_base,
         embedding_dimensions=embedding_dimensions,
         embedding_timeout=embedding_timeout,
+        vector_backend=vector_backend,
+        lexical_backend=lexical_backend,
+        node_backend=node_backend,
         chunker_type=chunker_type,
         chunker_params=chunker_params,
         index_mode=index_mode,

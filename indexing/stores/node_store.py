@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from indexing.models.doc_tree import ParsedDocumentTree
 from indexing.models.node import Node
+from indexing.stores.sqlite_node_store import SqliteNodeStore
 
 
+@runtime_checkable
 class NodeStore(Protocol):
+    def save_nodes(self, nodes: list[Node]) -> None: ...
     def save_trees(self, trees: list[ParsedDocumentTree]) -> None: ...
     def load_nodes(self) -> list[Node]: ...
     def load_trees(self) -> dict[str, ParsedDocumentTree]: ...
@@ -25,6 +28,21 @@ class JsonNodeStore:
         self._nodes_cache_mtime_ns: int | None = None
         self._trees_cache: dict[str, ParsedDocumentTree] | None = None
         self._trees_cache_mtime_ns: int | None = None
+        self._node_index_cache: dict[str, Node] | None = None
+        self._children_index_cache: dict[str, list[Node]] | None = None
+
+    def save_nodes(self, nodes: list[Node]) -> None:
+        self.nodes_path.parent.mkdir(parents=True, exist_ok=True)
+        self.nodes_path.write_text(
+            "".join(
+                json.dumps(node.to_dict(include_embedding=False), ensure_ascii=False) + "\n"
+                for node in nodes
+            ),
+            encoding="utf-8",
+        )
+        self._nodes_cache = list(nodes)
+        self._nodes_cache_mtime_ns = self.nodes_path.stat().st_mtime_ns
+        self._rebuild_node_indexes(nodes)
 
     def save_trees(self, trees: list[ParsedDocumentTree]) -> None:
         existing_trees = self.load_trees()
@@ -36,15 +54,8 @@ class JsonNodeStore:
             for node in tree.nodes:
                 all_nodes[node.node_id] = node
 
-        self.nodes_path.parent.mkdir(parents=True, exist_ok=True)
         self.doc_trees_path.parent.mkdir(parents=True, exist_ok=True)
-        self.nodes_path.write_text(
-            "".join(
-                json.dumps(node.to_dict(include_embedding=False), ensure_ascii=False) + "\n"
-                for node in all_nodes.values()
-            ),
-            encoding="utf-8",
-        )
+        self.save_nodes(list(all_nodes.values()))
         self.doc_trees_path.write_text(
             json.dumps(
                 {doc_id: tree.to_dict() for doc_id, tree in existing_trees.items()},
@@ -53,8 +64,6 @@ class JsonNodeStore:
             ),
             encoding="utf-8",
         )
-        self._nodes_cache = list(all_nodes.values())
-        self._nodes_cache_mtime_ns = self.nodes_path.stat().st_mtime_ns
         self._trees_cache = dict(existing_trees)
         self._trees_cache_mtime_ns = self.doc_trees_path.stat().st_mtime_ns
 
@@ -71,6 +80,7 @@ class JsonNodeStore:
             nodes.append(Node.from_dict(json.loads(line)))
         self._nodes_cache = list(nodes)
         self._nodes_cache_mtime_ns = mtime_ns
+        self._rebuild_node_indexes(nodes)
         return nodes
 
     def load_trees(self) -> dict[str, ParsedDocumentTree]:
@@ -107,20 +117,44 @@ class JsonNodeStore:
         return trees
 
     def get_node(self, node_id: str) -> Node | None:
-        for node in self.load_nodes():
-            if node.node_id == node_id:
-                return node
-        return None
+        if self._node_index_cache is None:
+            self._rebuild_node_indexes(self.load_nodes())
+        assert self._node_index_cache is not None
+        return self._node_index_cache.get(node_id)
 
     def get_children(self, node_id: str) -> list[Node]:
-        for tree in self.load_trees().values():
-            children = tree.get_children(node_id)
-            if children:
-                return children
-        return []
+        if self._children_index_cache is None:
+            self._rebuild_node_indexes(self.load_nodes())
+        assert self._children_index_cache is not None
+        return list(self._children_index_cache.get(node_id, []))
 
     def get_parent(self, node_id: str) -> Node | None:
         node = self.get_node(node_id)
         if node is None or node.parent_id is None:
             return None
         return self.get_node(node.parent_id)
+
+    def _rebuild_node_indexes(self, nodes: list[Node]) -> None:
+        self._node_index_cache = {node.node_id: node for node in nodes}
+        children_by_parent: dict[str, list[Node]] = {}
+        for node in nodes:
+            if node.parent_id is None:
+                continue
+            children_by_parent.setdefault(node.parent_id, []).append(node)
+        for siblings in children_by_parent.values():
+            siblings.sort(key=lambda item: item.order)
+        self._children_index_cache = children_by_parent
+
+
+def create_node_store(
+    backend: str,
+    *,
+    nodes_path: str | Path,
+    doc_trees_path: str | Path,
+) -> NodeStore:
+    normalized_backend = backend.strip().lower()
+    if normalized_backend == "json":
+        return JsonNodeStore(nodes_path, doc_trees_path)
+    if normalized_backend == "sqlite":
+        return SqliteNodeStore(nodes_path=nodes_path, doc_trees_path=doc_trees_path)
+    raise ValueError(f"Unsupported node backend: {backend}")

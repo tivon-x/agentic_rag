@@ -10,14 +10,16 @@ from pathlib import Path
 from langchain_core.documents import Document
 
 from core.persistence import save_bm25_bundle
-from indexing.bm25_index import BM25Bundle, create_bm25_bundle
+from indexing.bm25_index import BM25Bundle, create_lexical_store
 from indexing.builders.hierarchical_index_builder import HierarchicalIndexBuilder
 from indexing.chunker import Chunker
 from indexing.embeddings import get_embeddings
 from indexing.mappers import CHUNKER_MAPPING, LOADER_MAPPING
 from indexing.parsers.base import SUPPORTED_HIERARCHICAL_SUFFIXES, build_parser
-from indexing.stores.node_store import JsonNodeStore
-from indexing.vectorstore import VectorStore
+from indexing.stores.lexical_store import LexicalStore
+from indexing.stores.node_store import create_node_store
+from indexing.stores.vector_store import VectorStore as VectorStoreProtocol
+from indexing.vectorstore import create_vector_store
 
 
 class Indexer:
@@ -41,8 +43,13 @@ class Indexer:
 
         nodes_path = self.config.get("nodes_path")
         doc_trees_path = self.config.get("doc_trees_path")
+        node_backend = str(self.config.get("node_backend", "json"))
         self.node_store = (
-            JsonNodeStore(nodes_path, doc_trees_path)
+            create_node_store(
+                node_backend,
+                nodes_path=nodes_path,
+                doc_trees_path=doc_trees_path,
+            )
             if nodes_path and doc_trees_path
             else None
         )
@@ -109,9 +116,11 @@ class Indexer:
             f"Indexer_get_chunker -> Invalid chunker mapping for {chunker_type}"
         )
 
-    def _get_vectorstore(self) -> VectorStore:
+    def _get_vectorstore(self) -> VectorStoreProtocol:
         vectorstore_config = self.config.get("vectorstore", {})
-        return VectorStore(
+        vector_backend = str(self.config.get("vector_backend", "faiss"))
+        return create_vector_store(
+            vector_backend,
             embeddings=self.embeddings,
             persist_directory=vectorstore_config.get("persist_directory"),
         )
@@ -156,7 +165,7 @@ class Indexer:
             self.node_store.save_trees(enriched_trees)
         return builder.to_documents(enriched_trees)
 
-    def index(self, file_path: str) -> None | tuple[VectorStore, BM25Bundle]:
+    def index(self, file_path: str) -> None | tuple[VectorStoreProtocol, LexicalStore]:
         if self.index_mode == "hierarchical":
             chunks = self._index_hierarchical(file_path)
         else:
@@ -171,13 +180,19 @@ class Indexer:
         vectorstore_config = self.config.get("vectorstore", {})
         persist_directory = vectorstore_config.get("persist_directory")
         if persist_directory:
-            self.vector_store.save_local(persist_directory)
+            self.vector_store.save(persist_directory)
 
         all_docs = self.vector_store.get_all_documents()
-        bm25_bundle = create_bm25_bundle(all_docs)
+        lexical_backend = str(self.config.get("lexical_backend", "bm25"))
+        lexical_store = create_lexical_store(
+            lexical_backend,
+            documents=all_docs,
+        )
 
         bm25_path = self.config.get("bm25_path")
         if bm25_path:
-            save_bm25_bundle(bm25_path, bm25_bundle)
+            if not isinstance(lexical_store, BM25Bundle):
+                raise TypeError("Only BM25Bundle persistence is currently supported.")
+            save_bm25_bundle(bm25_path, lexical_store)
 
-        return self.vector_store, bm25_bundle
+        return self.vector_store, lexical_store

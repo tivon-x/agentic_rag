@@ -11,7 +11,7 @@ from indexing.embeddings import FakeEmbeddings
 from indexing.models.doc_tree import ParsedDocumentTree
 from indexing.models.node import Node
 from indexing.stores.node_store import JsonNodeStore
-from indexing.vectorstore import VectorStore
+from indexing.vectorstore import FaissVectorStore, create_vector_store
 from agent.tools import ToolFactory
 
 
@@ -21,7 +21,11 @@ def vector_store(sample_documents, tmp_path):
     embeddings = FakeEmbeddings(dimensions=384)
     persist_dir = str(tmp_path / "test_faiss")
 
-    vector_store = VectorStore(persist_directory=persist_dir, embeddings=embeddings)
+    vector_store = create_vector_store(
+        "faiss",
+        persist_directory=persist_dir,
+        embeddings=embeddings,
+    )
     vector_store.add_documents(sample_documents)
 
     return vector_store
@@ -111,7 +115,7 @@ def hierarchical_node_store(tmp_path):
 
 def test_bm25_retriever_basic_query(bm25_bundle):
     """Test BM25Retriever returns relevant documents for a query."""
-    retriever = BM25Retriever(bundle=bm25_bundle, k=3)
+    retriever = BM25Retriever(lexical_store=bm25_bundle, k=3)
 
     results = retriever.invoke("Python programming")
 
@@ -126,7 +130,7 @@ def test_bm25_retriever_basic_query(bm25_bundle):
 
 def test_bm25_retriever_respects_k_parameter(bm25_bundle):
     """Test BM25Retriever respects k parameter."""
-    retriever = BM25Retriever(bundle=bm25_bundle, k=2)
+    retriever = BM25Retriever(lexical_store=bm25_bundle, k=2)
 
     results = retriever.invoke("test query")
 
@@ -135,7 +139,7 @@ def test_bm25_retriever_respects_k_parameter(bm25_bundle):
 
 def test_bm25_retriever_returns_documents_with_metadata(bm25_bundle):
     """Test BM25Retriever returns documents with metadata intact."""
-    retriever = BM25Retriever(bundle=bm25_bundle, k=5)
+    retriever = BM25Retriever(lexical_store=bm25_bundle, k=5)
 
     results = retriever.invoke("Python")
 
@@ -147,7 +151,11 @@ def test_bm25_retriever_returns_documents_with_metadata(bm25_bundle):
 def test_fusion_retriever_combines_results(vector_store, bm25_bundle):
     """Test FusionRetriever combines vector and BM25 results."""
     retriever = FusionRetriever(
-        vectorstore=vector_store, bm25=bm25_bundle, k=3, alpha=0.5, fetch_k=10
+        vectorstore=vector_store,
+        lexical_store=bm25_bundle,
+        k=3,
+        alpha=0.5,
+        fetch_k=10,
     )
 
     results = retriever.invoke("Python programming language")
@@ -165,14 +173,22 @@ def test_fusion_retriever_alpha_weighting(vector_store, bm25_bundle):
     """Test FusionRetriever with different alpha values."""
     # Alpha = 1.0 (only vector search)
     retriever_vector_only = FusionRetriever(
-        vectorstore=vector_store, bm25=bm25_bundle, k=3, alpha=1.0, fetch_k=10
+        vectorstore=vector_store,
+        lexical_store=bm25_bundle,
+        k=3,
+        alpha=1.0,
+        fetch_k=10,
     )
 
     results_vector = retriever_vector_only.invoke("Python")
 
     # Alpha = 0.0 (only BM25)
     retriever_bm25_only = FusionRetriever(
-        vectorstore=vector_store, bm25=bm25_bundle, k=3, alpha=0.0, fetch_k=10
+        vectorstore=vector_store,
+        lexical_store=bm25_bundle,
+        k=3,
+        alpha=0.0,
+        fetch_k=10,
     )
 
     results_bm25 = retriever_bm25_only.invoke("Python")
@@ -185,7 +201,11 @@ def test_fusion_retriever_alpha_weighting(vector_store, bm25_bundle):
 def test_fusion_retriever_deduplicates_results(vector_store, bm25_bundle):
     """Test FusionRetriever deduplicates documents from both sources."""
     retriever = FusionRetriever(
-        vectorstore=vector_store, bm25=bm25_bundle, k=5, alpha=0.5, fetch_k=20
+        vectorstore=vector_store,
+        lexical_store=bm25_bundle,
+        k=5,
+        alpha=0.5,
+        fetch_k=20,
     )
 
     results = retriever.invoke("Python machine learning")
@@ -205,7 +225,11 @@ def test_fusion_retriever_deduplicates_results(vector_store, bm25_bundle):
 def test_fusion_retriever_fetch_k_parameter(vector_store, bm25_bundle):
     """Test FusionRetriever fetch_k parameter."""
     retriever = FusionRetriever(
-        vectorstore=vector_store, bm25=bm25_bundle, k=2, alpha=0.5, fetch_k=5
+        vectorstore=vector_store,
+        lexical_store=bm25_bundle,
+        k=2,
+        alpha=0.5,
+        fetch_k=5,
     )
 
     results = retriever.invoke("Python")
@@ -216,7 +240,7 @@ def test_fusion_retriever_fetch_k_parameter(vector_store, bm25_bundle):
 
 def test_bm25_retriever_empty_query(bm25_bundle):
     """Test BM25Retriever handles empty query."""
-    retriever = BM25Retriever(bundle=bm25_bundle, k=3)
+    retriever = BM25Retriever(lexical_store=bm25_bundle, k=3)
 
     results = retriever.invoke("")
 
@@ -227,7 +251,11 @@ def test_bm25_retriever_empty_query(bm25_bundle):
 def test_fusion_retriever_empty_query(vector_store, bm25_bundle):
     """Test FusionRetriever handles empty query."""
     retriever = FusionRetriever(
-        vectorstore=vector_store, bm25=bm25_bundle, k=3, alpha=0.5, fetch_k=10
+        vectorstore=vector_store,
+        lexical_store=bm25_bundle,
+        k=3,
+        alpha=0.5,
+        fetch_k=10,
     )
 
     results = retriever.invoke("")
@@ -238,7 +266,7 @@ def test_fusion_retriever_empty_query(vector_store, bm25_bundle):
 
 def test_bm25_retriever_with_large_k(bm25_bundle):
     """Test BM25Retriever when k exceeds available documents."""
-    retriever = BM25Retriever(bundle=bm25_bundle, k=1000)
+    retriever = BM25Retriever(lexical_store=bm25_bundle, k=1000)
 
     results = retriever.invoke("test")
 
@@ -249,7 +277,11 @@ def test_bm25_retriever_with_large_k(bm25_bundle):
 def test_fusion_retriever_preserves_metadata(vector_store, bm25_bundle):
     """Test FusionRetriever preserves document metadata."""
     retriever = FusionRetriever(
-        vectorstore=vector_store, bm25=bm25_bundle, k=3, alpha=0.5, fetch_k=10
+        vectorstore=vector_store,
+        lexical_store=bm25_bundle,
+        k=3,
+        alpha=0.5,
+        fetch_k=10,
     )
 
     results = retriever.invoke("Python")
@@ -263,7 +295,11 @@ def test_fusion_retriever_preserves_metadata(vector_store, bm25_bundle):
 
 def test_fusion_retriever_returns_pipeline_debug(vector_store, bm25_bundle):
     retriever = FusionRetriever(
-        vectorstore=vector_store, bm25=bm25_bundle, k=3, alpha=0.5, fetch_k=10
+        vectorstore=vector_store,
+        lexical_store=bm25_bundle,
+        k=3,
+        alpha=0.5,
+        fetch_k=10,
     )
 
     packed = retriever.retrieve("Python programming language")
@@ -304,14 +340,14 @@ def test_fusion_retriever_packs_adjacent_paragraphs_with_node_store(
         ),
     ]
     embeddings = FakeEmbeddings(dimensions=384)
-    vector_store = VectorStore(
+    vector_store = FaissVectorStore(
         persist_directory=str(tmp_path / "hier_faiss"), embeddings=embeddings
     )
     vector_store.add_documents(documents)
     bm25_bundle = create_bm25_bundle(documents)
     retriever = FusionRetriever(
         vectorstore=vector_store,
-        bm25=bm25_bundle,
+        lexical_store=bm25_bundle,
         k=2,
         alpha=0.5,
         fetch_k=5,
@@ -345,14 +381,14 @@ def test_fusion_retriever_promotes_section_context_for_summary_queries(
         )
     ]
     embeddings = FakeEmbeddings(dimensions=384)
-    vector_store = VectorStore(
+    vector_store = FaissVectorStore(
         persist_directory=str(tmp_path / "summary_faiss"), embeddings=embeddings
     )
     vector_store.add_documents(documents)
     bm25_bundle = create_bm25_bundle(documents)
     retriever = FusionRetriever(
         vectorstore=vector_store,
-        bm25=bm25_bundle,
+        lexical_store=bm25_bundle,
         k=1,
         alpha=0.5,
         fetch_k=5,
@@ -380,7 +416,7 @@ def test_fusion_retriever_uses_flashrank_reranker(monkeypatch, vector_store, bm2
 
     retriever = FusionRetriever(
         vectorstore=vector_store,
-        bm25=bm25_bundle,
+        lexical_store=bm25_bundle,
         k=3,
         alpha=0.5,
         fetch_k=10,
@@ -436,7 +472,7 @@ def test_tool_factory_passes_active_query_plan_to_retriever():
 def test_fusion_retriever_rerank_uses_corpus_profile_priors(vector_store, bm25_bundle):
     retriever = FusionRetriever(
         vectorstore=vector_store,
-        bm25=bm25_bundle,
+        lexical_store=bm25_bundle,
         k=2,
         alpha=0.5,
         fetch_k=5,

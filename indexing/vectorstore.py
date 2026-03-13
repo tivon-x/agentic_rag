@@ -1,49 +1,47 @@
+from __future__ import annotations
+
+import logging
 import os
 from typing import Literal
-import faiss
-import logging
-from langchain_community.docstore.in_memory import InMemoryDocstore
-from langchain_community.vectorstores import FAISS
-from langchain_core.embeddings import Embeddings
-from langchain_core.documents import Document
 from uuid import uuid4
 
+import faiss
+from langchain_community.docstore.in_memory import InMemoryDocstore
+from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores.base import VectorStoreRetriever
 
+from indexing.stores.sqlite_vec_store import SqliteVecVectorStore
 
-class VectorStore:
+
+class FaissVectorStore:
+    """FAISS-backed vector store adapter."""
+
     def __init__(self, embeddings: Embeddings, persist_directory: str | None = None):
-        """
-        Initialize vector store.
-
-        Args:
-            embeddings (Embeddings): Embedding model instance.
-            persist_directory (str): Persistence directory; loads FAISS index if exists.
-        """
         logger = logging.getLogger(__name__)
         loaded = False
         if persist_directory:
-            # langchain FAISS persistence expects index.faiss + index.pkl
             index_path = os.path.join(persist_directory, "index.faiss")
             pkl_path = os.path.join(persist_directory, "index.pkl")
             if os.path.isfile(index_path) and os.path.isfile(pkl_path):
                 try:
-                    self.__vectorstore = FAISS.load_local(
+                    self._vectorstore = FAISS.load_local(
                         persist_directory,
                         embeddings,
                         allow_dangerous_deserialization=True,
                     )
                     loaded = True
-                except Exception as e:
+                except Exception as exc:
                     logger.warning(
                         "Failed to load FAISS index from %s: %s; creating a new empty index",
                         persist_directory,
-                        str(e),
+                        str(exc),
                     )
 
         if not loaded:
             index = faiss.IndexFlatL2(len(embeddings.embed_query("dimension_probe")))
-            self.__vectorstore = FAISS(
+            self._vectorstore = FAISS(
                 embedding_function=embeddings,
                 index=index,
                 docstore=InMemoryDocstore({}),
@@ -51,54 +49,74 @@ class VectorStore:
             )
 
     def add_documents(self, documents: list[Document]) -> None:
-        """
-        Add documents to vector store.
-
-        Args:
-            documents (list[Document]): Document list.
-        """
         ids = [str(uuid4()) for _ in documents]
-        self.__vectorstore.add_documents(documents=documents, ids=ids)
+        self._vectorstore.add_documents(documents=documents, ids=ids)
+
+    def add_embeddings(
+        self,
+        texts: list[str],
+        embeddings: list[list[float]],
+        metadatas: list[dict[str, object]] | None = None,
+    ) -> None:
+        ids = [str(uuid4()) for _ in texts]
+        payloads = metadatas or [{} for _ in texts]
+        self._vectorstore.add_embeddings(
+            text_embeddings=list(zip(texts, embeddings, strict=False)),
+            metadatas=payloads,
+            ids=ids,
+        )
+
+    def search(
+        self,
+        query: str,
+        *,
+        k: int = 10,
+        filter: dict[str, object] | None = None,
+        fetch_k: int = 20,
+    ) -> list[Document]:
+        return self._vectorstore.similarity_search(
+            query,
+            k=k,
+            filter=filter,
+            fetch_k=fetch_k,
+        )
 
     def similarity_search(
-        self, query: str, k: int = 10, filter: dict | None = None, fetch_k: int = 20
+        self,
+        query: str,
+        k: int = 10,
+        filter: dict[str, object] | None = None,
+        fetch_k: int = 20,
     ) -> list[Document]:
-        """
-        Similarity search based on cosine similarity.
+        return self.search(query, k=k, filter=filter, fetch_k=fetch_k)
 
-        Args:
-            query (str): Query string.
-            k (int): Number of top results to return.
-            filter (dict): Optional filter conditions based on vector store metadata.
-            fetch_k (int): Number of documents to fetch before filtering, defaults to 20.
-
-        Returns:
-            list[Document]: Retrieved document list.
-        """
-        return self.__vectorstore.similarity_search(
-            query, k=k, filter=filter, fetch_k=fetch_k
+    def search_with_score(
+        self,
+        query: str,
+        *,
+        k: int = 10,
+        filter: dict[str, object] | None = None,
+        fetch_k: int = 20,
+    ) -> list[tuple[Document, float]]:
+        return self._vectorstore.similarity_search_with_score(
+            query,
+            k=k,
+            filter=filter,
+            fetch_k=fetch_k,
         )
 
     def similarity_search_with_score(
         self,
         query: str,
         k: int = 10,
-        filter: dict | None = None,
+        filter: dict[str, object] | None = None,
         fetch_k: int = 20,
     ) -> list[tuple[Document, float]]:
-        return self.__vectorstore.similarity_search_with_score(
-            query, k=k, filter=filter, fetch_k=fetch_k
-        )
+        return self.search_with_score(query, k=k, filter=filter, fetch_k=fetch_k)
 
     def get_all_documents(self) -> list[Document]:
-        """
-        Get all documents.
-
-        Returns:
-            list[Document]: All document list.
-        """
-        docstore = getattr(self.__vectorstore, "docstore", None)
-        index_to_id = getattr(self.__vectorstore, "index_to_docstore_id", None)
+        docstore = getattr(self._vectorstore, "docstore", None)
+        index_to_id = getattr(self._vectorstore, "index_to_docstore_id", None)
         if docstore is None or index_to_id is None:
             return []
 
@@ -118,9 +136,12 @@ class VectorStore:
                 docs.append(doc)
         return docs
 
-    def save_local(self, persist_directory: str) -> None:
+    def save(self, persist_directory: str) -> None:
         os.makedirs(persist_directory, exist_ok=True)
-        self.__vectorstore.save_local(persist_directory)
+        self._vectorstore.save_local(persist_directory)
+
+    def save_local(self, persist_directory: str) -> None:
+        self.save(persist_directory)
 
     def get_retriever(
         self,
@@ -129,14 +150,27 @@ class VectorStore:
         ] = "similarity",
         **search_kwargs,
     ) -> VectorStoreRetriever:
-        """
-        Get retriever.
+        return self._vectorstore.as_retriever(
+            search_type=search_type,
+            **search_kwargs,
+        )
 
-        Args:
-            search_type (Literal["similarity", "mmr", "similarity_score_threshold"]): Retrieval type, defaults to "similarity".
-            **search_kwargs: Other optional parameters.
 
-        Returns:
-            FAISS: Vector store retriever instance.
-        """
-        return self.__vectorstore.as_retriever(search_type=search_type, **search_kwargs)
+def create_vector_store(
+    backend: str,
+    *,
+    embeddings: Embeddings,
+    persist_directory: str | None = None,
+):
+    normalized_backend = backend.strip().lower()
+    if normalized_backend == "faiss":
+        return FaissVectorStore(
+            embeddings=embeddings,
+            persist_directory=persist_directory,
+        )
+    if normalized_backend == "sqlite_vec":
+        return SqliteVecVectorStore(
+            embeddings=embeddings,
+            persist_directory=persist_directory,
+        )
+    raise ValueError(f"Unsupported vector backend: {backend}")

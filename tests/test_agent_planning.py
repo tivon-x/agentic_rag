@@ -41,8 +41,10 @@ def test_plan_query_falls_back_to_default_plan_on_llm_errors(monkeypatch):
 
     result = plan_query(state)
 
-    assert result["queryPlan"] == {
-        "intent": "fact",
-        "subqueries": ["请总结检索链路的工作流程"],
-        "preferred_node_types": ["paragraph"],
+    assert result["queryPlan"]["intent"] == "fact"
+    assert result["queryPlan"]["subqueries"] == ["请总结检索链路的工作流程"]
+    assert result["queryPlan"]["preferred_node_types"] == ["paragraph"]
+    assert result["queryPlan"]["profile_hints"] == {
+        "matched_domain_keywords": [],
+        "matched_primary_entities": [],
     }

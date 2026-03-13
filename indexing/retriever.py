@@ -7,7 +7,6 @@ from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from pydantic import PrivateAttr
 
-from indexing.bm25_index import BM25Bundle
 from indexing.retrieval_pipeline import (
     PackedContext,
     RetrievalCandidate,
@@ -21,8 +20,10 @@ from indexing.retrieval_pipeline import (
     profile_terms,
     query_terms,
 )
+from indexing.stores.lexical_store import LexicalStore
+from indexing.stores.node_store import NodeStore
+from indexing.stores.vector_store import VectorStore
 from indexing.token_count import estimate_token_count
-from indexing.vectorstore import VectorStore
 
 
 def get_similarity_retriever(
@@ -32,20 +33,20 @@ def get_similarity_retriever(
 
 
 class BM25Retriever(BaseRetriever):
-    bundle: BM25Bundle
+    lexical_store: LexicalStore
     k: int = 10
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
     ) -> list[Document]:
-        return self.bundle.query(query, k=self.k)
+        return self.lexical_store.query(query, k=self.k)
 
 
 class FusionRetriever(BaseRetriever):
     model_config = {"arbitrary_types_allowed": True}
 
     vectorstore: VectorStore
-    bm25: BM25Bundle
+    lexical_store: LexicalStore
     alpha: float = 0.5
     k: int = 10
     fetch_k: int = 40
@@ -54,7 +55,7 @@ class FusionRetriever(BaseRetriever):
     flashrank_model: str = "ms-marco-TinyBERT-L-2-v2"
     flashrank_cache_dir: str = ""
     flashrank_top_n: int = 10
-    node_store: Any = None
+    node_store: NodeStore | None = None
     corpus_profile: dict[str, Any] | None = None
     _flashrank_reranker: Any = PrivateAttr(default=None)
     _cached_nodes: list[Any] | None = PrivateAttr(default=None)
@@ -105,7 +106,7 @@ class FusionRetriever(BaseRetriever):
 
     def _retrieve_from_fusion(self, query: str) -> list[RetrievalCandidate]:
         epsilon = 1e-8
-        vec_results = self.vectorstore.similarity_search_with_score(query, k=self.fetch_k)
+        vec_results = self.vectorstore.search_with_score(query, k=self.fetch_k)
         vec_sims = [1.0 / (dist + epsilon) for _, dist in vec_results]
         if vec_sims:
             vmin, vmax = float(min(vec_sims)), float(max(vec_sims))
@@ -119,7 +120,7 @@ class FusionRetriever(BaseRetriever):
             doc_by_key.setdefault(key, doc)
             vec_score_by_key[key] = 0.0 if vmax - vmin <= epsilon else (sim - vmin) / (vmax - vmin)
 
-        bm_results = self.bm25.topk_with_scores(query, k=self.fetch_k)
+        bm_results = self.lexical_store.topk_with_scores(query, k=self.fetch_k)
         bm_scores = [score for _, score in bm_results]
         if bm_scores:
             bmin, bmax = float(min(bm_scores)), float(max(bm_scores))

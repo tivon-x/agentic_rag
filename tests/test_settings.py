@@ -32,6 +32,9 @@ def test_load_settings_defaults(tmp_path, monkeypatch):
     assert settings.llm_api_base == ""
     assert settings.llm_temperature == 0.2
     assert settings.embedding_model == "text-embedding-3-small"
+    assert settings.vector_backend == "faiss"
+    assert settings.lexical_backend == "bm25"
+    assert settings.node_backend == "json"
     assert settings.chunker_type == "recursive"
     assert settings.index_mode == "flat"
     assert settings.leaf_node_type == "paragraph"
@@ -63,6 +66,9 @@ def test_load_settings_from_env(tmp_env_file, monkeypatch):
     assert settings.llm_model == "test-model"
     assert settings.log_level == "DEBUG"
     assert settings.chunker_params == {"chunk_size": 256, "chunk_overlap": 32}
+    assert settings.vector_backend == "faiss"
+    assert settings.lexical_backend == "bm25"
+    assert settings.node_backend == "json"
     assert settings.retriever_k == 5
     assert settings.flashrank_top_n == 5
 
@@ -177,6 +183,9 @@ def test_app_settings_methods(tmp_path):
         embedding_model="text-embedding-ada-002",
         embedding_api_key="test-embed-key",
         embedding_api_base="https://api.openai.com/v1",
+        vector_backend="faiss",
+        lexical_backend="bm25",
+        node_backend="json",
         chunker_type="token",
         chunker_params={"chunk_size": 512},
         retriever_k=15,
@@ -196,6 +205,9 @@ def test_app_settings_methods(tmp_path):
     assert indexer_config["embedding"]["api_key"] == "test-embed-key"
     assert indexer_config["chunker"]["type"] == "token"
     assert indexer_config["chunker"]["params"] == {"chunk_size": 512}
+    assert indexer_config["vector_backend"] == "faiss"
+    assert indexer_config["lexical_backend"] == "bm25"
+    assert indexer_config["node_backend"] == "json"
     assert indexer_config["index_mode"] == "flat"
     assert indexer_config["leaf_node_type"] == "paragraph"
     assert indexer_config["parent_embed_pooling"] == "mean"
