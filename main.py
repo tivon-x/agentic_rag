@@ -30,6 +30,12 @@ def cmd_index(args: argparse.Namespace) -> int:
     settings = load_settings()
     configure_logging(settings)
     cfg = settings.indexer_config()
+    if args.mode:
+        cfg["index_mode"] = args.mode
+    if args.leaf_node_type:
+        cfg["leaf_node_type"] = args.leaf_node_type
+    if args.parent_embed_pooling:
+        cfg["parent_embed_pooling"] = args.parent_embed_pooling
     indexer = Indexer(cfg)
 
     for p in args.paths:
@@ -86,6 +92,21 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_index = sub.add_parser("index", help="Index PDF(s) or directories")
     p_index.add_argument("paths", nargs="+", help="File or directory paths")
+    p_index.add_argument(
+        "--mode",
+        choices=["flat", "hierarchical"],
+        help="Index mode override. Defaults to INDEX_MODE or flat.",
+    )
+    p_index.add_argument(
+        "--leaf-node-type",
+        choices=["paragraph", "section", "document"],
+        help="Leaf node type used in hierarchical mode.",
+    )
+    p_index.add_argument(
+        "--parent-embed-pooling",
+        choices=["mean", "none"],
+        help="Parent embedding aggregation strategy in hierarchical mode.",
+    )
     p_index.set_defaults(func=cmd_index)
 
     p_ask = sub.add_parser("ask", help="Ask a question against the local index")

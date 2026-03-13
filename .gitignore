@@ -74,7 +74,9 @@ logs/
 *.pth
 *.onnx
 data/
-models/
+/models/
+!indexing/models/
+!indexing/models/*.py
 checkpoints/
 
 # IDE temporary files

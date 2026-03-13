@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import Literal
 from pydantic import BaseModel, Field
 
 
@@ -12,6 +12,10 @@ class RetrievalDecision(BaseModel):
 
 
 class QueryAnalysis(BaseModel):
-    questions: List[str] = Field(
+    is_clear: bool = Field(description="Whether the latest user query is clear enough.")
+    questions: list[str] = Field(
         description="List of rewritten, self-contained questions."
+    )
+    clarification_needed: str = Field(
+        description="Clarification request shown when the user query is underspecified."
     )

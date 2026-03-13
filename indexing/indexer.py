@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path
-from typing import List
-import os
+from __future__ import annotations
+
 import logging
+import os
+from pathlib import Path
+
 from langchain_core.documents import Document
 
-from indexing.bm25_index import BM25Bundle, create_bm25_bundle
-from indexing.embeddings import get_embeddings
-from indexing.vectorstore import VectorStore
-from indexing.chunker import Chunker
-from indexing.mappers import LOADER_MAPPING, CHUNKER_MAPPING
-
 from core.persistence import save_bm25_bundle
+from indexing.bm25_index import BM25Bundle, create_bm25_bundle
+from indexing.builders.hierarchical_index_builder import HierarchicalIndexBuilder
+from indexing.chunker import Chunker
+from indexing.embeddings import get_embeddings
+from indexing.mappers import CHUNKER_MAPPING, LOADER_MAPPING
+from indexing.parsers.base import SUPPORTED_HIERARCHICAL_SUFFIXES, build_parser
+from indexing.stores.node_store import JsonNodeStore
+from indexing.vectorstore import VectorStore
 
 
 class Indexer:
@@ -22,77 +26,71 @@ class Indexer:
         self._logger = logging.getLogger(__name__)
         self._init_components()
 
-    def _init_components(self):
-        """
-        Initialize indexer components including chunker and embeddings.
-        """
+    def _init_components(self) -> None:
+        self.chunker = self._get_chunker()
+        self.embeddings = get_embeddings(self.config)
+        self.vector_store = self._get_vectorstore()
 
-        # Initialize chunker
-        self.Chunker = self.__get_chunker()
+        self.index_mode = str(self.config.get("index_mode", "flat")).strip().lower()
+        self.leaf_node_type = str(
+            self.config.get("leaf_node_type", "paragraph")
+        ).strip()
+        self.parent_embed_pooling = str(
+            self.config.get("parent_embed_pooling", "mean")
+        ).strip()
 
-        # Initialize vector store
-        self.vector_store = self.__get_vectorstore(self.config)
+        nodes_path = self.config.get("nodes_path")
+        doc_trees_path = self.config.get("doc_trees_path")
+        self.node_store = (
+            JsonNodeStore(nodes_path, doc_trees_path)
+            if nodes_path and doc_trees_path
+            else None
+        )
 
-    def __get_data_processor(self, file_path: str) -> List[tuple[list[Document], str]]:
-        """
-        Get data processor based on file path, return processed data and file type.
-        Args:
-          file_path (str): File path
-
-        Returns:
-          List[tuple[list[Document], str]]: List of processed data and file type tuples
-        """
-
-        # Recursively process directories
+    def _iter_supported_files(self, file_path: str) -> list[str]:
         if os.path.isdir(file_path):
-            results = []
+            results: list[str] = []
+            for entry in sorted(os.listdir(file_path)):
+                if entry.startswith("."):
+                    continue
+                results.extend(self._iter_supported_files(os.path.join(file_path, entry)))
+            return results
+
+        suffix = Path(file_path).suffix.lower()
+        if suffix not in SUPPORTED_HIERARCHICAL_SUFFIXES:
+            return []
+        return [file_path]
+
+    def _get_flat_documents(self, file_path: str) -> list[tuple[list[Document], str]]:
+        if os.path.isdir(file_path):
+            results: list[tuple[list[Document], str]] = []
             for filename in os.listdir(file_path):
-                # Skip hidden files
                 if filename.startswith("."):
                     continue
                 full_path = os.path.join(file_path, filename)
                 try:
-                    # If it's a file, log that we're about to process it
                     if os.path.isfile(full_path):
                         self._logger.info("Processing file: %s", full_path)
-                    results += self.__get_data_processor(full_path)
-                except ValueError as e:
-                    self._logger.warning("Skipping %s: %s", full_path, str(e))
-                    continue
+                    results.extend(self._get_flat_documents(full_path))
+                except ValueError as exc:
+                    self._logger.warning("Skipping %s: %s", full_path, str(exc))
             return results
-        # If it's a file, select processor based on extension
-        else:
-            ext = Path(file_path).suffix.lower()  # Get file extension
-            # Select processor based on extension
-            loader_mapping = LOADER_MAPPING.get(ext)
-            if loader_mapping is None:
-                return []
-            processor, loader_args = loader_mapping
-            # Return processed file + extension to indicate image vs text
-            return [
-                (processor(**loader_args).process(file_path), file_path.split(".")[-1])
-            ]
 
-    def __get_chunker(self) -> Chunker:
-        """
-        Get chunker instance.
+        ext = Path(file_path).suffix.lower()
+        loader_mapping = LOADER_MAPPING.get(ext)
+        if loader_mapping is None:
+            return []
+        processor, loader_args = loader_mapping
+        return [(processor(**loader_args).process(file_path), file_path.split(".")[-1])]
 
-        Returns:
-            Chunker: Chunker instance
-        """
+    def _get_chunker(self) -> Chunker:
         chunker_config = self.config.get("chunker", {})
-        # Get chunker type and parameters
-        chunker_type = chunker_config.get(
-            "type", "recursive"
-        )  # Default to recursive chunker
+        chunker_type = chunker_config.get("type", "recursive")
         params = chunker_config.get("params", {})
         mapping_val = CHUNKER_MAPPING.get(chunker_type)
         if mapping_val is None:
-            raise ValueError(
-                f"Indexer_get_chunker -> Unknown chunker type: {chunker_type}"
-            )
+            raise ValueError(f"Indexer_get_chunker -> Unknown chunker type: {chunker_type}")
 
-        # Back-compat: mapping may be a class OR (class, default_kwargs)
         if isinstance(mapping_val, tuple) and len(mapping_val) == 2:
             chunker_cls, default_kwargs = mapping_val
             if not isinstance(default_kwargs, dict):
@@ -111,44 +109,63 @@ class Indexer:
             f"Indexer_get_chunker -> Invalid chunker mapping for {chunker_type}"
         )
 
-    def __get_vectorstore(self, config: dict) -> VectorStore:
-        """
-        Get vector store instance.
-
-        Returns:
-            VectorStore: Vector store instance
-        """
-        # Use unified embeddings function (cloud-based or fallback)
-        embeddings = get_embeddings(config)
-
+    def _get_vectorstore(self) -> VectorStore:
         vectorstore_config = self.config.get("vectorstore", {})
         return VectorStore(
-            embeddings=embeddings,
-            persist_directory=vectorstore_config.get("persist_directory", None),
+            embeddings=self.embeddings,
+            persist_directory=vectorstore_config.get("persist_directory"),
         )
 
-    def index(self, file_path: str) -> None | tuple[VectorStore, BM25Bundle]:
-        """
-        Index files
-        Args:
-            file_path (str): File path
-
-        Returns:
-            None | tuple[VectorStore, BM25Okapi]: Returns vector store and BM25 index, or None if no chunks generated
-        """
-        datas = self.__get_data_processor(file_path)
+    def _index_flat(self, file_path: str) -> list[Document]:
+        datas = self._get_flat_documents(file_path)
 
         chunks: list[Document] = []
         for data, file_type in datas:
             if file_type in ["jpg", "jpeg", "png"]:
-                pass  # Multimodal info: skip images for now, process text only
-            else:
-                chunks += self.Chunker.chunk(data)
+                continue
+            chunks.extend(self.chunker.chunk(data))
+        return chunks
+
+    def _index_hierarchical(self, file_path: str) -> list[Document]:
+        files = self._iter_supported_files(file_path)
+        if not files:
+            return []
+
+        trees = []
+        for supported_file in files:
+            try:
+                parser = build_parser(supported_file)
+                trees.append(parser.parse(supported_file))
+            except Exception as exc:
+                self._logger.warning(
+                    "Hierarchical parse failed for %s, skipping file: %s",
+                    supported_file,
+                    str(exc),
+                )
+
+        if not trees:
+            return []
+
+        builder = HierarchicalIndexBuilder(
+            embeddings=self.embeddings,
+            leaf_node_type=self.leaf_node_type,
+            parent_embed_pooling=self.parent_embed_pooling,
+        )
+        enriched_trees = builder.enrich_trees(trees)
+        if self.node_store is not None:
+            self.node_store.save_trees(enriched_trees)
+        return builder.to_documents(enriched_trees)
+
+    def index(self, file_path: str) -> None | tuple[VectorStore, BM25Bundle]:
+        if self.index_mode == "hierarchical":
+            chunks = self._index_hierarchical(file_path)
+        else:
+            chunks = self._index_flat(file_path)
 
         if not chunks:
             self._logger.warning("No chunks generated from input: %s", file_path)
             return None
-        # Build vector store
+
         self.vector_store.add_documents(chunks)
 
         vectorstore_config = self.config.get("vectorstore", {})
@@ -156,7 +173,6 @@ class Indexer:
         if persist_directory:
             self.vector_store.save_local(persist_directory)
 
-        # Build and persist BM25 (based on all indexed documents for consistency)
         all_docs = self.vector_store.get_all_documents()
         bm25_bundle = create_bm25_bundle(all_docs)
 

@@ -24,6 +24,8 @@ def test_load_settings_defaults(tmp_path, monkeypatch):
     assert settings.index_dir == tmp_path / "data" / "index"
     assert settings.faiss_dir == tmp_path / "data" / "index" / "faiss"
     assert settings.bm25_path == tmp_path / "data" / "index" / "bm25.pkl"
+    assert settings.nodes_path == tmp_path / "data" / "index" / "nodes.jsonl"
+    assert settings.doc_trees_path == tmp_path / "data" / "index" / "doc_trees.json"
     assert settings.log_level == "INFO"
     assert settings.llm_model == ""
     assert settings.llm_api_key == ""
@@ -31,6 +33,9 @@ def test_load_settings_defaults(tmp_path, monkeypatch):
     assert settings.llm_temperature == 0.2
     assert settings.embedding_model == "text-embedding-3-small"
     assert settings.chunker_type == "recursive"
+    assert settings.index_mode == "flat"
+    assert settings.leaf_node_type == "paragraph"
+    assert settings.parent_embed_pooling == "mean"
     assert settings.retriever_k == 10
     assert settings.fusion_alpha == 0.5
     assert settings.max_tool_calls == 8
@@ -127,6 +132,8 @@ def test_configure_logging(tmp_path):
         index_dir=tmp_path / "data" / "index",
         faiss_dir=tmp_path / "data" / "index" / "faiss",
         bm25_path=tmp_path / "data" / "index" / "bm25.pkl",
+        nodes_path=tmp_path / "data" / "index" / "nodes.jsonl",
+        doc_trees_path=tmp_path / "data" / "index" / "doc_trees.json",
         log_dir=tmp_path / "logs",
         log_file=tmp_path / "logs" / "test.log",
         log_level="DEBUG",
@@ -154,6 +161,8 @@ def test_app_settings_methods(tmp_path):
         index_dir=tmp_path / "data" / "index",
         faiss_dir=tmp_path / "data" / "index" / "faiss",
         bm25_path=tmp_path / "data" / "index" / "bm25.pkl",
+        nodes_path=tmp_path / "data" / "index" / "nodes.jsonl",
+        doc_trees_path=tmp_path / "data" / "index" / "doc_trees.json",
         log_dir=tmp_path / "logs",
         log_file=tmp_path / "logs" / "test.log",
         log_level="INFO",
@@ -183,6 +192,9 @@ def test_app_settings_methods(tmp_path):
     assert indexer_config["embedding"]["api_key"] == "test-embed-key"
     assert indexer_config["chunker"]["type"] == "token"
     assert indexer_config["chunker"]["params"] == {"chunk_size": 512}
+    assert indexer_config["index_mode"] == "flat"
+    assert indexer_config["leaf_node_type"] == "paragraph"
+    assert indexer_config["parent_embed_pooling"] == "mean"
     assert indexer_config["retriever"]["k"] == 15
     assert indexer_config["retriever"]["alpha"] == 0.6
 
@@ -193,3 +205,5 @@ def test_app_settings_methods(tmp_path):
     assert settings.faiss_dir.exists()
     assert settings.log_dir.exists()
     assert settings.bm25_path.parent.exists()
+    assert settings.nodes_path.parent.exists()
+    assert settings.doc_trees_path.parent.exists()

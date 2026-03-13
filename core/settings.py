@@ -60,6 +60,8 @@ class AppSettings:
     index_dir: Path
     faiss_dir: Path
     bm25_path: Path
+    nodes_path: Path
+    doc_trees_path: Path
 
     log_dir: Path
     log_file: Path
@@ -78,6 +80,9 @@ class AppSettings:
 
     chunker_type: str = "recursive"
     chunker_params: dict[str, object] = field(default_factory=dict)
+    index_mode: str = "flat"
+    leaf_node_type: str = "paragraph"
+    parent_embed_pooling: str = "mean"
 
     retriever_k: int = 10
     fusion_alpha: float = 0.5
@@ -94,6 +99,8 @@ class AppSettings:
         self.faiss_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.bm25_path.parent.mkdir(parents=True, exist_ok=True)
+        self.nodes_path.parent.mkdir(parents=True, exist_ok=True)
+        self.doc_trees_path.parent.mkdir(parents=True, exist_ok=True)
 
     def llm_config(self) -> dict:
         return {
@@ -117,8 +124,13 @@ class AppSettings:
         return {
             "embedding": embedding_cfg,
             "chunker": {"type": self.chunker_type, "params": self.chunker_params},
+            "index_mode": self.index_mode,
+            "leaf_node_type": self.leaf_node_type,
+            "parent_embed_pooling": self.parent_embed_pooling,
             "vectorstore": {"persist_directory": str(self.faiss_dir)},
             "bm25_path": str(self.bm25_path),
+            "nodes_path": str(self.nodes_path),
+            "doc_trees_path": str(self.doc_trees_path),
             "retriever": {"k": self.retriever_k, "alpha": self.fusion_alpha},
         }
 
@@ -162,6 +174,10 @@ def load_settings(
     index_dir = Path(_get_env("INDEX_DIR") or (data_dir / "index"))
     faiss_dir = Path(_get_env("FAISS_DIR") or (index_dir / "faiss"))
     bm25_path = Path(_get_env("BM25_PATH") or (index_dir / "bm25.pkl"))
+    nodes_path = Path(_get_env("NODES_PATH") or (index_dir / "nodes.jsonl"))
+    doc_trees_path = Path(
+        _get_env("DOC_TREES_PATH") or (index_dir / "doc_trees.json")
+    )
 
     log_dir = Path(_get_env("LOG_DIR") or (base / "logs"))
     log_file = Path(_get_env("LOG_FILE") or (log_dir / "agentic_rag.log"))
@@ -192,6 +208,11 @@ def load_settings(
     embedding_timeout = _get_env_float("EMBEDDING_TIMEOUT")
 
     chunker_type = _get_env("CHUNKER_TYPE", default="recursive") or "recursive"
+    index_mode = _get_env("INDEX_MODE", default="flat") or "flat"
+    leaf_node_type = _get_env("LEAF_NODE_TYPE", default="paragraph") or "paragraph"
+    parent_embed_pooling = (
+        _get_env("PARENT_EMBED_POOLING", default="mean") or "mean"
+    )
     chunk_size = _get_env_int("CHUNK_SIZE")
     chunk_overlap = _get_env_int("CHUNK_OVERLAP")
     chunker_params: dict[str, object] = {}
@@ -215,6 +236,8 @@ def load_settings(
         index_dir=index_dir,
         faiss_dir=faiss_dir,
         bm25_path=bm25_path,
+        nodes_path=nodes_path,
+        doc_trees_path=doc_trees_path,
         log_dir=log_dir,
         log_file=log_file,
         log_level=log_level,
@@ -229,6 +252,9 @@ def load_settings(
         embedding_timeout=embedding_timeout,
         chunker_type=chunker_type,
         chunker_params=chunker_params,
+        index_mode=index_mode,
+        leaf_node_type=leaf_node_type,
+        parent_embed_pooling=parent_embed_pooling,
         retriever_k=retriever_k,
         fusion_alpha=fusion_alpha if fusion_alpha is not None else 0.5,
         max_tool_calls=max_tool_calls,
