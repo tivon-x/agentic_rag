@@ -11,6 +11,7 @@ from indexing.token_count import estimate_token_count
 
 
 _WORD_RE = re.compile(r"[\w\u4e00-\u9fff]+", re.UNICODE)
+_CAMEL_BOUNDARY_RE = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 
 
 @dataclass
@@ -78,28 +79,40 @@ def normalize_text(text: str) -> str:
 
 
 def query_terms(text: str) -> set[str]:
-    return {term.casefold() for term in _WORD_RE.findall(text) if term.strip()}
+    expanded_text = _CAMEL_BOUNDARY_RE.sub(" ", text)
+    return {term.casefold() for term in _WORD_RE.findall(expanded_text) if term.strip()}
 
 
-def corpus_terms(corpus_profile: dict[str, Any] | None) -> set[str]:
+def profile_terms(
+    corpus_profile: dict[str, Any] | None,
+    *,
+    keys: tuple[str, ...],
+) -> set[str]:
     if not corpus_profile:
         return set()
 
     values: list[str] = []
-    for key in (
-        "name",
-        "summary",
-        "coverage",
-        "usage_notes",
-        "domain_keywords",
-        "primary_entities",
-    ):
+    for key in keys:
         value = corpus_profile.get(key, "")
         if isinstance(value, list):
             values.extend(str(item) for item in value)
         else:
             values.append(str(value))
     return query_terms(" ".join(values))
+
+
+def corpus_terms(corpus_profile: dict[str, Any] | None) -> set[str]:
+    return profile_terms(
+        corpus_profile,
+        keys=(
+            "name",
+            "summary",
+            "coverage",
+            "usage_notes",
+            "domain_keywords",
+            "primary_entities",
+        ),
+    )
 
 
 def lexical_overlap_score(query: str, text: str) -> float:

@@ -23,6 +23,7 @@ class GraphState(MessagesState):
     routingDecision: str
     routingReason: str
     corpusProfile: str
+    corpusProfileData: dict
     conversation_summary: str
     originalQuery: str
     queryPlan: dict

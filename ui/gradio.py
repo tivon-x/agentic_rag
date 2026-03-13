@@ -33,6 +33,11 @@ _CACHE: dict[str, object] = {"graph": None, "fingerprint": None}
 SUPPORTED_SOURCE_TYPES = [".pdf", ".md", ".txt"]
 
 
+def _split_profile_values(text: str) -> list[str]:
+    items = [part.strip() for part in text.replace(";", "\n").splitlines()]
+    return [item for item in items if item]
+
+
 
 def _fingerprint(settings: AppSettings) -> str:
     return (
@@ -222,11 +227,49 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                         placeholder="说明适合回答哪些问题，不适合回答哪些问题。",
                         value=str(existing_profile.get("coverage", "")),
                     )
+                    kb_non_coverage = gr.Textbox(
+                        label="不覆盖范围",
+                        lines=2,
+                        placeholder="例如：通用百科、财务数据、未上传资料对应的问题。",
+                        value=str(existing_profile.get("non_coverage", "")),
+                    )
                     kb_usage_notes = gr.Textbox(
                         label="使用说明",
                         lines=2,
                         placeholder="例如：优先回答产品实现、架构设计和 API 细节，不回答通用百科问题。",
                         value=str(existing_profile.get("usage_notes", "")),
+                    )
+                    kb_domain_keywords = gr.Textbox(
+                        label="领域关键词",
+                        lines=2,
+                        placeholder="每行一个，或用分号分隔。",
+                        value="\n".join(existing_profile.get("domain_keywords", [])),
+                    )
+                    kb_primary_entities = gr.Textbox(
+                        label="核心实体",
+                        lines=2,
+                        placeholder="每行一个，或用分号分隔。",
+                        value="\n".join(existing_profile.get("primary_entities", [])),
+                    )
+                    kb_recommended_questions = gr.Textbox(
+                        label="推荐提问",
+                        lines=2,
+                        placeholder="每行一个，列出这套知识库最适合回答的问题。",
+                        value="\n".join(
+                            existing_profile.get("recommended_questions", [])
+                        ),
+                    )
+                    kb_forbidden_questions = gr.Textbox(
+                        label="禁止/不建议问题",
+                        lines=2,
+                        placeholder="每行一个，列出明确超范围的问题类型。",
+                        value="\n".join(existing_profile.get("forbidden_questions", [])),
+                    )
+                    kb_answer_style = gr.Textbox(
+                        label="偏好回答风格",
+                        lines=2,
+                        placeholder="例如：先给结论，再列证据，保持实现导向。",
+                        value=str(existing_profile.get("preferred_answer_style", "")),
                     )
 
                     gr.Markdown("<div class='section-title'>2. 导入知识源</div>")
@@ -256,7 +299,13 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                         corpus_name: str,
                         corpus_summary: str,
                         corpus_coverage: str,
+                        corpus_non_coverage: str,
                         corpus_usage_notes: str,
+                        corpus_domain_keywords: str,
+                        corpus_primary_entities: str,
+                        corpus_recommended_questions: str,
+                        corpus_forbidden_questions: str,
+                        corpus_answer_style: str,
                         file_paths: list[str] | None,
                         progress=gr.Progress(),
                     ):
@@ -272,8 +321,18 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                             name=corpus_name,
                             summary=corpus_summary,
                             coverage=corpus_coverage,
+                            non_coverage=corpus_non_coverage,
                             usage_notes=corpus_usage_notes,
                             source_examples=source_examples,
+                            domain_keywords=_split_profile_values(corpus_domain_keywords),
+                            primary_entities=_split_profile_values(corpus_primary_entities),
+                            recommended_questions=_split_profile_values(
+                                corpus_recommended_questions
+                            ),
+                            forbidden_questions=_split_profile_values(
+                                corpus_forbidden_questions
+                            ),
+                            preferred_answer_style=corpus_answer_style,
                         )
 
                         out_lines = [f"已保存知识库画像: {profile_path}"]
@@ -305,7 +364,19 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
 
                     index_btn.click(
                         do_index,
-                        inputs=[kb_name, kb_summary, kb_coverage, kb_usage_notes, files],
+                        inputs=[
+                            kb_name,
+                            kb_summary,
+                            kb_coverage,
+                            kb_non_coverage,
+                            kb_usage_notes,
+                            kb_domain_keywords,
+                            kb_primary_entities,
+                            kb_recommended_questions,
+                            kb_forbidden_questions,
+                            kb_answer_style,
+                            files,
+                        ],
                         outputs=[status, corpus_profile_box],
                     )
                     refresh_profile_btn.click(

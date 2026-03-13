@@ -76,5 +76,8 @@ def build_graph(settings: AppSettings):
     tool_factory = ToolFactory(retriever)
     tools = tool_factory.create_tools()
     return create_agent_graph(
-        tools, corpus_profile=corpus_profile_context, tool_factory=tool_factory
+        tools,
+        corpus_profile=corpus_profile_context,
+        corpus_profile_data=corpus_profile,
+        tool_factory=tool_factory,
     )

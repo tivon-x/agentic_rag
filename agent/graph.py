@@ -19,14 +19,22 @@ from agent.states import GraphState
 
 
 
-def create_agent_graph(tools_list, corpus_profile: str = "", tool_factory=None):
+def create_agent_graph(
+    tools_list,
+    corpus_profile: str = "",
+    corpus_profile_data: dict | None = None,
+    tool_factory=None,
+):
     logger = logging.getLogger(__name__)
 
     agent_subgraph = create_research_search_agent(tools_list, tool_factory=tool_factory)
     checkpointer = InMemorySaver()
 
     graph_builder = StateGraph(GraphState)
-    graph_builder.add_node("inject_corpus_profile", inject_corpus_profile(corpus_profile))
+    graph_builder.add_node(
+        "inject_corpus_profile",
+        inject_corpus_profile(corpus_profile, corpus_profile_data or {}),
+    )
     graph_builder.add_node("summarize_history", summarize_history)
     graph_builder.add_node("decide_retrieval", decide_retrieval)
     graph_builder.add_node("direct_answer", direct_answer)

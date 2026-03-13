@@ -9,6 +9,12 @@ from agent.prompts import (
     get_retrieval_decision_prompt,
     get_rewrite_query_prompt,
 )
+from core.corpus_profile import (
+    analyze_corpus_profile_match,
+    apply_profile_query_plan_prior,
+    build_answer_style_instruction,
+    expand_queries_with_corpus_profile,
+)
 from core.rag_answer import render_grounded_answer, render_out_of_scope_answer
 from llms.llm import get_llm_by_type
 
@@ -17,9 +23,15 @@ from .states import GraphState
 
 
 
-def inject_corpus_profile(corpus_profile: str):
+def inject_corpus_profile(
+    corpus_profile: str,
+    corpus_profile_data: dict | None = None,
+):
     def _inject(_: GraphState):
-        return {"corpusProfile": corpus_profile}
+        return {
+            "corpusProfile": corpus_profile,
+            "corpusProfileData": dict(corpus_profile_data or {}),
+        }
 
     return _inject
 
@@ -66,10 +78,25 @@ def decide_retrieval(state: GraphState):
     last_message = state["messages"][-1]
     conversation_summary = state.get("conversation_summary", "")
     corpus_profile = state.get("corpusProfile", "")
+    corpus_profile_data = state.get("corpusProfileData", {})
+    profile_match = analyze_corpus_profile_match(
+        str(last_message.content),
+        corpus_profile_data,
+    )
+
+    if profile_match["force_out_of_scope"]:
+        return {
+            "routingDecision": "out_of_scope",
+            "routingReason": profile_match["reason"]
+            or "The query matches the corpus profile's explicit non-coverage boundary.",
+            "originalQuery": last_message.content,
+        }
 
     sections = []
     if corpus_profile.strip():
         sections.append(f"Knowledge Base Profile:\n{corpus_profile}")
+    if profile_match["reason"]:
+        sections.append(f"Corpus Profile Prior:\n{profile_match['reason']}")
     if conversation_summary.strip():
         sections.append(f"Conversation Summary:\n{conversation_summary}")
     sections.append(f"Latest User Message:\n{last_message.content}")
@@ -105,6 +132,8 @@ def rewrite_query(state: GraphState):
     last_message = state["messages"][-1]
     conversation_summary = state.get("conversation_summary", "")
     query_plan = state.get("queryPlan", {})
+    corpus_profile = state.get("corpusProfile", "")
+    corpus_profile_data = state.get("corpusProfileData", {})
     seed_queries = [
         str(item).strip()
         for item in query_plan.get("subqueries", [])
@@ -120,11 +149,13 @@ def rewrite_query(state: GraphState):
 
     questions: list[str] = []
     for seed_query in seed_queries[:3]:
-        context_section = (
-            f"Conversation Context:\n{conversation_summary}\n"
-            if conversation_summary.strip()
-            else ""
-        ) + f"User Query:\n{seed_query}\n"
+        sections = []
+        if corpus_profile.strip():
+            sections.append(f"Knowledge Base Profile:\n{corpus_profile}")
+        if conversation_summary.strip():
+            sections.append(f"Conversation Context:\n{conversation_summary}")
+        sections.append(f"User Query:\n{seed_query}")
+        context_section = "\n\n".join(sections) + "\n"
         try:
             response = llm_with_structure.invoke(
                 [
@@ -139,6 +170,13 @@ def rewrite_query(state: GraphState):
     if not questions:
         questions = [last_message.content]
 
+    questions = expand_queries_with_corpus_profile(
+        questions,
+        original_query=str(last_message.content),
+        query_plan=query_plan,
+        profile=corpus_profile_data,
+    )
+
     return {
         "rewrittenQuestions": list(dict.fromkeys(questions))[:3],
         "originalQuery": last_message.content,
@@ -148,6 +186,7 @@ def plan_query(state: GraphState):
     original_query = state.get("originalQuery") or state["messages"][-1].content
     conversation_summary = state.get("conversation_summary", "")
     corpus_profile = state.get("corpusProfile", "")
+    corpus_profile_data = state.get("corpusProfileData", {})
 
     sections = []
     if corpus_profile.strip():
@@ -175,7 +214,14 @@ def plan_query(state: GraphState):
             preferred_node_types=["paragraph"],
         )
 
-    return {"queryPlan": plan.model_dump(), "originalQuery": original_query}
+    return {
+        "queryPlan": apply_profile_query_plan_prior(
+            plan.model_dump(),
+            original_query=str(original_query),
+            profile=corpus_profile_data,
+        ),
+        "originalQuery": original_query,
+    }
 
 
 
@@ -265,13 +311,20 @@ def aggregate_answers(state: GraphState):
     }
 
     llm = get_llm_by_type("aggregate_answers")
+    preferred_answer_style = build_answer_style_instruction(
+        state.get("corpusProfileData", {})
+    )
     try:
         structured_llm = llm.with_config(temperature=0).with_structured_output(
             GroundedAnswer
         )
         grounded_answer = structured_llm.invoke(
             [
-                SystemMessage(content=get_aggregation_prompt()),
+                SystemMessage(
+                    content=get_aggregation_prompt(
+                        preferred_answer_style=preferred_answer_style,
+                    )
+                ),
                 HumanMessage(content=str(payload)),
             ]
         ).model_dump()

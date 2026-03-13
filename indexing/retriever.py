@@ -18,6 +18,7 @@ from indexing.retrieval_pipeline import (
     merge_documents,
     normalize_query_plan,
     normalize_text,
+    profile_terms,
     query_terms,
 )
 from indexing.token_count import estimate_token_count
@@ -221,7 +222,19 @@ class FusionRetriever(BaseRetriever):
         query_plan: dict[str, Any],
     ) -> tuple[list[RetrievalCandidate], dict[str, Any]]:
         q_terms = query_terms(query)
-        profile_terms = corpus_terms(self.corpus_profile)
+        coverage_terms = corpus_terms(self.corpus_profile)
+        domain_keyword_terms = profile_terms(
+            self.corpus_profile,
+            keys=("domain_keywords",),
+        )
+        primary_entity_terms = profile_terms(
+            self.corpus_profile,
+            keys=("primary_entities",),
+        )
+        non_coverage_terms = profile_terms(
+            self.corpus_profile,
+            keys=("non_coverage", "forbidden_questions"),
+        )
         preferred_node_types = set(query_plan.get("preferred_node_types", []))
 
         for candidate in candidates:
@@ -253,10 +266,37 @@ class FusionRetriever(BaseRetriever):
             if preferred_node_types and str(metadata.get("node_type", "")) in preferred_node_types:
                 candidate.boosts["node_type_match"] = 0.08
 
-            if profile_terms and searchable_terms:
-                overlap = len(profile_terms & searchable_terms) / max(len(profile_terms), 1)
+            if coverage_terms and searchable_terms:
+                overlap = len(coverage_terms & searchable_terms) / max(len(coverage_terms), 1)
                 if overlap > 0:
                     candidate.boosts["corpus_profile"] = round(min(0.12, overlap), 4)
+
+            if domain_keyword_terms and searchable_terms:
+                overlap = len(domain_keyword_terms & searchable_terms) / max(
+                    len(domain_keyword_terms),
+                    1,
+                )
+                if overlap > 0:
+                    candidate.boosts["domain_keyword"] = round(min(0.08, overlap), 4)
+
+            if primary_entity_terms and searchable_terms:
+                overlap = len(primary_entity_terms & searchable_terms) / max(
+                    len(primary_entity_terms),
+                    1,
+                )
+                if overlap > 0:
+                    candidate.boosts["primary_entity"] = round(min(0.1, overlap), 4)
+
+            if non_coverage_terms and searchable_terms and not (q_terms & searchable_terms):
+                overlap = len(non_coverage_terms & searchable_terms) / max(
+                    len(non_coverage_terms),
+                    1,
+                )
+                if overlap > 0:
+                    candidate.boosts["non_coverage_penalty"] = round(
+                        -min(0.12, overlap),
+                        4,
+                    )
 
         reranked = sorted(candidates, key=lambda item: item.final_score, reverse=True)
         flashrank_debug = {"enabled": False}

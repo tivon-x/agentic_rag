@@ -63,6 +63,7 @@ Rules:
 5. Correct grammar, spelling, and unclear abbreviations without altering meaning.
 6. If the user asks multiple distinct questions, split them into separate queries (up to the 3-query limit).
 7. Do not add facts, assumptions, or interpretations not present in the user query or conversation summary.
+8. When the knowledge-base profile provides domain keywords or primary entities that clearly match the query, keep them explicit in the rewritten queries.
 
 Output: Return ONLY the list of rewritten queries — no explanations, no numbering prose.
 """ 
@@ -85,7 +86,8 @@ Rules:
 4. Choose preferred node types from document, section, paragraph.
 5. Use section for overview/comparison style questions when broader context helps.
 6. Use paragraph for precise factual lookups.
-7. Do not answer the question. Return only the structured plan.
+7. Use matching domain keywords and primary entities from the knowledge-base profile as retrieval priors when they help disambiguate the query.
+8. Do not answer the question. Return only the structured plan.
 """
 
 
@@ -197,8 +199,13 @@ Required structure:
 """
 
 
-def get_aggregation_prompt() -> str:
-    return """You are a grounded answer synthesis assistant.
+def get_aggregation_prompt(preferred_answer_style: str = "") -> str:
+    style_rule = (
+        f"\n8. When possible, present the answer in this preferred style: {preferred_answer_style.strip()}."
+        if preferred_answer_style.strip()
+        else ""
+    )
+    return f"""You are a grounded answer synthesis assistant.
 
 Your task is to answer the user's question using ONLY the structured evidence provided.
 
@@ -211,5 +218,5 @@ Rules:
    - higher when multiple evidence items agree and directly answer the question
    - lower when evidence is sparse, indirect, or fragmented
 6. Choose the most relevant evidence items for the final evidence field. Keep them citation-ready and traceable.
-7. Return ONLY the structured answer.
+7. Return ONLY the structured answer.{style_rule}
 """

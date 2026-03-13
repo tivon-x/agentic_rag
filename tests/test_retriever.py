@@ -4,7 +4,7 @@ import json
 
 import pytest
 from langchain_core.documents import Document
-from indexing.retrieval_pipeline import PackedContext
+from indexing.retrieval_pipeline import PackedContext, RetrievalCandidate
 from indexing.bm25_index import create_bm25_bundle
 from indexing.retriever import BM25Retriever, FusionRetriever
 from indexing.embeddings import FakeEmbeddings
@@ -431,3 +431,45 @@ def test_tool_factory_passes_active_query_plan_to_retriever():
             {"intent": "summary", "preferred_node_types": ["section", "paragraph"]},
         )
     ]
+
+
+def test_fusion_retriever_rerank_uses_corpus_profile_priors(vector_store, bm25_bundle):
+    retriever = FusionRetriever(
+        vectorstore=vector_store,
+        bm25=bm25_bundle,
+        k=2,
+        alpha=0.5,
+        fetch_k=5,
+        reranker_backend="none",
+        corpus_profile={
+            "domain_keywords": ["rerank"],
+            "primary_entities": ["FusionRetriever"],
+            "non_coverage": "finance and stock prices",
+        },
+    )
+    candidates = [
+        RetrievalCandidate(
+            document=Document(
+                page_content="FusionRetriever applies rerank to retrieval candidates.",
+                metadata={"node_id": "good", "node_type": "paragraph"},
+            ),
+            score=0.2,
+        ),
+        RetrievalCandidate(
+            document=Document(
+                page_content="Stock prices and finance forecasts belong elsewhere.",
+                metadata={"node_id": "bad", "node_type": "paragraph"},
+            ),
+            score=0.2,
+        ),
+    ]
+
+    reranked, debug = retriever._rerank_candidates(
+        "How does rerank work in FusionRetriever?",
+        candidates,
+        {"preferred_node_types": ["paragraph"]},
+    )
+
+    assert reranked[0].document.metadata["node_id"] == "good"
+    assert "primary_entity" in reranked[0].boosts
+    assert debug["top_candidates"][0]["node_id"] == "good"
