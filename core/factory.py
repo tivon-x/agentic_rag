@@ -10,6 +10,7 @@ from core.persistence import load_bm25_bundle
 from core.settings import AppSettings
 from indexing.indexer import Indexer
 from indexing.retriever import FusionRetriever
+from indexing.stores.node_store import JsonNodeStore
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,23 @@ def build_retriever(settings: AppSettings) -> FusionRetriever | None:
     retr_cfg = cfg.get("retriever", {})
     k = int(retr_cfg.get("k", settings.retriever_k))
     alpha = float(retr_cfg.get("alpha", settings.fusion_alpha))
+    node_store = None
+    if settings.nodes_path.exists() and settings.doc_trees_path.exists():
+        node_store = JsonNodeStore(settings.nodes_path, settings.doc_trees_path)
+    corpus_profile = load_corpus_profile(settings.index_dir)
     return FusionRetriever(
-        vectorstore=indexer.vector_store, bm25=bm25, alpha=alpha, k=k
+        vectorstore=indexer.vector_store,
+        bm25=bm25,
+        alpha=alpha,
+        k=k,
+        reranker_backend=str(retr_cfg.get("reranker_backend", settings.reranker_backend)),
+        flashrank_model=str(retr_cfg.get("flashrank_model", settings.flashrank_model)),
+        flashrank_cache_dir=str(
+            retr_cfg.get("flashrank_cache_dir", settings.flashrank_cache_dir)
+        ),
+        flashrank_top_n=int(retr_cfg.get("flashrank_top_n", settings.flashrank_top_n)),
+        node_store=node_store,
+        corpus_profile=corpus_profile,
     )
 
 
@@ -57,5 +73,8 @@ def build_graph(settings: AppSettings):
     corpus_profile = load_corpus_profile(settings.index_dir)
     corpus_profile_context = build_corpus_profile_context(corpus_profile)
 
-    tools = ToolFactory(retriever).create_tools()
-    return create_agent_graph(tools, corpus_profile=corpus_profile_context)
+    tool_factory = ToolFactory(retriever)
+    tools = tool_factory.create_tools()
+    return create_agent_graph(
+        tools, corpus_profile=corpus_profile_context, tool_factory=tool_factory
+    )

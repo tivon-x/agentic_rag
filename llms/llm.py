@@ -10,15 +10,6 @@ ChatModel: TypeAlias = ChatOpenAI
 _LLM_ROUTER_CONFIG: dict[str, Any] | None = None
 _LLM_CACHE: dict[str, ChatModel] = {}
 
-_TASK_ALIASES = {
-    "summarize_history": "summarize",
-    "decide_retrieval": "decision",
-    "rewrite_query": "rewrite",
-    "direct_answer": "direct",
-    "out_of_scope_answer": "out_of_scope",
-    "aggregate_answers": "aggregate",
-}
-
 
 def _build_chat_model(model: str, api_key: str, api_base: str, model_config: dict) -> ChatModel:
     return ChatOpenAI(
@@ -65,6 +56,7 @@ def _task_model_map_from_env() -> dict[str, str]:
     mapping = {
         "summarize_history": os.getenv("LLM_MODEL_SUMMARIZE_HISTORY", "").strip(),
         "decide_retrieval": os.getenv("LLM_MODEL_DECIDE_RETRIEVAL", "").strip(),
+        "plan_query": os.getenv("LLM_MODEL_PLAN_QUERY", "").strip(),
         "rewrite_query": os.getenv("LLM_MODEL_REWRITE_QUERY", "").strip(),
         "direct_answer": os.getenv("LLM_MODEL_DIRECT_ANSWER", "").strip(),
         "out_of_scope_answer": os.getenv("LLM_MODEL_OUT_OF_SCOPE_ANSWER", "").strip(),
@@ -109,10 +101,6 @@ def get_llm_by_type(task_type: str, config: dict | None = None) -> ChatModel | N
     task_models = resolved_cfg.get("task_models", {}) or {}
 
     selected_model = task_models.get(task_type)
-    if not selected_model:
-        alias = _TASK_ALIASES.get(task_type)
-        if alias:
-            selected_model = task_models.get(alias)
     if not selected_model:
         selected_model = model
 

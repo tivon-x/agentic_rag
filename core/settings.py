@@ -86,6 +86,10 @@ class AppSettings:
 
     retriever_k: int = 10
     fusion_alpha: float = 0.5
+    reranker_backend: str = "flashrank"
+    flashrank_model: str = "ms-marco-TinyBERT-L-2-v2"
+    flashrank_cache_dir: str = ""
+    flashrank_top_n: int = 10
 
     max_tool_calls: int = 8
     max_iterations: int = 10
@@ -131,7 +135,14 @@ class AppSettings:
             "bm25_path": str(self.bm25_path),
             "nodes_path": str(self.nodes_path),
             "doc_trees_path": str(self.doc_trees_path),
-            "retriever": {"k": self.retriever_k, "alpha": self.fusion_alpha},
+            "retriever": {
+                "k": self.retriever_k,
+                "alpha": self.fusion_alpha,
+                "reranker_backend": self.reranker_backend,
+                "flashrank_model": self.flashrank_model,
+                "flashrank_cache_dir": self.flashrank_cache_dir,
+                "flashrank_top_n": self.flashrank_top_n,
+            },
         }
 
 
@@ -223,6 +234,13 @@ def load_settings(
 
     retriever_k = _get_env_int("RETRIEVER_K") or 10
     fusion_alpha = _get_env_float("FUSION_ALPHA")
+    reranker_backend = _get_env("RERANKER_BACKEND", default="flashrank") or "flashrank"
+    flashrank_model = (
+        _get_env("FLASHRANK_MODEL", default="ms-marco-TinyBERT-L-2-v2")
+        or "ms-marco-TinyBERT-L-2-v2"
+    )
+    flashrank_cache_dir = _get_env("FLASHRANK_CACHE_DIR", default="") or ""
+    flashrank_top_n = _get_env_int("FLASHRANK_TOP_N") or retriever_k
 
     max_tool_calls = _get_env_int("MAX_TOOL_CALLS") or 8
     max_iterations = _get_env_int("MAX_ITERATIONS") or 10
@@ -257,6 +275,10 @@ def load_settings(
         parent_embed_pooling=parent_embed_pooling,
         retriever_k=retriever_k,
         fusion_alpha=fusion_alpha if fusion_alpha is not None else 0.5,
+        reranker_backend=reranker_backend,
+        flashrank_model=flashrank_model,
+        flashrank_cache_dir=flashrank_cache_dir,
+        flashrank_top_n=flashrank_top_n,
         max_tool_calls=max_tool_calls,
         max_iterations=max_iterations,
         max_context_tokens=max_context_tokens,

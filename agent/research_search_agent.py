@@ -27,6 +27,61 @@ from core.config import KEEP_MESSAGES, MAX_CONTEXT_TOKENS, MAX_ITERATIONS, MAX_T
 from llms.llm import get_llm_by_type
 
 
+class QueryPlanMiddleware(AgentMiddleware):
+    """Expose graph-level query planning to tool calls via ToolFactory context."""
+
+    def __init__(self, tool_factory):
+        self.tool_factory = tool_factory
+
+    def wrap_model_call(
+        self, request: ModelRequest, handler: Callable[[ModelRequest], ModelResponse]
+    ) -> ModelResponse:
+        token = self.tool_factory.set_active_query_plan(
+            request.state.get("query_plan", {})
+        )
+        try:
+            return handler(request)
+        finally:
+            self.tool_factory.reset_active_query_plan(token)
+
+    async def awrap_model_call(
+        self,
+        request: ModelRequest,
+        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
+    ) -> ModelResponse:
+        token = self.tool_factory.set_active_query_plan(
+            request.state.get("query_plan", {})
+        )
+        try:
+            return await handler(request)
+        finally:
+            self.tool_factory.reset_active_query_plan(token)
+
+    def wrap_tool_call(
+        self,
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], ToolMessage | Command[Any]],
+    ) -> ToolMessage | Command[Any]:
+        state = request.state if isinstance(request.state, dict) else {}
+        token = self.tool_factory.set_active_query_plan(state.get("query_plan", {}))
+        try:
+            return handler(request)
+        finally:
+            self.tool_factory.reset_active_query_plan(token)
+
+    async def awrap_tool_call(
+        self,
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command[Any]]],
+    ) -> ToolMessage | Command[Any]:
+        state = request.state if isinstance(request.state, dict) else {}
+        token = self.tool_factory.set_active_query_plan(state.get("query_plan", {}))
+        try:
+            return await handler(request)
+        finally:
+            self.tool_factory.reset_active_query_plan(token)
+
+
 class FallbackMiddleware(AgentMiddleware):
     """Guardrails for iteration/tool-call limits with a fallback final answer."""
 
@@ -151,7 +206,7 @@ def collect_answer(state: AgentState, runtime: Runtime) -> dict | None:
     }
 
 
-def create_research_search_agent(tools):
+def create_research_search_agent(tools, tool_factory=None):
     llm = get_llm_by_type("research_search")
 
     summarization_middleware = SummarizationMiddleware(
@@ -162,11 +217,14 @@ def create_research_search_agent(tools):
     fallback_middleware = FallbackMiddleware(
         model=llm, max_iterations=MAX_ITERATIONS, max_tool_calls=MAX_TOOL_CALLS
     )
+    middleware = [summarization_middleware, fallback_middleware]
+    if tool_factory is not None:
+        middleware.insert(0, QueryPlanMiddleware(tool_factory))
 
     return create_agent(
         model=llm,
         tools=tools,
         system_prompt=get_research_search_prompt(),
-        middleware=[summarization_middleware, fallback_middleware, collect_answer],
+        middleware=[*middleware, collect_answer],
         state_schema=ResearchSearchState,
     )

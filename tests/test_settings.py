@@ -38,6 +38,9 @@ def test_load_settings_defaults(tmp_path, monkeypatch):
     assert settings.parent_embed_pooling == "mean"
     assert settings.retriever_k == 10
     assert settings.fusion_alpha == 0.5
+    assert settings.reranker_backend == "flashrank"
+    assert settings.flashrank_model == "ms-marco-TinyBERT-L-2-v2"
+    assert settings.flashrank_top_n == 10
     assert settings.max_tool_calls == 8
     assert settings.max_iterations == 10
     assert settings.max_context_tokens == 5000
@@ -61,6 +64,7 @@ def test_load_settings_from_env(tmp_env_file, monkeypatch):
     assert settings.log_level == "DEBUG"
     assert settings.chunker_params == {"chunk_size": 256, "chunk_overlap": 32}
     assert settings.retriever_k == 5
+    assert settings.flashrank_top_n == 5
 
 
 def test_is_offline_mode(monkeypatch):
@@ -197,6 +201,7 @@ def test_app_settings_methods(tmp_path):
     assert indexer_config["parent_embed_pooling"] == "mean"
     assert indexer_config["retriever"]["k"] == 15
     assert indexer_config["retriever"]["alpha"] == 0.6
+    assert indexer_config["retriever"]["reranker_backend"] == "flashrank"
 
     # Test ensure_dirs
     settings.ensure_dirs()

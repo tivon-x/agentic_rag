@@ -1,6 +1,6 @@
 """Tests for agent schemas module."""
 
-from agent.schemas import QueryAnalysis
+from agent.schemas import QueryAnalysis, QueryPlan
 
 
 def test_query_analysis_valid():
@@ -81,3 +81,16 @@ def test_query_analysis_multiple_questions():
 
     assert len(analysis.questions) == 3
     assert all(q in analysis.questions for q in questions)
+
+
+def test_query_plan_serialization():
+    plan = QueryPlan(
+        intent="summary",
+        subqueries=["retrieval pipeline", "dedupe rerank"],
+        preferred_node_types=["section", "paragraph"],
+    )
+
+    payload = plan.model_dump()
+
+    assert payload["intent"] == "summary"
+    assert payload["preferred_node_types"] == ["section", "paragraph"]

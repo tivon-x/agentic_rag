@@ -65,6 +65,27 @@ Rules:
 7. Do not add facts, assumptions, or interpretations not present in the user query or conversation summary.
 
 Output: Return ONLY the list of rewritten queries — no explanations, no numbering prose.
+""" 
+
+
+def get_plan_query_prompt() -> str:
+    return """You are a retrieval query planner for a hierarchical RAG system.
+
+Your task is to analyze the user's latest question together with any conversation summary and knowledge-base profile, then produce a compact retrieval plan.
+
+Rules:
+1. Choose exactly one intent:
+   - fact
+   - summary
+   - compare
+   - multi_hop
+   - definition
+2. Produce 1 to 3 focused subqueries for retrieval.
+3. Prefer concise, self-contained subqueries that preserve the user's named entities and technical terms.
+4. Choose preferred node types from document, section, paragraph.
+5. Use section for overview/comparison style questions when broader context helps.
+6. Use paragraph for precise factual lookups.
+7. Do not answer the question. Return only the structured plan.
 """
 
 

@@ -5,12 +5,13 @@ from agent.prompts import (
     get_conversation_summary_prompt,
     get_direct_answer_prompt,
     get_out_of_scope_prompt,
+    get_plan_query_prompt,
     get_retrieval_decision_prompt,
     get_rewrite_query_prompt,
 )
 from llms.llm import get_llm_by_type
 
-from .schemas import QueryAnalysis, RetrievalDecision
+from .schemas import QueryAnalysis, QueryPlan, RetrievalDecision
 from .states import GraphState
 
 
@@ -98,36 +99,78 @@ def decide_retrieval(state: GraphState):
 def rewrite_query(state: GraphState):
     last_message = state["messages"][-1]
     conversation_summary = state.get("conversation_summary", "")
-
-    context_section = (
-        f"Conversation Context:\n{conversation_summary}\n"
-        if conversation_summary.strip()
-        else ""
-    ) + f"User Query:\n{last_message.content}\n"
+    query_plan = state.get("queryPlan", {})
+    seed_queries = [
+        str(item).strip()
+        for item in query_plan.get("subqueries", [])
+        if str(item).strip()
+    ]
+    if not seed_queries:
+        seed_queries = [last_message.content]
 
     llm = get_llm_by_type("rewrite_query")
     llm_with_structure = llm.with_config(temperature=0.1).with_structured_output(
         QueryAnalysis
     )
 
-    try:
-        response = llm_with_structure.invoke(
-            [
-                SystemMessage(content=get_rewrite_query_prompt()),
-                HumanMessage(content=context_section),
-            ]
-        )
-        questions = [q.strip() for q in response.questions if q and q.strip()]
-    except Exception:
-        questions = []
+    questions: list[str] = []
+    for seed_query in seed_queries[:3]:
+        context_section = (
+            f"Conversation Context:\n{conversation_summary}\n"
+            if conversation_summary.strip()
+            else ""
+        ) + f"User Query:\n{seed_query}\n"
+        try:
+            response = llm_with_structure.invoke(
+                [
+                    SystemMessage(content=get_rewrite_query_prompt()),
+                    HumanMessage(content=context_section),
+                ]
+            )
+            questions.extend(q.strip() for q in response.questions if q and q.strip())
+        except Exception:
+            questions.append(seed_query)
 
     if not questions:
         questions = [last_message.content]
 
     return {
-        "rewrittenQuestions": questions[:3],
+        "rewrittenQuestions": list(dict.fromkeys(questions))[:3],
         "originalQuery": last_message.content,
     }
+
+def plan_query(state: GraphState):
+    original_query = state.get("originalQuery") or state["messages"][-1].content
+    conversation_summary = state.get("conversation_summary", "")
+    corpus_profile = state.get("corpusProfile", "")
+
+    sections = []
+    if corpus_profile.strip():
+        sections.append(f"Knowledge Base Profile:\n{corpus_profile}")
+    if conversation_summary.strip():
+        sections.append(f"Conversation Summary:\n{conversation_summary}")
+    sections.append(f"Latest User Message:\n{original_query}")
+    planner_input = "\n\n".join(sections)
+
+    try:
+        llm = get_llm_by_type("plan_query")
+        structured_llm = llm.with_config(temperature=0).with_structured_output(
+            QueryPlan
+        )
+        plan = structured_llm.invoke(
+            [
+                SystemMessage(content=get_plan_query_prompt()),
+                HumanMessage(content=planner_input),
+            ]
+        )
+    except Exception:
+        plan = QueryPlan(
+            intent="fact",
+            subqueries=[original_query],
+            preferred_node_types=["paragraph"],
+        )
+
+    return {"queryPlan": plan.model_dump(), "originalQuery": original_query}
 
 
 

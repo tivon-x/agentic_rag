@@ -25,6 +25,7 @@ class GraphState(MessagesState):
     corpusProfile: str
     conversation_summary: str
     originalQuery: str
+    queryPlan: dict
     rewrittenQuestions: list[str]
     agent_answers: Annotated[list[dict], accumulate_or_reset]
 
@@ -34,6 +35,7 @@ class ResearchSearchState(AgentState):
 
     question: str
     question_index: int
+    query_plan: dict
     context_summary: str
     retrieval_keys: Annotated[set[str], set_union]
     final_answer: str
