@@ -1,5 +1,5 @@
-from typing import Annotated
 import operator
+from typing import Annotated
 
 from langchain.agents import AgentState
 from langgraph.graph import MessagesState
@@ -28,6 +28,10 @@ class GraphState(MessagesState):
     queryPlan: dict
     rewrittenQuestions: list[str]
     agent_answers: Annotated[list[dict], accumulate_or_reset]
+    retrievalEvidence: Annotated[list[dict], accumulate_or_reset]
+    packedContexts: Annotated[list[dict], accumulate_or_reset]
+    evidenceGroups: Annotated[list[dict], accumulate_or_reset]
+    groundedAnswer: dict
 
 
 class ResearchSearchState(AgentState):
@@ -40,5 +44,8 @@ class ResearchSearchState(AgentState):
     retrieval_keys: Annotated[set[str], set_union]
     final_answer: str
     agent_answers: list[dict]
+    retrievalEvidence: Annotated[list[dict], accumulate_or_reset]
+    packedContexts: Annotated[list[dict], accumulate_or_reset]
+    evidenceGroups: Annotated[list[dict], accumulate_or_reset]
     tool_call_count: Annotated[int, operator.add]
     iteration_count: Annotated[int, operator.add]

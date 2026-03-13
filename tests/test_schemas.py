@@ -1,6 +1,6 @@
 """Tests for agent schemas module."""
 
-from agent.schemas import QueryAnalysis, QueryPlan
+from agent.schemas import EvidenceGroup, GroundedAnswer, QueryAnalysis, QueryPlan
 
 
 def test_query_analysis_valid():
@@ -94,3 +94,39 @@ def test_query_plan_serialization():
 
     assert payload["intent"] == "summary"
     assert payload["preferred_node_types"] == ["section", "paragraph"]
+
+
+def test_grounded_answer_serialization():
+    answer = GroundedAnswer(
+        answer="Structured evidence is now supported.",
+        reasoning_summary="Based on the packed evidence groups.",
+        evidence=[
+            {
+                "doc_id": "doc-1",
+                "node_id": "node-1",
+                "source": "tasks.md",
+                "section_path": ["4.3"],
+                "page": None,
+                "quote": "aggregate_answers should consume structured evidence.",
+                "score": 0.9,
+                "relevance": "Specifies the milestone requirement.",
+            }
+        ],
+        confidence=0.8,
+        limitations="Only milestone docs were considered.",
+    )
+
+    payload = answer.model_dump()
+
+    assert payload["confidence"] == 0.8
+    assert payload["evidence"][0]["source"] == "tasks.md"
+
+
+def test_evidence_group_defaults():
+    group = EvidenceGroup(subquery="aggregate_answers", intent="summary")
+
+    payload = group.model_dump()
+
+    assert payload["packed_context"] == {}
+    assert payload["evidence"] == []
+    assert payload["debug"] == {}

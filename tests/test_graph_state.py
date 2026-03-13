@@ -73,6 +73,15 @@ def test_accumulate_or_reset_empty_new():
     assert result[0] == {"answer": "first"}
 
 
+def test_accumulate_or_reset_supports_evidence_payloads():
+    existing = [{"subquery": "q1", "evidence": [{"node_id": "a"}]}]
+    new = [{"subquery": "q2", "evidence": [{"node_id": "b"}]}]
+
+    result = accumulate_or_reset(existing, new)
+
+    assert [item["subquery"] for item in result] == ["q1", "q2"]
+
+
 def test_accumulate_or_reset_reset_false():
     """Test accumulate_or_reset when __reset__ is explicitly False."""
     existing = [{"answer": "first"}]

@@ -9,9 +9,10 @@ from agent.prompts import (
     get_retrieval_decision_prompt,
     get_rewrite_query_prompt,
 )
+from core.rag_answer import render_grounded_answer, render_out_of_scope_answer
 from llms.llm import get_llm_by_type
 
-from .schemas import QueryAnalysis, QueryPlan, RetrievalDecision
+from .schemas import GroundedAnswer, OutOfScopeResponse, QueryAnalysis, QueryPlan, RetrievalDecision
 from .states import GraphState
 
 
@@ -53,6 +54,10 @@ def summarize_history(state: GraphState):
     return {
         "conversation_summary": summary_response.content,
         "agent_answers": [{"__reset__": True}],
+        "retrievalEvidence": [{"__reset__": True}],
+        "packedContexts": [{"__reset__": True}],
+        "evidenceGroups": [{"__reset__": True}],
+        "groundedAnswer": {},
     }
 
 
@@ -209,31 +214,109 @@ def out_of_scope_answer(state: GraphState):
     user_input = "\n\n".join(sections)
 
     llm = get_llm_by_type("out_of_scope_answer")
-    response = llm.invoke(
-        [
-            SystemMessage(content=get_out_of_scope_prompt()),
-            HumanMessage(content=user_input),
-        ]
-    )
-    return {"messages": [AIMessage(content=response.content)]}
+    try:
+        structured_llm = llm.with_config(temperature=0).with_structured_output(
+            OutOfScopeResponse
+        )
+        response = structured_llm.invoke(
+            [
+                SystemMessage(content=get_out_of_scope_prompt()),
+                HumanMessage(content=user_input),
+            ]
+        )
+        payload = response.model_dump()
+        content = render_out_of_scope_answer(payload)
+    except Exception:
+        payload = {
+            "reason": "This question appears to fall outside the current knowledge base.",
+            "boundary": corpus_profile or "No knowledge-base profile is currently available.",
+            "suggestion": "Try asking about topics explicitly covered by the uploaded documents.",
+            "next_action": "Upload materials related to this topic if you want grounded answers here.",
+        }
+        content = render_out_of_scope_answer(payload)
+    return {"messages": [AIMessage(content=content)]}
 
 
 
 def aggregate_answers(state: GraphState):
-    if not state.get("agent_answers"):
+    evidence_groups = state.get("evidenceGroups", [])
+    if not evidence_groups:
         return {"messages": [AIMessage(content="No answers were generated.")]}
 
-    sorted_answers = sorted(state["agent_answers"], key=lambda x: x["index"])
-
-    formatted_answers = ""
-    for i, ans in enumerate(sorted_answers, start=1):
-        formatted_answers += f"\nAnswer {i}:\n{ans['answer']}\n"
-
-    user_message = HumanMessage(
-        content=f"""Original user question: {state["originalQuery"]}\nRetrieved answers:{formatted_answers}"""
+    packed_contexts = sorted(
+        state.get("packedContexts", []),
+        key=lambda item: str(item.get("subquery", "")),
     )
+    retrieval_evidence = sorted(
+        state.get("retrievalEvidence", []),
+        key=lambda item: str(item.get("subquery", "")),
+    )
+    sorted_groups = sorted(
+        evidence_groups,
+        key=lambda item: str(item.get("subquery", "")),
+    )
+
+    payload = {
+        "question": state.get("originalQuery", ""),
+        "query_plan": state.get("queryPlan", {}),
+        "packed_context": packed_contexts,
+        "evidence_groups": sorted_groups,
+        "retrieval_evidence": retrieval_evidence,
+    }
+
     llm = get_llm_by_type("aggregate_answers")
-    synthesis_response = llm.invoke(
-        [SystemMessage(content=get_aggregation_prompt()), user_message]
-    )
-    return {"messages": [AIMessage(content=synthesis_response.content)]}
+    try:
+        structured_llm = llm.with_config(temperature=0).with_structured_output(
+            GroundedAnswer
+        )
+        grounded_answer = structured_llm.invoke(
+            [
+                SystemMessage(content=get_aggregation_prompt()),
+                HumanMessage(content=str(payload)),
+            ]
+        ).model_dump()
+    except Exception:
+        collected_evidence: list[dict] = []
+        for group in sorted_groups:
+            for item in group.get("evidence", []):
+                collected_evidence.append(item)
+
+        unique_evidence: list[dict] = []
+        seen_keys: set[str] = set()
+        for item in collected_evidence:
+            key = f"{item.get('doc_id', '')}:{item.get('node_id', '')}:{item.get('quote', '')}"
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            unique_evidence.append(item)
+
+        evidence_count = len(unique_evidence)
+        answer = (
+            "I couldn't find any relevant information in the available sources to answer your question."
+            if evidence_count == 0
+            else " ".join(
+                item.get("quote", "").strip()
+                for item in unique_evidence[:3]
+                if item.get("quote", "").strip()
+            ).strip()
+        )
+        grounded_answer = {
+            "answer": answer
+            or "I couldn't find any relevant information in the available sources to answer your question.",
+            "reasoning_summary": (
+                f"Synthesized from {len(sorted_groups)} evidence group(s) and {evidence_count} unique evidence item(s)."
+            ),
+            "evidence": unique_evidence[:5],
+            "confidence": min(0.95, 0.25 + (0.12 * evidence_count)),
+            "limitations": (
+                "Available evidence is limited to the retrieved passages."
+                if evidence_count
+                else "No structured evidence was captured from retrieval."
+            ),
+        }
+
+    content = render_grounded_answer(grounded_answer)
+    return {
+        "groundedAnswer": grounded_answer,
+        "messages": [AIMessage(content=content)],
+    }

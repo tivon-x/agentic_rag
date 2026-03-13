@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+
 from langchain_core.documents import Document
 
 
@@ -71,3 +72,132 @@ def format_retrieval_only_answer(
         lines.append("\n---\n**Sources:**")
         lines.extend([f"- {s}" for s in sources])
     return "\n".join(lines)
+
+
+def render_grounded_answer(payload: dict) -> str:
+    """Render a structured grounded answer payload to Markdown."""
+    answer = str(payload.get("answer", "")).strip()
+    reasoning_summary = str(payload.get("reasoning_summary", "")).strip()
+    limitations = str(payload.get("limitations", "")).strip()
+    confidence = payload.get("confidence")
+    evidence = payload.get("evidence", []) or []
+
+    if not answer:
+        return "I couldn't find any relevant information in the available sources to answer your question."
+
+    lines = [answer]
+
+    if reasoning_summary:
+        lines.extend(["", "## Reasoning summary", reasoning_summary])
+
+    if confidence is not None:
+        try:
+            confidence_pct = round(float(confidence) * 100)
+            lines.extend(["", f"**Confidence:** {confidence_pct}%"])
+        except (TypeError, ValueError):
+            pass
+
+    if limitations:
+        lines.extend(["", "## Limitations", limitations])
+
+    if evidence:
+        lines.extend(["", "## Evidence"])
+        for item in evidence:
+            source = str(item.get("source", "unknown")).strip() or "unknown"
+            doc_id = str(item.get("doc_id", "")).strip()
+            node_id = str(item.get("node_id", "")).strip()
+            page = item.get("page")
+            section_path = item.get("section_path", []) or []
+            location = " > ".join(str(part) for part in section_path if str(part).strip())
+
+            details: list[str] = []
+            if doc_id:
+                details.append(f"doc_id={doc_id}")
+            if node_id:
+                details.append(f"node_id={node_id}")
+            if isinstance(page, int):
+                details.append(f"p.{page}")
+            if location:
+                details.append(location)
+
+            label = f"- **{source}**"
+            if details:
+                label += f" ({'; '.join(details)})"
+            lines.append(label)
+
+            quote = str(item.get("quote", "")).strip()
+            if quote:
+                lines.append(f"  > {quote}")
+
+            relevance = str(item.get("relevance", "")).strip()
+            if relevance:
+                lines.append(f"  Relevance: {relevance}")
+
+    return "\n".join(lines)
+
+
+def render_grounded_citations(payload: dict) -> str:
+    """Render grouped citations directly from GroundedAnswer.evidence."""
+    evidence = payload.get("evidence", []) or []
+    if not evidence:
+        return "当前回答没有可展示的结构化引用。"
+
+    grouped: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for item in evidence:
+        source = str(item.get("source", "unknown")).strip() or "unknown"
+        section_path = item.get("section_path", []) or []
+        if isinstance(section_path, str):
+            section_path = [section_path]
+        section_label = " > ".join(
+            str(part).strip() for part in section_path if str(part).strip()
+        ) or "Unscoped section"
+        grouped[(source, section_label)].append(item)
+
+    lines = ["## Citations"]
+    for (source, section_label), items in sorted(grouped.items()):
+        lines.extend(["", f"### {source}", f"**Section:** {section_label}"])
+        for item in items:
+            details: list[str] = []
+            doc_id = str(item.get("doc_id", "")).strip()
+            node_id = str(item.get("node_id", "")).strip()
+            page = item.get("page")
+            if doc_id:
+                details.append(f"doc_id={doc_id}")
+            if node_id:
+                details.append(f"node_id={node_id}")
+            if isinstance(page, int):
+                details.append(f"p.{page}")
+
+            bullet = "- Citation"
+            if details:
+                bullet += f" ({'; '.join(details)})"
+            lines.append(bullet)
+
+            quote = str(item.get("quote", "")).strip()
+            if quote:
+                lines.append(f"  > {quote}")
+
+            relevance = str(item.get("relevance", "")).strip()
+            if relevance:
+                lines.append(f"  Relevance: {relevance}")
+
+    return "\n".join(lines)
+
+
+def render_out_of_scope_answer(payload: dict) -> str:
+    """Render a structured out-of-scope response to Markdown."""
+    reason = str(payload.get("reason", "")).strip()
+    boundary = str(payload.get("boundary", "")).strip()
+    suggestion = str(payload.get("suggestion", "")).strip()
+    next_action = str(payload.get("next_action", "")).strip()
+
+    lines: list[str] = []
+    if reason:
+        lines.append(reason)
+    if boundary:
+        lines.extend(["", "## Current coverage", boundary])
+    if suggestion:
+        lines.extend(["", "## Better question", suggestion])
+    if next_action:
+        lines.extend(["", "## Next step", next_action])
+    return "\n".join(lines).strip() or "This question is outside the current knowledge base."

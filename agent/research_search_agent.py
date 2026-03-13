@@ -22,6 +22,7 @@ from langgraph.runtime import Runtime
 from langgraph.types import Command
 
 from agent.prompts import get_fallback_response_prompt, get_research_search_prompt
+from agent.schemas import EvidenceGroup
 from agent.states import ResearchSearchState
 from core.config import KEEP_MESSAGES, MAX_CONTEXT_TOKENS, MAX_ITERATIONS, MAX_TOOL_CALLS
 from llms.llm import get_llm_by_type
@@ -80,6 +81,62 @@ class QueryPlanMiddleware(AgentMiddleware):
             return await handler(request)
         finally:
             self.tool_factory.reset_active_query_plan(token)
+
+
+class EvidenceCaptureMiddleware(AgentMiddleware):
+    """Capture structured retrieval artifacts from tool calls into agent state."""
+
+    def _command_from_tool_message(
+        self, request: ToolCallRequest, response: ToolMessage
+    ) -> Command[Any] | ToolMessage:
+        if request.tool_call.get("name") != "search_relevant_chunks":
+            return response
+
+        artifact = response.artifact if isinstance(response.artifact, dict) else None
+        if artifact is None:
+            return response
+
+        query_plan = artifact.get("query_plan", {}) or {}
+        evidence_group = EvidenceGroup(
+            subquery=str(artifact.get("subquery", "")).strip(),
+            intent=str(query_plan.get("intent", "fact")).strip() or "fact",
+            packed_context=dict(artifact.get("packed_context", {}) or {}),
+            evidence=list(artifact.get("evidence", []) or []),
+            debug=dict(artifact.get("debug", {}) or {}),
+        )
+        return Command(
+            update={
+                "messages": [response],
+                "retrievalEvidence": [dict(artifact)],
+                "packedContexts": [
+                    {
+                        "subquery": evidence_group.subquery,
+                        **evidence_group.packed_context,
+                    }
+                ],
+                "evidenceGroups": [evidence_group.model_dump()],
+            }
+        )
+
+    def wrap_tool_call(
+        self,
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], ToolMessage | Command[Any]],
+    ) -> ToolMessage | Command[Any]:
+        response = handler(request)
+        if isinstance(response, ToolMessage):
+            return self._command_from_tool_message(request, response)
+        return response
+
+    async def awrap_tool_call(
+        self,
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command[Any]]],
+    ) -> ToolMessage | Command[Any]:
+        response = await handler(request)
+        if isinstance(response, ToolMessage):
+            return self._command_from_tool_message(request, response)
+        return response
 
 
 class FallbackMiddleware(AgentMiddleware):
@@ -217,7 +274,7 @@ def create_research_search_agent(tools, tool_factory=None):
     fallback_middleware = FallbackMiddleware(
         model=llm, max_iterations=MAX_ITERATIONS, max_tool_calls=MAX_TOOL_CALLS
     )
-    middleware = [summarization_middleware, fallback_middleware]
+    middleware = [summarization_middleware, fallback_middleware, EvidenceCaptureMiddleware()]
     if tool_factory is not None:
         middleware.insert(0, QueryPlanMiddleware(tool_factory))
 

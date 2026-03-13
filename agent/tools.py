@@ -20,10 +20,37 @@ class ToolFactory:
     def get_active_query_plan(self) -> dict | None:
         return self._active_query_plan.get()
 
+    def _build_evidence_item(self, doc, *, subquery: str) -> dict:
+        metadata = dict(doc.metadata)
+        section_path = metadata.get("section_path") or metadata.get("title_path") or []
+        if isinstance(section_path, str):
+            section_path = [section_path]
+        quote = (doc.page_content or "").strip()
+        if len(quote) > 400:
+            quote = quote[:399] + "…"
+        return {
+            "doc_id": str(metadata.get("doc_id", "")).strip()
+            or str(metadata.get("source", "")).strip(),
+            "node_id": str(metadata.get("node_id", "")).strip()
+            or str(metadata.get("id", "")).strip()
+            or f"{subquery}:{hash(quote)}",
+            "source": str(metadata.get("source", "")).strip() or "unknown",
+            "section_path": [str(item) for item in section_path if str(item).strip()],
+            "page": metadata.get("page")
+            if isinstance(metadata.get("page"), int)
+            else None,
+            "quote": quote,
+            "score": metadata.get("score")
+            if isinstance(metadata.get("score"), int | float)
+            else None,
+            "relevance": None,
+        }
+
     def _search_documents(self, query: str):
         logging.getLogger(__name__).debug("Tool search query: %s", query)
+        active_query_plan = self.get_active_query_plan() or {}
         packed_context = (
-            self.retriever.retrieve(query, query_plan=self.get_active_query_plan())
+            self.retriever.retrieve(query, query_plan=active_query_plan)
             if hasattr(self.retriever, "retrieve")
             else None
         )
@@ -45,7 +72,29 @@ class ToolFactory:
             f"Source: {doc.metadata}\nContent: {doc.page_content}" for doc in retrieved_docs
         )
         serialized = "\n\n".join(sections)
-        return serialized, retrieved_docs
+        evidence = [
+            self._build_evidence_item(doc, subquery=query) for doc in retrieved_docs
+        ]
+        artifact = {
+            "subquery": query,
+            "query_plan": active_query_plan,
+            "packed_context": {
+                "total_tokens": getattr(packed_context, "total_tokens", None),
+                "dropped_candidates": getattr(packed_context, "dropped_candidates", None),
+                "packing_strategy": getattr(packed_context, "packing_strategy", None),
+                "passage_count": len(retrieved_docs),
+            },
+            "passages": [
+                {
+                    "content": doc.page_content,
+                    "metadata": dict(doc.metadata),
+                }
+                for doc in retrieved_docs
+            ],
+            "evidence": evidence,
+            "debug": getattr(packed_context, "debug", {}),
+        }
+        return serialized, artifact
 
     def create_tools(self):
         search_document_tool = tool(

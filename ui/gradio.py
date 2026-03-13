@@ -16,9 +16,12 @@ from core.corpus_profile import (
     save_corpus_profile,
 )
 from core.factory import build_retriever, build_graph
-from indexing.indexer import Indexer
+from core.rag_answer import (
+    format_retrieval_only_answer,
+    render_grounded_citations,
+)
 from core.settings import AppSettings
-from core.rag_answer import format_retrieval_only_answer
+from indexing.indexer import Indexer
 
 
 logger = logging.getLogger(__name__)
@@ -327,6 +330,11 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                     )
                     session_id_state = gr.State(value=lambda: str(uuid.uuid4()))
                     chatbot = gr.Chatbot(height=520)
+                    with gr.Accordion("证据引用", open=False):
+                        citation_box = gr.Markdown(
+                            value="当前回答的引用会显示在这里。",
+                            elem_classes="prose",
+                        )
                     msg = gr.Textbox(
                         placeholder="例如：这套知识库里关于检索流程重构的设计重点是什么？",
                         show_label=False,
@@ -337,7 +345,9 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                         new_chat_btn = gr.Button("新建对话")
                         clear_btn = gr.Button("清空对话", variant="secondary")
                         clear_btn.click(
-                            lambda: ("", []), inputs=None, outputs=[msg, chatbot]
+                            lambda: ("", [], "当前回答的引用会显示在这里。"),
+                            inputs=None,
+                            outputs=[msg, chatbot, citation_box],
                         )
 
                     def reload_index():
@@ -349,15 +359,24 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                                 "未找到索引。请先在“知识库构建”中保存画像并导入资料。",
                                 [],
                                 profile_text,
+                                "当前回答的引用会显示在这里。",
                             )
-                        return "索引已加载。", [], profile_text
+                        return "索引已加载。", [], profile_text, "当前回答的引用会显示在这里。"
 
                     def new_chat():
                         new_session_id = str(uuid.uuid4())
-                        return [], new_session_id
+                        return [], new_session_id, "当前回答的引用会显示在这里。"
 
                     def user_msg(user_message: str, history):
                         return "", history + [{"role": "user", "content": user_message}]
+
+                    def _extract_citations(result: dict | None) -> str:
+                        if not isinstance(result, dict):
+                            return "当前回答没有可展示的结构化引用。"
+                        grounded = result.get("groundedAnswer", {})
+                        if isinstance(grounded, dict) and grounded.get("evidence"):
+                            return render_grounded_citations(grounded)
+                        return "当前回答没有可展示的结构化引用。"
 
                     async def bot_msg(history, session_id):
                         offline = settings.offline_mode
@@ -365,7 +384,7 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
 
                         user_message = history[-1]["content"]
                         history.append({"role": "assistant", "content": ""})
-                        yield history
+                        yield history, "正在整理本次回答的证据引用…"
 
                         try:
                             if graph is None:
@@ -374,12 +393,12 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                                     history[-1]["content"] = (
                                         "未加载索引。请先在“知识库构建”中保存画像并导入资料。"
                                     )
-                                    yield history
+                                    yield history, "当前回答没有可展示的结构化引用。"
                                     return
                                 docs = retriever.invoke(user_message)
                                 answer = format_retrieval_only_answer(user_message, docs)
                                 history[-1]["content"] = answer
-                                yield history
+                                yield history, "离线模式下仅展示检索摘录，节点级 citation 面板不可用。"
                             else:
                                 input_state = {
                                     "messages": [HumanMessage(content=user_message)]
@@ -402,8 +421,9 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                                         ):
                                             streamed += chunk.content
                                             history[-1]["content"] = streamed
-                                            yield history
+                                            yield history, "正在整理本次回答的证据引用…"
 
+                                result: dict | None = None
                                 if not streamed:
                                     result = graph.invoke(
                                         cast(GraphState, input_state),
@@ -420,13 +440,19 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                                         else str(result)
                                     )
                                     history[-1]["content"] = answer
-                                    yield history
+                                else:
+                                    snapshot = graph.get_state(config)
+                                    result = (
+                                        snapshot.values if hasattr(snapshot, "values") else None
+                                    )
+
+                                yield history, _extract_citations(result)
 
                         except ConnectionError as e:
                             error_msg = "连接 AI 服务失败。请检查您的 API 配置是否正确。"
                             logger.error("Connection error: %s", e)
                             history[-1]["content"] = error_msg
-                            yield history
+                            yield history, "当前回答没有可展示的结构化引用。"
                         except ValueError as e:
                             if "API key" in str(e) or "api_key" in str(e).lower():
                                 error_msg = "API 密钥未配置。请在 .env 文件中设置 OPENAI_API_KEY。"
@@ -434,22 +460,22 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                                 error_msg = f"配置错误: {e}"
                             logger.error("Value error: %s", e)
                             history[-1]["content"] = error_msg
-                            yield history
+                            yield history, "当前回答没有可展示的结构化引用。"
                         except TimeoutError as e:
                             error_msg = "请求超时，请重试。"
                             logger.error("Timeout error: %s", e)
                             history[-1]["content"] = error_msg
-                            yield history
+                            yield history, "当前回答没有可展示的结构化引用。"
                         except Exception as e:
                             error_msg = f"发生错误: {e}，请重试。"
                             logger.error("Unexpected error: %s", e, exc_info=True)
                             history[-1]["content"] = error_msg
-                            yield history
+                            yield history, "当前回答没有可展示的结构化引用。"
 
                     reload_btn.click(
                         reload_index,
                         inputs=None,
-                        outputs=[msg, chatbot, chat_profile_box],
+                        outputs=[msg, chatbot, chat_profile_box, citation_box],
                     )
                     refresh_chat_profile_btn.click(
                         refresh_profile,
@@ -457,11 +483,13 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                         outputs=chat_profile_box,
                     )
                     new_chat_btn.click(
-                        new_chat, inputs=None, outputs=[chatbot, session_id_state]
+                        new_chat,
+                        inputs=None,
+                        outputs=[chatbot, session_id_state, citation_box],
                     )
                     msg.submit(
                         user_msg, [msg, chatbot], [msg, chatbot], queue=False
-                    ).then(bot_msg, [chatbot, session_id_state], chatbot)
+                    ).then(bot_msg, [chatbot, session_id_state], [chatbot, citation_box])
 
         gr.Markdown(
             "<div class='subtle'>索引存储位置：<code>data/index/</code>。知识库画像会保存为 <code>data/index/corpus_profile.json</code>。</div>"
