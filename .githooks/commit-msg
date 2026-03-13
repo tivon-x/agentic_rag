@@ -1,0 +1,56 @@
+#!/bin/sh
+
+set -eu
+
+message_file=$1
+first_line=$(
+  sed -n '/^[[:space:]]*#/d; /^[[:space:]]*$/d; p; q' "$message_file" | tr -d '\r'
+)
+
+if [ -z "$first_line" ]; then
+  echo "ERROR: commit message cannot be empty." >&2
+  exit 1
+fi
+
+case "$first_line" in
+  Merge\ *|Revert\ *)
+    exit 0
+    ;;
+  fixup!\ *|squash!\ *)
+    normalized_message=${first_line#*! }
+    ;;
+  *)
+    normalized_message=$first_line
+    ;;
+esac
+
+conventional_pattern='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9][a-z0-9._/-]*\))?(!)?: [a-z].+'
+
+if printf '%s\n' "$normalized_message" | grep -Eq "$conventional_pattern"; then
+  exit 0
+fi
+
+cat >&2 <<'EOF'
+ERROR: commit message must follow Conventional Commits.
+
+Expected format:
+  type(scope): subject
+
+Examples:
+  feat(retrieval): add reranker fallback path
+  fix(ui): handle empty citations in answer panel
+  docs: refresh setup instructions
+  refactor(agent)!: simplify routing state transitions
+
+Allowed types:
+  build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test
+
+Notes:
+  - scope is optional
+  - use lowercase type and subject
+  - breaking changes can use !
+  - merge and revert commits are allowed as-is
+  - fixup!/squash! commits are allowed if the wrapped message is valid
+EOF
+
+exit 1
