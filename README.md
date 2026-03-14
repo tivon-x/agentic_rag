@@ -83,6 +83,22 @@ python main.py ui
 python main.py ask "你的问题"
 ```
 
+### CLI 评测
+
+```bash
+uv run python main.py eval --suite retrieval --offline
+uv run python main.py eval --suite answer
+uv run python main.py eval --suite all --output-format both
+```
+
+评测会默认比较三组实验：
+
+- `baseline_flat`
+- `flat_rerank`
+- `hierarchical`
+
+评测语料放在 `evals/`，样例集放在 `evals/datasets/`。报告默认输出到 `data/eval_reports/`。
+
 ## UI 工作流
 
 ### 1. 知识库构建
@@ -209,6 +225,31 @@ agentic_rag/
 - `faiss/`：FAISS 向量索引
 - `bm25.pkl`：BM25 索引
 - `corpus_profile.json`：知识库画像
+
+评测后，默认会在 `data/eval_reports/` 下生成：
+
+- `eval_report_<suite>_<timestamp>.json`
+- `eval_report_<suite>_<timestamp>.md`
+- `indexes/<variant>/...`：各实验配置缓存的评测索引
+
+## 评测说明
+
+Milestone 7 现已提供最小可用评测闭环：
+
+- Routing：`route_accuracy`
+- Retrieval：`recall@k`、`MRR`、`nDCG`、`redundancy_rate`
+- Answer：`groundedness`、`citation_precision`、`answer_completeness`、`hallucination_rate_rule`
+- 可选：在配置了 LLM 时，额外计算 `hallucination_rate_llm_judge`
+
+其中 Answer 评测会额外标注：
+
+- `answer_mode`
+- `evaluation_mode`
+
+当 `evaluation_mode=offline_extractive_fallback` 时，表示当前结果来自离线抽取式 fallback，只适合做 smoke test 或回归监控，不应直接当作完整 grounded generation 能力对比。
+
+详细说明见 [docs/eval_guide.md](docs/eval_guide.md)。
+首份离线基线对比结果见 [docs/eval_baseline_report.md](docs/eval_baseline_report.md)。
 
 ## 开发说明
 

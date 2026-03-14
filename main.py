@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+from pathlib import Path
 from typing import cast
 
 from dotenv import load_dotenv
@@ -9,9 +10,10 @@ from langchain_core.messages import HumanMessage
 
 from agent.states import GraphState
 from core.factory import build_graph, build_retriever
-from indexing.indexer import Indexer
 from core.settings import configure_logging, load_settings
 from core.rag_answer import format_retrieval_only_answer
+from evals.runner import parse_eval_runner_config, run_eval_suite
+from indexing.indexer import Indexer
 
 load_dotenv()  # 加载环境变量
 
@@ -86,6 +88,33 @@ def cmd_ui(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_eval(args: argparse.Namespace) -> int:
+    settings = load_settings()
+    configure_logging(settings)
+    config = parse_eval_runner_config(args)
+    report = run_eval_suite(settings, config)
+
+    logger.info("Eval suite: %s", report["suite"])
+    logger.info("Embedding mode: %s", report["embedding_mode"])
+    logger.info("LLM enabled: %s", report["llm_enabled"])
+    for variant_name, variant_report in report["variants"].items():
+        logger.info("Variant: %s", variant_name)
+        for suite_name, suite_report in variant_report.get("suites", {}).items():
+            logger.info("  %s metrics: %s", suite_name, suite_report.get("metrics", {}))
+    for suite_name, rows in report.get("leaderboard", {}).items():
+        top = rows[0] if rows else None
+        if top is not None:
+            logger.info(
+                "Leaderboard winner for %s: %s (score=%s, comparable=%s)",
+                suite_name,
+                top["variant"],
+                top["score"],
+                top.get("comparable", True),
+            )
+    logger.info("Artifacts: %s", report.get("artifacts", {}))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="agentic-rag")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -115,6 +144,52 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_ui = sub.add_parser("ui", help="Launch Gradio UI")
     p_ui.set_defaults(func=cmd_ui)
+
+    p_eval = sub.add_parser("eval", help="Run routing/retrieval/answer evaluation suites")
+    p_eval.add_argument(
+        "--suite",
+        choices=["routing", "retrieval", "answer", "all"],
+        default="all",
+        help="Evaluation suite to run.",
+    )
+    p_eval.add_argument(
+        "--output-format",
+        choices=["markdown", "json", "both"],
+        default="both",
+        help="Report formats to write.",
+    )
+    p_eval.add_argument(
+        "--output-dir",
+        default=str(Path("data") / "eval_reports"),
+        help="Directory for generated reports and eval indexes.",
+    )
+    p_eval.add_argument(
+        "--dataset-dir",
+        default=str(Path("evals") / "datasets"),
+        help="Directory containing eval JSONL datasets.",
+    )
+    p_eval.add_argument(
+        "--corpus-dir",
+        default="evals",
+        help="Directory containing the eval source documents.",
+    )
+    p_eval.add_argument(
+        "--force-reindex",
+        action="store_true",
+        help="Rebuild eval indexes even if cached artifacts already exist.",
+    )
+    p_eval.add_argument(
+        "--offline",
+        action="store_true",
+        help="Force FakeEmbeddings and skip LLM-based judging.",
+    )
+    p_eval.add_argument(
+        "--variant",
+        action="append",
+        choices=["baseline_flat", "flat_rerank", "hierarchical"],
+        help="Variant(s) to evaluate. Defaults to all three.",
+    )
+    p_eval.set_defaults(func=cmd_eval)
     return parser
 
 
