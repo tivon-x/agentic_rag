@@ -1,269 +1,154 @@
 # Agentic RAG
 
 ![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![LangGraph](https://img.shields.io/badge/Orchestration-LangGraph-orange.svg)
 ![FAISS](https://img.shields.io/badge/VectorStore-FAISS-blue.svg)
+![BM25+FAISS](https://img.shields.io/badge/Retrieval-BM25%2BFAISS-2f855a.svg)
+![Grounded Answer](https://img.shields.io/badge/Answer-Grounded%20with%20Citations-0f766e.svg)
 ![Gradio](https://img.shields.io/badge/UI-Gradio-red.svg)
 
-## 项目简介
+基于 LangGraph 的 Hierarchical Agentic RAG 项目，支持本地知识库构建、多阶段检索、结构化证据答案、评测与可观测调试 UI。
 
-这是一个基于 LangGraph 的 Agentic RAG Demo，包含本地索引、混合检索、任务路由和 Gradio UI。
+## 项目背景
 
-当前版本的重点不是“和单个 PDF 聊天”，而是“围绕一组有边界的知识源构建知识库”。系统会先根据用户消息判断是否需要检索，再决定走直接回答、知识库检索，或提示问题超出当前知识库范围。
+这个项目解决的不是“和单个 PDF 聊天”，而是如何把一组有边界的知识源升级成一个更接近生产形态的 Agentic RAG 系统。
 
-## 功能特性
+核心改造方向是：从平面 chunk 检索升级到分层文档树检索，从简单召回升级到显式的 retrieval pipeline，从文本拼接回答升级到带结构化证据的 grounded answer。
 
-- 混合检索：BM25 + FAISS 融合召回。
-- Agent 编排：基于 LangGraph 的显式节点与边。
-- 多模型路由：不同任务可使用不同模型，例如 `decide_retrieval`、`rewrite_query`、`direct_answer`、`out_of_scope_answer`、`summarize_history`、`aggregate_answers`、`research_search`。
-- 知识库画像：支持为当前索引维护 `corpus_profile.json`，描述知识库名称、内容摘要、覆盖范围和使用说明。
-- 三态路由：用户问题会被路由为 `retrieve`、`direct_answer` 或 `out_of_scope`。
-- Gradio 工作台：UI 包含“知识库构建”和“智能问答”两个视图，适合演示企业知识库场景。
-- 流式输出：问答阶段支持 LangGraph 事件流。
-- 离线模式：在无模型配置时可退化为仅检索结果展示。
+## 核心能力
 
-## 系统架构
+- 分层索引：支持 `flat` 与 `hierarchical` 两种模式；分层模式会构建 `document -> section -> paragraph` 文档树。
+- 多阶段检索：查询规划、混合召回、去重、重排、context packing 全链路可观测。
+- Grounded Answer：答案基于结构化证据生成，附带 citation、confidence 与 limitations。
+- 知识库画像：`corpus_profile.json` 参与路由、改写、重排和回答风格控制。
+- 评测体系：内置 routing / retrieval / answer 三类评测，可对比 `baseline_flat`、`flat_rerank`、`hierarchical`。
+- Gradio 工作台：可视化索引模式、调试面板、证据引用和命中文档树位置。
 
-```mermaid
-graph TD
-    subgraph 索引阶段
-        A[知识源文件<br/>PDF / Markdown / TXT] --> B[加载与清洗]
-        B --> C[智能分块]
-        C --> D[FAISS 向量索引]
-        C --> E[BM25 索引]
-        A --> F[知识库画像<br/>corpus_profile.json]
-    end
+## 架构亮点
 
-    subgraph 问答阶段
-        G[用户消息] --> H[decide_retrieval]
-        F --> H
-        H -->|retrieve| I[rewrite_query]
-        I --> J[research_search 子图]
-        J --> K[aggregate_answers]
-        H -->|direct_answer| L[直接回答]
-        H -->|out_of_scope| M[超出范围提示]
-    end
-```
+- 为什么使用 LangGraph：路由、检索、聚合、越界处理都有明确节点职责，比简单链式调用更适合表达多分支决策和可观测状态流转。
+- Hierarchical Index：文档被解析为 `Node` 树并保留 `doc_id / parent_id / order / metadata`；叶子节点做 embedding，父节点使用聚合策略生成向量。
+- FusionRetriever：检索流程固定为 `plan -> retrieve -> dedupe -> rerank -> pack_context`，每个阶段都有中间产物，可直接进入 UI 调试面板。
+- 存储抽象层：通过 `NodeStore`、`VectorStore`、`LexicalStore` Protocol 解耦业务与存储实现，当前默认实现是 JSON Node Store + FAISS + BM25。
+- 结构化证据答案：最终输出不是“若干 chunk 拼接”，而是带 citation 的 grounded answer，便于回溯命中的文档位置和证据片段。
 
-## 快速开始
+## 评测结果
 
-环境要求：Python 3.12+，建议使用 `uv`
+首份离线基线报告见 [基线评测报告](docs/eval_baseline_report.md)。
 
-### 本地运行
-
-```bash
-# 克隆项目
-git clone <repo-url>
-cd agentic_rag
-
-# 安装依赖
-uv sync
-
-# 配置环境变量
-cp .env.example .env
-
-# 可选：先通过 CLI 索引
-python main.py index path/to/knowledge_sources
-
-# 启动 UI
-python main.py ui
-```
-
-启动后建议按下面顺序体验：
-
-1. 进入“知识库构建”页。
-2. 填写知识库名称、内容摘要、覆盖范围、使用说明。
-3. 上传 `.pdf`、`.md` 或 `.txt` 文件并构建索引。
-4. 进入“智能问答”页，根据顶部展示的“当前知识库画像”提问。
-
-### CLI 提问
-
-```bash
-python main.py ask "你的问题"
-```
-
-### CLI 评测
-
-```bash
-uv run python main.py eval --suite retrieval --offline
-uv run python main.py eval --suite answer
-uv run python main.py eval --suite all --output-format both
-```
-
-评测会默认比较三组实验：
-
-- `baseline_flat`
-- `flat_rerank`
-- `hierarchical`
-
-评测语料放在 `evals/`，样例集放在 `evals/datasets/`。报告默认输出到 `data/eval_reports/`。
-
-## UI 工作流
-
-### 1. 知识库构建
-
-在 UI 中，先定义知识库边界，再导入知识源：
-
-- 知识库名称：这套语料是什么。
-- 内容摘要：1 到 3 句话概括语料主题。
-- 覆盖范围：适合回答什么，不适合回答什么。
-- 使用说明：给后续问答和检索路由提供边界提示。
-
-这些信息会保存到：
-
-- `data/index/corpus_profile.json`
-
-### 2. 智能问答
-
-问答页顶部会始终展示“当前知识库画像”。
-
-系统会根据：
-
-- 用户最新消息
-- 对话摘要
-- 当前知识库画像
-
-做一次路由决策：
-
-- `retrieve`：进入检索流程
-- `direct_answer`：不检索，直接回答
-- `out_of_scope`：提示问题超出当前知识库范围
-
-## 检索路由说明
-
-当前主图流程如下：
-
-```text
-summarize_history
--> decide_retrieval
--> direct_answer | rewrite_query -> research_search -> aggregate_answers | out_of_scope_answer
-```
-
-其中：
-
-- `decide_retrieval` 只负责路由决策，不再负责 query rewrite。
-- `rewrite_query` 只负责把用户问题改写成适合检索的 self-contained queries。
-- `direct_answer` 和 `out_of_scope_answer` 分别使用自己的独立模型路由，不再复用 `aggregate_answers`。
-- `out_of_scope_answer` 会基于知识库画像提示用户当前知识库的边界。
-
-## 配置参考
-
-### 基础 LLM 配置
-
-| 变量名 | 描述 | 默认值 |
-|--------|------|--------|
-| OPENAI_API_KEY | LLM API 密钥 | 必填 |
-| OPENAI_API_BASE | LLM API 地址 | 必填 |
-| LLM_MODEL | 默认模型名称 | 必填 |
-| LLM_TEMPERATURE | 默认生成温度 | 0.2 |
-
-### 分任务模型配置
-
-| 变量名 | 描述 | 默认值 |
-|--------|------|--------|
-| LLM_MODEL_RESEARCH_SEARCH | 检索子图模型 | 同 `LLM_MODEL` |
-| LLM_MODEL_DECIDE_RETRIEVAL | 路由决策模型 | 同 `LLM_MODEL` |
-| LLM_MODEL_REWRITE_QUERY | 查询改写模型 | 同 `LLM_MODEL` |
-| LLM_MODEL_DIRECT_ANSWER | 直接回答模型 | 同 `LLM_MODEL` |
-| LLM_MODEL_OUT_OF_SCOPE_ANSWER | 超出范围提示模型 | 同 `LLM_MODEL` |
-| LLM_MODEL_SUMMARIZE_HISTORY | 对话摘要模型 | 同 `LLM_MODEL` |
-| LLM_MODEL_AGGREGATE_ANSWERS | 聚合回答模型 | 同 `LLM_MODEL` |
-| LLM_MODEL_DECISION | 路由决策兼容别名 | 可选 |
-| LLM_MODEL_REWRITE | 查询改写兼容别名 | 可选 |
-| LLM_MODEL_DIRECT | 直接回答兼容别名 | 可选 |
-| LLM_MODEL_OUT_OF_SCOPE | 超出范围提示兼容别名 | 可选 |
-| LLM_MODEL_SUMMARIZE | 摘要兼容别名 | 可选 |
-| LLM_MODEL_AGGREGATE | 聚合兼容别名 | 可选 |
-
-### 索引与检索配置
-
-| 变量名 | 描述 | 默认值 |
-|--------|------|--------|
-| EMBEDDING_MODEL | 嵌入模型 | `text-embedding-3-small` |
-| EMBEDDING_API_KEY | 嵌入 API 密钥 | 同 `OPENAI_API_KEY` |
-| EMBEDDING_API_BASE | 嵌入 API 地址 | 同 `OPENAI_API_BASE` |
-| CHUNKER_TYPE | 分块策略 | `recursive` |
-| CHUNK_SIZE | 分块大小 | 未显式设置 |
-| CHUNK_OVERLAP | 分块重叠 | 未显式设置 |
-| RETRIEVER_K | 检索结果数 | 10 |
-| FUSION_ALPHA | 融合权重 | 0.5 |
-| DATA_DIR | 数据目录 | `data/` |
-| FAISS_DIR | FAISS 索引目录 | `data/index/faiss/` |
-| BM25_PATH | BM25 索引路径 | `data/index/bm25.pkl` |
-
-### Agent 运行配置
-
-| 变量名 | 描述 | 默认值 |
-|--------|------|--------|
-| MAX_TOOL_CALLS | 最大工具调用次数 | 8 |
-| MAX_ITERATIONS | 最大迭代次数 | 10 |
-| MAX_CONTEXT_TOKENS | 最大上下文 Token | 5000 |
-| KEEP_MESSAGES | 对话压缩后保留消息数 | 20 |
-| OFFLINE_MODE | 是否启用离线模式 | false |
-| LOG_LEVEL | 日志级别 | INFO |
+- `flat_rerank` 相比 `baseline_flat`，`MRR` 从 `0.85` 提升到 `1.0`，`nDCG` 从 `0.8681` 提升到 `1.0`。
+- `citation_precision` 从 `0.2833` 提升到 `0.4333`，说明重排后证据命中质量更稳定。
+- 当前离线基线里 `hierarchical` 仍弱于 `flat_rerank`，因此它在这个仓库中不是“已经最优”，而是下一轮重点优化对象。
 
 ## 项目结构
 
 ```text
 agentic_rag/
-├── agent/                  # 主图、节点、提示词、状态与工具
-├── core/                   # 配置、工厂、持久化、知识库画像
-├── indexing/               # 加载、分块、Embedding、检索、向量库
-├── llms/                   # LLM 路由与 ChatOpenAI 适配
-├── ui/                     # Gradio UI
-├── data/                   # 本地索引和知识库画像输出目录
-├── tests/                  # 测试
-├── main.py                 # CLI 入口
-└── pyproject.toml          # 项目依赖与元数据
+├── agent/
+│   ├── graph.py    # LangGraph 主图装配
+│   ├── nodes/      # 拆分后的节点包：summarize / route / plan / rewrite / aggregate ...
+│   ├── prompts.py
+│   └── states.py
+├── core/           # settings、factory、corpus_profile、grounded answer 渲染
+├── indexing/
+│   ├── parsers/    # markdown / txt / pdf 分层解析
+│   ├── builders/   # flat / hierarchical index builder
+│   ├── stores/     # NodeStore / VectorStore / LexicalStore 抽象与实现
+│   └── retriever.py
+├── evals/          # 评测数据、指标与 runner
+├── llms/           # 按任务类型路由模型
+├── ui/             # Gradio UI
+├── tests/          # pytest 测试
+└── main.py         # CLI 入口
 ```
 
-## 输出文件
+## 快速开始
 
-构建知识库后，默认会在 `data/index/` 下生成：
-
-- `faiss/`：FAISS 向量索引
-- `bm25.pkl`：BM25 索引
-- `corpus_profile.json`：知识库画像
-
-评测后，默认会在 `data/eval_reports/` 下生成：
-
-- `eval_report_<suite>_<timestamp>.json`
-- `eval_report_<suite>_<timestamp>.md`
-- `indexes/<variant>/...`：各实验配置缓存的评测索引
-
-## 评测说明
-
-Milestone 7 现已提供最小可用评测闭环：
-
-- Routing：`route_accuracy`
-- Retrieval：`recall@k`、`MRR`、`nDCG`、`redundancy_rate`
-- Answer：`groundedness`、`citation_precision`、`answer_completeness`、`hallucination_rate_rule`
-- 可选：在配置了 LLM 时，额外计算 `hallucination_rate_llm_judge`
-
-其中 Answer 评测会额外标注：
-
-- `answer_mode`
-- `evaluation_mode`
-
-当 `evaluation_mode=offline_extractive_fallback` 时，表示当前结果来自离线抽取式 fallback，只适合做 smoke test 或回归监控，不应直接当作完整 grounded generation 能力对比。
-
-详细说明见 [docs/eval_guide.md](docs/eval_guide.md)。
-首份离线基线对比结果见 [docs/eval_baseline_report.md](docs/eval_baseline_report.md)。
-
-## 开发说明
+建议使用 `uv`：
 
 ```bash
-# 安装开发依赖
 uv sync --dev
-
-# 代码风格检查
-uv run ruff check .
-
-# 运行测试
-uv run pytest -v
+cp .env.example .env
 ```
+
+构建索引：
+
+```bash
+uv run python main.py index path/to/knowledge --mode hierarchical
+```
+
+CLI 提问：
+
+```bash
+uv run python main.py ask "你的问题"
+```
+
+调试说明：
+
+- 当前可观测性主要通过 Gradio UI 的调试面板提供，可查看 `route decision`、`query plan`、`retrieved candidates`、`reranked passages`、`packed context` 和 citations。
+- `main.py ask` 当前版本尚未提供 `--debug` 参数，因此 README 不把它写成已支持能力。
+
+启动 UI：
+
+```bash
+uv run python main.py ui
+```
+
+运行评测：
+
+```bash
+uv run python main.py eval --suite retrieval --offline
+uv run python main.py eval --suite answer
+```
+
+## 优化后的检索与回答链路
+
+```text
+summarize_history
+-> decide_retrieval
+-> plan_query
+-> rewrite_query
+-> retrieve
+-> dedupe
+-> rerank
+-> pack_context
+-> aggregate_answers
+```
+
+输出不再是简单拼接 chunk，而是基于结构化 evidence 的 grounded answer。
+
+## 工程化设计
+
+- `agent/nodes/` 已替代单文件 `agent/nodes.py`，节点按职责拆分，便于维护和测试。
+- `indexing/stores/` 提供可替换的存储接口，避免业务逻辑直接耦合到 FAISS / BM25。
+- `tests/test_retrieval_pipeline.py` 覆盖 dedupe、rerank、pack_context 及端到端检索流程。
+
+## 主要产物
+
+索引默认写入 `data/index/`：
+
+- `faiss/`
+- `bm25.pkl`
+- `nodes.jsonl`
+- `doc_trees.json`
+- `corpus_profile.json`
+
+评测报告默认写入 `data/eval_reports/`。
+
+## 常用命令
+
+```bash
+uv run ruff check .
+uv run pytest -v
+uv run pytest tests/test_retrieval_pipeline.py -v
+```
+
+## 相关文档
+
+- [分层 RAG 设计任务](tasks.md)
+- [评测指南](docs/eval_guide.md)
+- [基线评测报告](docs/eval_baseline_report.md)
 
 ## License
 
-MIT License
+MIT
