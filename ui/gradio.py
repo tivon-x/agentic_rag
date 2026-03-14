@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections import defaultdict
 import logging
 import uuid
 from pathlib import Path
-from typing import cast
+from typing import Any, TypeAlias, cast
 
 import gradio as gr
 import gradio.themes as themes
@@ -15,13 +16,14 @@ from core.corpus_profile import (
     load_corpus_profile,
     save_corpus_profile,
 )
-from core.factory import build_retriever, build_graph
+from core.factory import build_graph, build_retriever
 from core.rag_answer import (
     format_retrieval_only_answer,
     render_grounded_citations,
 )
 from core.settings import AppSettings
 from indexing.indexer import Indexer
+from indexing.stores.node_store import create_node_store
 
 
 logger = logging.getLogger(__name__)
@@ -32,11 +34,42 @@ _CACHE: dict[str, object] = {"graph": None, "fingerprint": None}
 
 SUPPORTED_SOURCE_TYPES = [".pdf", ".md", ".txt"]
 
+DebugTuple: TypeAlias = tuple[
+    dict[str, Any],
+    dict[str, Any],
+    list[Any],
+    dict[str, Any],
+    dict[str, Any],
+    dict[str, Any],
+]
+DebugWithTreeTuple: TypeAlias = tuple[
+    dict[str, Any],
+    dict[str, Any],
+    list[Any],
+    dict[str, Any],
+    dict[str, Any],
+    dict[str, Any],
+    str,
+]
+ChatYieldTuple: TypeAlias = tuple[Any, ...]
+
 
 def _split_profile_values(text: str) -> list[str]:
     items = [part.strip() for part in text.replace(";", "\n").splitlines()]
     return [item for item in items if item]
 
+
+def _humanize_index_mode(mode: str) -> str:
+    normalized = mode.strip().lower()
+    if normalized == "hierarchical":
+        return "Hierarchical Mode"
+    return "Flat Chunk Mode"
+
+
+def _detect_current_index_mode(settings: AppSettings) -> str:
+    if settings.nodes_path.exists() and settings.doc_trees_path.exists():
+        return "hierarchical"
+    return "flat"
 
 
 def _fingerprint(settings: AppSettings) -> str:
@@ -46,11 +79,9 @@ def _fingerprint(settings: AppSettings) -> str:
     )
 
 
-
 def _invalidate_cache() -> None:
     _CACHE["graph"] = None
     _CACHE["fingerprint"] = None
-
 
 
 def _get_graph(settings: AppSettings):
@@ -70,6 +101,215 @@ def _get_graph(settings: AppSettings):
     except RuntimeError:
         return None
 
+
+def _load_index_stats(settings: AppSettings) -> str:
+    mode = _detect_current_index_mode(settings)
+    lines = [
+        "### 当前索引概览",
+        "",
+        f"- 当前可检测索引模式: `{_humanize_index_mode(mode)}`",
+    ]
+
+    if mode == "hierarchical":
+        node_store = create_node_store(
+            settings.node_backend,
+            nodes_path=settings.nodes_path,
+            doc_trees_path=settings.doc_trees_path,
+        )
+        nodes = node_store.load_nodes()
+        trees = node_store.load_trees()
+        counts: dict[str, int] = defaultdict(int)
+        token_values: list[int] = []
+        parent_ids = {
+            node.parent_id for node in nodes if isinstance(node.parent_id, str) and node.parent_id
+        }
+
+        for node in nodes:
+            counts[node.node_type] += 1
+            if isinstance(node.token_count, int) and node.token_count > 0:
+                token_values.append(node.token_count)
+        leaf_count = sum(
+            1 for node in nodes if node.node_id not in parent_ids and node.text.strip()
+        )
+
+        avg_tokens = round(sum(token_values) / len(token_values), 1) if token_values else 0
+        lines.extend(
+            [
+                f"- 文档数: `{len(trees)}`",
+                f"- Section 数: `{counts.get('section', 0)}`",
+                f"- Paragraph 数: `{counts.get('paragraph', 0)}`",
+                f"- 叶子节点数: `{leaf_count}`",
+                f"- 平均 tokens: `{avg_tokens}`",
+            ]
+        )
+        return "\n".join(lines)
+
+    try:
+        faiss_ready = settings.faiss_dir.exists() and any(settings.faiss_dir.iterdir())
+    except OSError:
+        faiss_ready = False
+    bm25_ready = settings.bm25_path.exists()
+    lines.extend(
+        [
+            f"- 文档数: `{'已构建' if faiss_ready or bm25_ready else 0}`",
+            "- Section 数: `N/A（Flat 模式不保留层级节点）`",
+            "- Paragraph 数: `N/A（Flat 模式不保留层级节点）`",
+            "- 叶子节点数: `N/A（Flat 模式不保留层级节点）`",
+            "- 平均 tokens: `N/A`",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _extract_citations(result: dict[str, Any] | None) -> str:
+    if not isinstance(result, dict):
+        return "当前回答没有可展示的结构化引用。"
+    grounded = result.get("groundedAnswer", {})
+    if isinstance(grounded, dict) and grounded.get("evidence"):
+        return render_grounded_citations(grounded)
+    return "当前回答没有可展示的结构化引用。"
+
+
+def _render_tree_hits(result: dict[str, Any] | None) -> str:
+    if not isinstance(result, dict):
+        return "当前没有可展示的命中文档树位置。"
+
+    grounded = result.get("groundedAnswer", {})
+    evidence = grounded.get("evidence", []) if isinstance(grounded, dict) else []
+    if not evidence:
+        evidence_groups = result.get("evidenceGroups", [])
+        for group in evidence_groups if isinstance(evidence_groups, list) else []:
+            if isinstance(group, dict):
+                evidence.extend(group.get("evidence", []) or [])
+
+    if not evidence:
+        return "当前没有可展示的命中文档树位置。"
+
+    grouped: dict[str, set[str]] = defaultdict(set)
+    for item in evidence:
+        if not isinstance(item, dict):
+            continue
+        source = str(item.get("source", "unknown")).strip() or "unknown"
+        section_path = item.get("section_path", []) or []
+        if isinstance(section_path, str):
+            section_path = [section_path]
+        if section_path:
+            grouped[source].add(
+                " > ".join(str(part).strip() for part in section_path if str(part).strip())
+            )
+        else:
+            node_id = str(item.get("node_id", "")).strip()
+            grouped[source].add(node_id or "未标注 section path")
+
+    lines = ["## 命中的文档树位置"]
+    for source, paths in sorted(grouped.items()):
+        lines.extend(["", f"### {source}"])
+        for path in sorted(path for path in paths if path):
+            segments = [segment.strip() for segment in path.split(">") if segment.strip()]
+            if not segments:
+                lines.append("- 未标注层级位置")
+                continue
+            lines.append(f"- {segments[0]}")
+            for depth, segment in enumerate(segments[1:], start=1):
+                lines.append(f"{'  ' * depth}> {segment}")
+    return "\n".join(lines)
+
+
+def _extract_debug_payload(result: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(result, dict):
+        return {
+            "route_decision": {},
+            "query_plan": {},
+            "rewritten_queries": [],
+            "retrieved_candidates": {},
+            "reranked_top_passages": {},
+            "packed_context": {},
+        }
+
+    evidence_groups = result.get("evidenceGroups", [])
+    first_group = (
+        evidence_groups[0]
+        if isinstance(evidence_groups, list)
+        and evidence_groups
+        and isinstance(evidence_groups[0], dict)
+        else {}
+    )
+    debug = first_group.get("debug", {}) if isinstance(first_group, dict) else {}
+    rerank = debug.get("rerank", {}) if isinstance(debug, dict) else {}
+    dedupe = debug.get("dedupe", {}) if isinstance(debug, dict) else {}
+
+    return {
+        "route_decision": {
+            "decision": result.get("routingDecision"),
+            "reason": result.get("routingReason"),
+        },
+        "query_plan": result.get("queryPlan", {}),
+        "rewritten_queries": result.get("rewrittenQuestions", []),
+        "retrieved_candidates": {
+            "query_plan": debug.get("query_plan"),
+            "raw_candidates": debug.get("raw_candidates"),
+            "structured_candidates": debug.get("structured_candidates"),
+            "dedupe": dedupe,
+        },
+        "reranked_top_passages": {
+            "top_candidates": rerank.get("top_candidates", []),
+            "flashrank": rerank.get("flashrank", {}),
+        },
+        "packed_context": {
+            "packed_count": debug.get("packed_count"),
+            "total_tokens": debug.get("total_tokens"),
+            "packing_strategy": debug.get("packing_strategy", "score_then_contiguity"),
+            "packed_contexts": result.get("packedContexts", []),
+        },
+    }
+
+
+def _default_debug_outputs() -> DebugTuple:
+    payload = _extract_debug_payload(None)
+    return (
+        payload["route_decision"],
+        payload["query_plan"],
+        payload["rewritten_queries"],
+        payload["retrieved_candidates"],
+        payload["reranked_top_passages"],
+        payload["packed_context"],
+    )
+
+
+def _extract_debug_outputs(
+    result: dict[str, Any] | None,
+) -> DebugWithTreeTuple:
+    payload = _extract_debug_payload(result)
+    return (
+        payload["route_decision"],
+        payload["query_plan"],
+        payload["rewritten_queries"],
+        payload["retrieved_candidates"],
+        payload["reranked_top_passages"],
+        payload["packed_context"],
+        _render_tree_hits(result),
+    )
+
+
+def _pending_debug_response(history: list[dict[str, str]]) -> ChatYieldTuple:
+    return (
+        history,
+        "正在整理本次回答的证据引用…",
+        *_default_debug_outputs(),
+        "当前没有可展示的命中文档树位置。",
+    )
+
+
+def _empty_debug_response(
+    history: list[dict[str, str]],
+    citation_message: str,
+) -> ChatYieldTuple:
+    return (
+        history,
+        citation_message,
+        *_default_debug_outputs(),
+        "当前没有可展示的命中文档树位置。",
+    )
 
 
 def build_ui(settings: AppSettings) -> gr.Blocks:
@@ -191,6 +431,16 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
 
     existing_profile = load_corpus_profile(settings.index_dir)
     initial_profile_text = format_corpus_profile(existing_profile)
+    initial_index_stats = _load_index_stats(settings)
+    initial_mode = _detect_current_index_mode(settings)
+    (
+        default_route,
+        default_plan,
+        default_queries,
+        default_retrieved,
+        default_rerank,
+        default_packed,
+    ) = _default_debug_outputs()
 
     with gr.Blocks(theme=themes.Soft(), css=css) as demo:
         gr.Markdown(
@@ -255,9 +505,7 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                         label="推荐提问",
                         lines=2,
                         placeholder="每行一个，列出这套知识库最适合回答的问题。",
-                        value="\n".join(
-                            existing_profile.get("recommended_questions", [])
-                        ),
+                        value="\n".join(existing_profile.get("recommended_questions", [])),
                     )
                     kb_forbidden_questions = gr.Textbox(
                         label="禁止/不建议问题",
@@ -273,6 +521,12 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                     )
 
                     gr.Markdown("<div class='section-title'>2. 导入知识源</div>")
+                    index_mode = gr.Radio(
+                        label="索引模式",
+                        choices=["flat", "hierarchical"],
+                        value=initial_mode,
+                        info="Flat Chunk Mode 适合快速构建；Hierarchical Mode 会保留文档树，便于调试、引用和命中路径展示。",
+                    )
                     files = gr.File(
                         label="上传知识源文件",
                         file_count="multiple",
@@ -294,6 +548,7 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                         interactive=False,
                         value=initial_profile_text,
                     )
+                    index_stats_box = gr.Markdown(value=initial_index_stats)
 
                     def do_index(
                         corpus_name: str,
@@ -306,6 +561,7 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                         corpus_recommended_questions: str,
                         corpus_forbidden_questions: str,
                         corpus_answer_style: str,
+                        selected_index_mode: str,
                         file_paths: list[str] | None,
                         progress=gr.Progress(),
                     ):
@@ -313,6 +569,7 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                             return (
                                 "请至少填写“知识库名称”或“内容摘要”，让系统知道这批语料大致是什么。",
                                 initial_profile_text,
+                                initial_index_stats,
                             )
 
                         source_examples = [Path(p).name for p in (file_paths or [])][:10]
@@ -335,19 +592,23 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                             preferred_answer_style=corpus_answer_style,
                         )
 
-                        out_lines = [f"已保存知识库画像: {profile_path}"]
+                        out_lines = [
+                            f"已保存知识库画像: {profile_path}",
+                            f"本次构建模式: {_humanize_index_mode(selected_index_mode)}",
+                        ]
 
                         if file_paths:
                             cfg = settings.indexer_config()
+                            cfg["index_mode"] = selected_index_mode
                             indexer = Indexer(cfg)
-                            for i, p in enumerate(file_paths, start=1):
+                            for i, file_path in enumerate(file_paths, start=1):
                                 progress(
                                     (i - 1) / max(len(file_paths), 1),
-                                    desc=f"正在索引: {Path(p).name}",
+                                    desc=f"正在索引: {Path(file_path).name}",
                                 )
-                                logger.info("Indexing file from UI: %s", p)
-                                indexer.index(p)
-                                out_lines.append(f"已索引: {p}")
+                                logger.info("Indexing file from UI: %s", file_path)
+                                indexer.index(file_path)
+                                out_lines.append(f"已索引: {file_path}")
 
                             _invalidate_cache()
                             progress(1.0, desc="完成")
@@ -357,9 +618,16 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                             out_lines.append("本次未上传新文件，仅更新了知识库画像。")
 
                         profile_text = format_corpus_profile(load_corpus_profile(settings.index_dir))
-                        return "\n".join(out_lines), profile_text
+                        index_stats = _load_index_stats(settings)
+                        return "\n".join(out_lines), profile_text, index_stats
 
                     def refresh_profile():
+                        return (
+                            format_corpus_profile(load_corpus_profile(settings.index_dir)),
+                            _load_index_stats(settings),
+                        )
+
+                    def refresh_profile_text():
                         return format_corpus_profile(load_corpus_profile(settings.index_dir))
 
                     index_btn.click(
@@ -375,14 +643,15 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                             kb_recommended_questions,
                             kb_forbidden_questions,
                             kb_answer_style,
+                            index_mode,
                             files,
                         ],
-                        outputs=[status, corpus_profile_box],
+                        outputs=[status, corpus_profile_box, index_stats_box],
                     )
                     refresh_profile_btn.click(
                         refresh_profile,
                         inputs=None,
-                        outputs=corpus_profile_box,
+                        outputs=[corpus_profile_box, index_stats_box],
                     )
 
             with gr.Tab("智能问答"):
@@ -397,13 +666,43 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                         value=initial_profile_text,
                     )
                     gr.Markdown(
-                        "<div class='hint-card'><div class='section-title'>问答方式</div><div class='subtle'>这里的回答默认应该围绕当前知识库来进行。如果问题明显超出知识库边界，后续可以引导为直接回答或提示超出范围。</div></div>"
+                        "<div class='hint-card'><div class='section-title'>问答方式</div><div class='subtle'>这里不仅展示最终答案，也展示 route、query plan、rerank 和 packed context，方便观察系统为什么这样回答。</div></div>"
                     )
                     session_id_state = gr.State(value=lambda: str(uuid.uuid4()))
                     chatbot = gr.Chatbot(height=520)
                     with gr.Accordion("证据引用", open=False):
                         citation_box = gr.Markdown(
                             value="当前回答的引用会显示在这里。",
+                            elem_classes="prose",
+                        )
+                    with gr.Accordion("调试面板", open=False):
+                        route_decision_box = gr.JSON(
+                            label="Route Decision",
+                            value=default_route,
+                        )
+                        query_plan_box = gr.JSON(
+                            label="Query Plan",
+                            value=default_plan,
+                        )
+                        rewritten_queries_box = gr.JSON(
+                            label="Rewritten Queries",
+                            value=default_queries,
+                        )
+                        retrieved_candidates_box = gr.JSON(
+                            label="Retrieved Candidates",
+                            value=default_retrieved,
+                        )
+                        reranked_box = gr.JSON(
+                            label="Reranked Top Passages",
+                            value=default_rerank,
+                        )
+                        packed_context_box = gr.JSON(
+                            label="Packed Context",
+                            value=default_packed,
+                        )
+                    with gr.Accordion("命中文档树位置", open=False):
+                        tree_hits_box = gr.Markdown(
+                            value="当前没有可展示的命中文档树位置。",
                             elem_classes="prose",
                         )
                     msg = gr.Textbox(
@@ -416,9 +715,26 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                         new_chat_btn = gr.Button("新建对话")
                         clear_btn = gr.Button("清空对话", variant="secondary")
                         clear_btn.click(
-                            lambda: ("", [], "当前回答的引用会显示在这里。"),
+                            lambda: (
+                                "",
+                                [],
+                                "当前回答的引用会显示在这里。",
+                                *_default_debug_outputs(),
+                                "当前没有可展示的命中文档树位置。",
+                            ),
                             inputs=None,
-                            outputs=[msg, chatbot, citation_box],
+                            outputs=[
+                                msg,
+                                chatbot,
+                                citation_box,
+                                route_decision_box,
+                                query_plan_box,
+                                rewritten_queries_box,
+                                retrieved_candidates_box,
+                                reranked_box,
+                                packed_context_box,
+                                tree_hits_box,
+                            ],
                         )
 
                     def reload_index():
@@ -430,24 +746,31 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                                 "未找到索引。请先在“知识库构建”中保存画像并导入资料。",
                                 [],
                                 profile_text,
-                                "当前回答的引用会显示在这里。",
+                                "当前回答没有可展示的结构化引用。",
+                                *_default_debug_outputs(),
+                                "当前没有可展示的命中文档树位置。",
                             )
-                        return "索引已加载。", [], profile_text, "当前回答的引用会显示在这里。"
+                        return (
+                            "索引已加载。",
+                            [],
+                            profile_text,
+                            "当前回答的引用会显示在这里。",
+                            *_default_debug_outputs(),
+                            "当前没有可展示的命中文档树位置。",
+                        )
 
                     def new_chat():
                         new_session_id = str(uuid.uuid4())
-                        return [], new_session_id, "当前回答的引用会显示在这里。"
+                        return (
+                            [],
+                            new_session_id,
+                            "当前回答的引用会显示在这里。",
+                            *_default_debug_outputs(),
+                            "当前没有可展示的命中文档树位置。",
+                        )
 
                     def user_msg(user_message: str, history):
                         return "", history + [{"role": "user", "content": user_message}]
-
-                    def _extract_citations(result: dict | None) -> str:
-                        if not isinstance(result, dict):
-                            return "当前回答没有可展示的结构化引用。"
-                        grounded = result.get("groundedAnswer", {})
-                        if isinstance(grounded, dict) and grounded.get("evidence"):
-                            return render_grounded_citations(grounded)
-                        return "当前回答没有可展示的结构化引用。"
 
                     async def bot_msg(history, session_id):
                         offline = settings.offline_mode
@@ -455,7 +778,7 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
 
                         user_message = history[-1]["content"]
                         history.append({"role": "assistant", "content": ""})
-                        yield history, "正在整理本次回答的证据引用…"
+                        yield _pending_debug_response(history)
 
                         try:
                             if graph is None:
@@ -464,103 +787,164 @@ def build_ui(settings: AppSettings) -> gr.Blocks:
                                     history[-1]["content"] = (
                                         "未加载索引。请先在“知识库构建”中保存画像并导入资料。"
                                     )
-                                    yield history, "当前回答没有可展示的结构化引用。"
+                                    yield _empty_debug_response(
+                                        history,
+                                        "当前回答没有可展示的结构化引用。",
+                                    )
                                     return
+
                                 docs = retriever.invoke(user_message)
                                 answer = format_retrieval_only_answer(user_message, docs)
                                 history[-1]["content"] = answer
-                                yield history, "离线模式下仅展示检索摘录，节点级 citation 面板不可用。"
-                            else:
-                                input_state = {
-                                    "messages": [HumanMessage(content=user_message)]
-                                }
-                                config = {"configurable": {"thread_id": session_id}}
+                                yield _empty_debug_response(
+                                    history,
+                                    "离线模式下仅展示检索摘录，节点级 citation 与调试面板不可用。",
+                                )
+                                return
 
-                                streamed = ""
-                                async for event in graph.astream_events(
+                            input_state = {"messages": [HumanMessage(content=user_message)]}
+                            config = {"configurable": {"thread_id": session_id}}
+
+                            streamed = ""
+                            async for event in graph.astream_events(
+                                cast(GraphState, input_state),
+                                config=config,
+                                version="v2",
+                            ):
+                                kind = event.get("event", "")
+                                if kind == "on_chat_model_stream":
+                                    chunk = event.get("data", {}).get("chunk")
+                                    if chunk and hasattr(chunk, "content") and chunk.content:
+                                        streamed += chunk.content
+                                        history[-1]["content"] = streamed
+                                        yield _empty_debug_response(
+                                            history,
+                                            "正在整理本次回答的证据引用…",
+                                        )
+
+                            result: dict[str, Any] | None = None
+                            if not streamed:
+                                result = graph.invoke(
                                     cast(GraphState, input_state),
                                     config=config,
-                                    version="v2",
-                                ):
-                                    kind = event.get("event", "")
-                                    if kind == "on_chat_model_stream":
-                                        chunk = event.get("data", {}).get("chunk")
-                                        if (
-                                            chunk
-                                            and hasattr(chunk, "content")
-                                            and chunk.content
-                                        ):
-                                            streamed += chunk.content
-                                            history[-1]["content"] = streamed
-                                            yield history, "正在整理本次回答的证据引用…"
+                                )
+                                messages = (
+                                    result.get("messages", [])
+                                    if isinstance(result, dict)
+                                    else []
+                                )
+                                answer = (
+                                    getattr(messages[-1], "content", str(messages[-1]))
+                                    if messages
+                                    else str(result)
+                                )
+                                history[-1]["content"] = answer
+                            else:
+                                snapshot = graph.get_state(config)
+                                result = (
+                                    snapshot.values if hasattr(snapshot, "values") else None
+                                )
 
-                                result: dict | None = None
-                                if not streamed:
-                                    result = graph.invoke(
-                                        cast(GraphState, input_state),
-                                        config=config,
-                                    )
-                                    messages = (
-                                        result.get("messages", [])
-                                        if isinstance(result, dict)
-                                        else []
-                                    )
-                                    answer = (
-                                        getattr(messages[-1], "content", str(messages[-1]))
-                                        if messages
-                                        else str(result)
-                                    )
-                                    history[-1]["content"] = answer
-                                else:
-                                    snapshot = graph.get_state(config)
-                                    result = (
-                                        snapshot.values if hasattr(snapshot, "values") else None
-                                    )
+                            yield (
+                                history,
+                                _extract_citations(result),
+                                *_extract_debug_outputs(result),
+                            )
 
-                                yield history, _extract_citations(result)
-
-                        except ConnectionError as e:
+                        except ConnectionError as exc:
                             error_msg = "连接 AI 服务失败。请检查您的 API 配置是否正确。"
-                            logger.error("Connection error: %s", e)
+                            logger.error("Connection error: %s", exc)
                             history[-1]["content"] = error_msg
-                            yield history, "当前回答没有可展示的结构化引用。"
-                        except ValueError as e:
-                            if "API key" in str(e) or "api_key" in str(e).lower():
+                            yield _empty_debug_response(
+                                history,
+                                "当前回答没有可展示的结构化引用。",
+                            )
+                        except ValueError as exc:
+                            if "API key" in str(exc) or "api_key" in str(exc).lower():
                                 error_msg = "API 密钥未配置。请在 .env 文件中设置 OPENAI_API_KEY。"
                             else:
-                                error_msg = f"配置错误: {e}"
-                            logger.error("Value error: %s", e)
+                                error_msg = f"配置错误: {exc}"
+                            logger.error("Value error: %s", exc)
                             history[-1]["content"] = error_msg
-                            yield history, "当前回答没有可展示的结构化引用。"
-                        except TimeoutError as e:
+                            yield _empty_debug_response(
+                                history,
+                                "当前回答没有可展示的结构化引用。",
+                            )
+                        except TimeoutError as exc:
                             error_msg = "请求超时，请重试。"
-                            logger.error("Timeout error: %s", e)
+                            logger.error("Timeout error: %s", exc)
                             history[-1]["content"] = error_msg
-                            yield history, "当前回答没有可展示的结构化引用。"
-                        except Exception as e:
-                            error_msg = f"发生错误: {e}，请重试。"
-                            logger.error("Unexpected error: %s", e, exc_info=True)
+                            yield _empty_debug_response(
+                                history,
+                                "当前回答没有可展示的结构化引用。",
+                            )
+                        except Exception as exc:
+                            error_msg = f"发生错误: {exc}，请重试。"
+                            logger.error("Unexpected error: %s", exc, exc_info=True)
                             history[-1]["content"] = error_msg
-                            yield history, "当前回答没有可展示的结构化引用。"
+                            yield _empty_debug_response(
+                                history,
+                                "当前回答没有可展示的结构化引用。",
+                            )
 
                     reload_btn.click(
                         reload_index,
                         inputs=None,
-                        outputs=[msg, chatbot, chat_profile_box, citation_box],
+                        outputs=[
+                            msg,
+                            chatbot,
+                            chat_profile_box,
+                            citation_box,
+                            route_decision_box,
+                            query_plan_box,
+                            rewritten_queries_box,
+                            retrieved_candidates_box,
+                            reranked_box,
+                            packed_context_box,
+                            tree_hits_box,
+                        ],
                     )
                     refresh_chat_profile_btn.click(
-                        refresh_profile,
+                        refresh_profile_text,
                         inputs=None,
                         outputs=chat_profile_box,
                     )
                     new_chat_btn.click(
                         new_chat,
                         inputs=None,
-                        outputs=[chatbot, session_id_state, citation_box],
+                        outputs=[
+                            chatbot,
+                            session_id_state,
+                            citation_box,
+                            route_decision_box,
+                            query_plan_box,
+                            rewritten_queries_box,
+                            retrieved_candidates_box,
+                            reranked_box,
+                            packed_context_box,
+                            tree_hits_box,
+                        ],
                     )
                     msg.submit(
-                        user_msg, [msg, chatbot], [msg, chatbot], queue=False
-                    ).then(bot_msg, [chatbot, session_id_state], [chatbot, citation_box])
+                        user_msg,
+                        [msg, chatbot],
+                        [msg, chatbot],
+                        queue=False,
+                    ).then(
+                        bot_msg,
+                        [chatbot, session_id_state],
+                        [
+                            chatbot,
+                            citation_box,
+                            route_decision_box,
+                            query_plan_box,
+                            rewritten_queries_box,
+                            retrieved_candidates_box,
+                            reranked_box,
+                            packed_context_box,
+                            tree_hits_box,
+                        ],
+                    )
 
         gr.Markdown(
             "<div class='subtle'>索引存储位置：<code>data/index/</code>。知识库画像会保存为 <code>data/index/corpus_profile.json</code>。</div>"
