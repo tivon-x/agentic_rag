@@ -118,8 +118,8 @@ FastAPI 进程内最多启动一个 index worker 和一个 run worker。SQLite �
 1. `POST /api/index/files` 流式保存文件，计算 SHA-256，写 `indexing_jobs` 和 `index_job_items`。
 2. index worker 领取 lease，解析到项目自有 `ParsedPaper` schema。
 3. 元数据归一化并写 catalog；parser 输出落为可检查 artifact。
-4. 为 passage 生成 `quote_text` 与 `retrieval_text`。
-5. 在临时版本目录构建 FAISS、BM25 和 manifest。
+4. 为 passage 生成 `quote_text` 与 `retrieval_text`，并在调用 embedding provider 前执行应用侧长度校验。
+5. 在临时版本目录构建 FAISS、BM25 和 manifest；manifest 固化 embedding provider、model、dimension、input mode 和代码版本。
 6. 完整性校验通过后，用一次数据库事务切换 `active_index_version`。
 7. 失败版本保留错误摘要，不影响当前 active version。
 
@@ -170,7 +170,7 @@ Enhanced 再新增：
 - `section_id = sha256(paper_version_id + normalized_heading_path + ordinal)`。
 - `passage_id = sha256(paper_version_id + section_id + page_start + ordinal + sha256(quote_text))`。
 - `evidence_id = "E-" + passage_id[:12]`，展示稳定，数据库仍保存完整 `passage_id`。
-- `index_version` 是不可变 UUID，manifest 记录 parser、embedding、BM25 tokenizer、chunker、reranker 和代码版本。
+- `index_version` 是不可变 UUID，manifest 记录 parser、embedding provider/model/dimension/input mode/context-length check/max input chars、BM25 tokenizer、chunker、reranker 和代码版本。
 - `run_id` 是 UUID。LangGraph `thread_id` 与 `run_id` 相同，但会话历史来自数据库快照，不由 checkpoint 承担。
 
 Core 中的 `paper` 表示一个上传文件实体，`paper_versions` 表示该文件经过不同 parser 或 normalization 版本得到的解析版本，不表示论文内容修订版。同一论文的 arXiv 新版本、出版社版本或重新下载后字节不同的 PDF 会生成不同 `paper_id`，Core 不自动合并。DOI 和 arXiv ID 只作为元数据保存，后续允许用户手工合并文件实体。
@@ -281,6 +281,7 @@ M2 门槛：
 
 - `retrieval_text` 用于 BM25、embedding 和 rerank。
 - `quote_text` 保持 parser 抽取的原文，只用于上下文和引用。
+- 当前 OpenAI-compatible embedding provider 使用 raw-string input mode，即 `check_embedding_ctx_length=false`。因此 passage 与 metadata prefix 组合后的长度由应用侧负责校验，超限时确定性重切分或明确失败，不能直接发送超长输入。
 - 无法确认的 metadata 留空，不让低置信值污染所有 passage。
 - prefix 每个字段有开关，可以独立消融。
 
@@ -491,6 +492,8 @@ PARSER_TIMEOUT_SECONDS=180
 LONG_DOCUMENT_TIMEOUT_SECONDS=600
 INDEX_WORKER_LEASE_SECONDS=60
 RUN_WORKER_LEASE_SECONDS=30
+EMBEDDING_INPUT_MODE=raw
+EMBEDDING_MAX_INPUT_CHARS=6000
 RETRIEVAL_PIPELINE=v2_fixed
 BM25_TOKENIZER=mixed
 RRF_K=60
@@ -500,7 +503,7 @@ CONTEXT_TOKEN_BUDGET=8000
 LANGGRAPH_STRICT_MSGPACK=true
 ```
 
-Core 不需要新增 API Key。dense embedding 和生成仍使用现有 OpenAI-compatible 配置；无 Key 时 Search 的 BM25 和已存在的离线检索模式仍可运行。
+Core 不需要新增 API Key。dense embedding 和生成仍使用现有 OpenAI-compatible 配置；无 Key 时 Search 的 BM25 和已存在的离线检索模式仍可运行。`EMBEDDING_INPUT_MODE=raw` 映射为 `check_embedding_ctx_length=false`；`EMBEDDING_MAX_INPUT_CHARS=6000` 是 provider 调用前的确定性应用侧上限。后续若切换 input mode 或长度上限，必须生成新 index version。API Key 不得写入 manifest。
 
 ### 9.2 依赖
 
@@ -555,7 +558,7 @@ Route test 固定 4 类，每类 12 条：direct、fixed、adaptive、refuse。�
 | B3 | B2 + section neighbor expansion | 扩展净收益 |
 | B4 | B3 + adaptive | Enhanced 净收益 |
 
-所有组使用同一 parser 产物、同一 embedding、同一 reranker、同一 top-k 和同一测试集。对 B2 做以下单因素消融：
+所有组使用同一 parser 产物、同一 embedding provider/model/dimension/input mode、同一 reranker、同一 top-k 和同一测试集。B0 至 B3 必须从同一冻结配置重建索引，不得复用历史 fake embedding 索引或其他模型生成的 FAISS 索引。查询配置与 index manifest 不兼容时立即失败。对 B2 做以下单因素消融：
 
 - 去掉 metadata prefix。
 - 去掉 sparse。
@@ -760,6 +763,7 @@ pnpm --dir web build
 **改造**
 
 - `retrieval_text` 与 `quote_text` 分离。
+- 固化 embedding provider/model/dimension/input mode，并让 runner 校验 index manifest。
 - 中英 mixed tokenizer。
 - RRF 替换默认 min-max fusion。
 - B0 至 B3 共用 runner。

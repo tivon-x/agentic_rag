@@ -23,7 +23,8 @@
 当前基线：
 - 工作分支应为 codex/v2-core。
 - pre-V2 baseline commit 为 5983aca。
-- baseline 后端测试结果为 154 passed、1 failed。失败用例是 tests/test_settings.py::test_load_settings_defaults，原因是测试没有隔离 EMBEDDING_MODEL 环境变量。
+- M1 实施起点 commit 为 324e7c0，其中包含 OpenAI-compatible embedding provider 的 raw-string 输入修复。
+- 当前后端测试结果为 155 passed、1 failed。失败用例是 tests/test_settings.py::test_load_settings_defaults，原因是测试没有隔离 EMBEDDING_MODEL 环境变量。
 - baseline Ruff 通过，pnpm --dir web lint 和 pnpm --dir web build 通过。
 - 已知安全问题：api/routers/indexing.py 直接使用 upload.filename 拼接保存路径，必须在 M1 中修复路径穿越风险，并增加回归测试。
 
@@ -32,6 +33,7 @@
 - 不开始 M2 至 M6，不安装 Docling，不新增 Redis、Celery、PostgreSQL、任务服务或其他外部基础设施。
 - 复用现有 FastAPI、SQLite、Indexer、Settings 和前端代码，不另建平行实现。
 - 所有配置继续通过 AppSettings，禁止在路由中直接读取环境变量。
+- embedding raw-string 行为必须成为显式配置和索引契约，不能继续作为 indexing/embeddings.py 中未记录的隐藏细节。
 - 保护所有用户文件。开始时运行 git status --short --branch -uall；如果出现不属于本 Goal 的新增改动，保留并绕开，发生路径冲突时停止并说明。
 
 必须完成：
@@ -40,11 +42,13 @@
 3. 将 _BACKGROUND_TASKS 替换为单 index worker、SQLite lease、heartbeat、启动扫描和有限重试。
 4. indexing job 状态统一为 queued -> running -> completed|failed|cancelled。
 5. 上传写入安全临时目录，校验文件名、后缀、大小和最终解析路径，禁止目录穿越。重复 Idempotency-Key 不创建第二个 job。
-6. 新索引写入不可变临时版本，校验成功后原子切换 active pointer；失败时旧 active index 不变。
-7. 合并 main.py 与 FastAPI 的 Settings 加载边界，避免测试和启动方式产生不同配置。
-8. /api/chat/stream 只发送进度、证据和一次最终答案，不转发任意节点的原始模型 token。
-9. 保留旧索引读取适配器和 INDEX_WRITE_MODE=legacy 回滚路径。
-10. 补齐 API、migration、worker recovery、index version、上传安全、幂等和 SSE 测试。
+6. 将 embedding provider、model、dimension、input mode、context-length check 和 max input chars 纳入 AppSettings。raw-string provider 使用 check_embedding_ctx_length=false，应用侧默认 EMBEDDING_MAX_INPUT_CHARS=6000；不得把 API Key 或其他凭据写入 manifest。
+7. 新索引写入不可变临时版本，manifest 记录 embedding provider、model、dimension、input mode、context-length check、max input chars 和代码版本；校验成功后原子切换 active pointer，失败时旧 active index 不变。
+8. 加载索引时校验当前 embedding 配置与 manifest。model、dimension 或 input mode 不兼容时拒绝加载并要求重建，不能静默查询旧向量。
+9. 合并 main.py 与 FastAPI 的 Settings 加载边界，避免测试和启动方式产生不同配置。
+10. /api/chat/stream 只发送进度、证据和一次最终答案，不转发任意节点的原始模型 token。
+11. 保留旧索引读取适配器和 INDEX_WRITE_MODE=legacy 回滚路径。
+12. 补齐 API、migration、worker recovery、index version、embedding compatibility、上传安全、幂等和 SSE 测试。
 
 验证：
 - 运行 uv run --extra dev python -m pytest -q，完整测试必须通过。
@@ -52,6 +56,7 @@
 - 运行 pnpm --dir web lint 和 pnpm --dir web build，必须通过。
 - 手工故障注入：上传两篇论文，在 indexing running 时终止 API，再启动；确认最多一个 worker 恢复任务。
 - 确认新索引校验前 active pointer 不变化。
+- 确认 embedding model、dimension 或 input mode 改变后旧索引不会被静默加载。
 - 确认重复 Idempotency-Key 不产生第二个 job。
 - 确认恶意文件名无法逃出 UPLOAD_ROOT。
 - 确认 SSE 不包含路由、规划或中间生成 token。
@@ -88,11 +93,12 @@
 3. paper 表示上传文件实体；paper_versions 表示 parser/normalization 解析版本。不同字节的 PDF 暂不自动合并。
 4. 元数据提取按 PDF metadata、首屏启发式、文件名依次降级，保存字段来源和置信度；支持用户修改 title、authors、year、venue、DOI 或 arXiv ID。
 5. 生成稳定的 paper、paper_version、section、passage ID，保存 page_start、page_end、quote_text 和 retrieval_text。
-6. Search API 返回 paper、section、page、quote 和各评分阶段，PDF API 支持 Range 请求和 #page=N 跳转。
-7. 将 /kb 迁移为 /library，新增 /papers/[id] 和 /search。页面必须展示解析状态、降级原因、元数据置信度、用户校正入口和原页跳转。
-8. 修改元数据后，新的 retrieval_text prefix 生效，但 quote_text 保持原文。
-9. 建立 parser gold：4 篇 dev、12 篇 test、共 48 个重点页面。覆盖双栏、表格、公式、长文、低文本和错误 metadata。不得根据 test 结果反向修改 test 标注。
-10. 增加 parser、metadata、paper API、Search API、Range 和页面跳转测试。
+6. 在调用 embedding provider 前对 retrieval_text 做确定性的长度校验。由于 raw-string 模式关闭 LangChain 自动切分，passage 和 metadata prefix 的组合必须受 AppSettings 中 EMBEDDING_MAX_INPUT_CHARS=6000 的默认硬上限保护；超限时重新切分或明确失败，不能把超长输入直接交给 provider。
+7. Search API 返回 paper、section、page、quote 和各评分阶段，PDF API 支持 Range 请求和 #page=N 跳转。
+8. 将 /kb 迁移为 /library，新增 /papers/[id] 和 /search。页面必须展示解析状态、降级原因、元数据置信度、用户校正入口和原页跳转。
+9. 修改元数据后，新的 retrieval_text prefix 生效，但 quote_text 保持原文。
+10. 建立 parser gold：4 篇 dev、12 篇 test、共 48 个重点页面。覆盖双栏、表格、公式、长文、低文本和错误 metadata。不得根据 test 结果反向修改 test 标注。
+11. 增加 parser、metadata、passage 长度边界、paper API、Search API、Range 和页面跳转测试。
 
 验证：
 - uv run --extra dev python -m pytest tests/test_pdf_parser.py tests/test_parser_quality.py tests/test_metadata.py tests/test_paper_api.py tests/test_search_api.py -q
@@ -130,7 +136,8 @@
 
 执行边界：
 - 只实施固定检索和 Core 评测，不增加 query routing、multi-query、自纠错循环、claim validation、run worker 或详细 Agent trace。
-- B0 至 B3 必须共用相同 parser artifact、embedding、reranker、top-k 和 test set。
+- B0 至 B3 必须共用相同 parser artifact、embedding provider、model、dimension、raw-string input mode、reranker、top-k 和 test set。
+- 所有 B0 至 B3 索引必须从同一冻结配置重新构建。不得复用历史 fake embedding 索引或其他 embedding 模型生成的 FAISS 索引。
 - 不能因为某个方案技术上更新就设为默认，默认切换只由冻结评测门槛决定。
 - 不使用 Anthropic 式 LLM chunk context，正式名称保持 metadata-prefixed retrieval。
 
@@ -139,12 +146,13 @@
 2. 实现中英 mixed tokenizer。
 3. 建立可配置、可测试的固定 pipeline registry。
 4. B0 为 dense + BM25 无 rerank；B1 为当前 flat_rerank；B2 为 metadata prefix + mixed BM25 + dense + RRF + rerank；B3 为 B2 + section neighbor expansion。
-5. RRF 使用方案确定的 k=60；召回、融合、重排、扩展和 context packing 均记录阶段性结果。
-6. 建立 48 条冻结 retrieval test，四类各 12 条：精确术语与定义、方法与章节定位、实验数值与表格、跨论文或跨章节问题。
-7. 建立 8 条 answer smoke，但不得用它代替正式 answer test。
-8. 对 B2 做去 metadata prefix、去 sparse、去 dense、RRF 换回 min-max、去 rerank 的单因素消融；neighbor expansion 单独作为 B3。
-9. 报告 Recall@5/10、MRR@10、nDCG@10、paper Recall@10、section Recall@10、逐问题胜平负、目标子集、p50/p95 延迟和坏例。
-10. 不填虚构提升百分比，不用统一综合分掩盖子集退化。
+5. 每次评测报告必须记录 embedding provider、model、dimension、input mode、索引 manifest 和代码 commit，查询 embedding 与索引 embedding 不一致时立即失败。
+6. RRF 使用方案确定的 k=60；召回、融合、重排、扩展和 context packing 均记录阶段性结果。
+7. 建立 48 条冻结 retrieval test，四类各 12 条：精确术语与定义、方法与章节定位、实验数值与表格、跨论文或跨章节问题。
+8. 建立 8 条 answer smoke，但不得用它代替正式 answer test。
+9. 对 B2 做去 metadata prefix、去 sparse、去 dense、RRF 换回 min-max、去 rerank 的单因素消融；neighbor expansion 单独作为 B3。
+10. 报告 Recall@5/10、MRR@10、nDCG@10、paper Recall@10、section Recall@10、逐问题胜平负、目标子集、p50/p95 延迟和坏例。
+11. 不填虚构提升百分比，不用统一综合分掩盖子集退化。
 
 发布门槛：
 - B2 Recall@10 不低于 B1。
