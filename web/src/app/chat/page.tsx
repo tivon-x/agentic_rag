@@ -2,9 +2,7 @@
 
 import {
   startTransition,
-  useDeferredValue,
   useEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -19,18 +17,11 @@ import type { ChatMessage as ChatMessageType, StreamToken } from "@/lib/types";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
-  const [draftReply, setDraftReply] = useState("");
-  const draftReplyRef = useRef("");
-  const deferredDraftReply = useDeferredValue(draftReply);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
   const [citations, setCitations] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    draftReplyRef.current = draftReply;
-  }, [draftReply]);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,17 +60,12 @@ export default function ChatPage() {
   }, [sessionId]);
 
   const stream = useSSEStream({
-    onToken(payload: StreamToken) {
-      startTransition(() => {
-        setDraftReply((current) => current + (payload.content ?? ""));
-      });
-    },
-    onCitations(payload: StreamToken) {
+    onEvidence(payload: StreamToken) {
       setCitations(payload.citations_markdown ?? "");
     },
-    onDone(payload: StreamToken) {
+    onFinal(payload: StreamToken) {
       startTransition(() => {
-        const content = draftReplyRef.current || payload.content || "";
+        const content = payload.content || "";
         if (content) {
           setMessages((current) => [
             ...current,
@@ -89,14 +75,13 @@ export default function ChatPage() {
             },
           ]);
         }
-        setDraftReply("");
       });
       setIsSubmitting(false);
     },
     onError(message: string) {
       setError(`${text.chat.errorPrefix}：${message}`);
       startTransition(() => {
-        const content = draftReplyRef.current || message;
+        const content = message;
         if (content) {
           setMessages((current) => [
             ...current,
@@ -106,7 +91,6 @@ export default function ChatPage() {
             },
           ]);
         }
-        setDraftReply("");
       });
       setIsSubmitting(false);
     },
@@ -156,7 +140,6 @@ export default function ChatPage() {
   function resetSession() {
     stream.closeStream();
     setMessages([]);
-    setDraftReply("");
     setSessionId(null);
     setInput("");
     setError("");
@@ -185,7 +168,7 @@ export default function ChatPage() {
           </div>
 
           <div className="space-y-4 rounded-[28px] border border-white/60 bg-white/80 p-4">
-            {messages.length === 0 && !deferredDraftReply ? (
+            {messages.length === 0 ? (
               <div className="rounded-[24px] bg-slate-900 px-5 py-6 text-slate-100">
                 <p className="text-lg font-semibold">{text.chat.emptyTitle}</p>
                 <p className="mt-2 text-sm leading-7 text-slate-300">
@@ -207,11 +190,6 @@ export default function ChatPage() {
               </article>
             ))}
 
-            {deferredDraftReply ? (
-              <article className="max-w-[88%] rounded-[26px] border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm leading-7 text-slate-800">
-                {deferredDraftReply}
-              </article>
-            ) : null}
           </div>
 
           <div className="space-y-3">
@@ -245,8 +223,8 @@ export default function ChatPage() {
               </p>
               <p className="text-sm leading-7 text-slate-300">
                 当前前端通过 `/api/chat` 创建或追加消息，再用 `/api/chat/stream`
-                订阅同一会话的流式输出。回答完成后，后端会再发一条 `citations`
-                事件，用来填充右侧引用面板。
+                订阅同一会话的进度。后端只发送已确认的 `evidence` 和一次
+                `answer.final`，不会暴露路由、规划或中间生成内容。
               </p>
             </div>
           </Card>

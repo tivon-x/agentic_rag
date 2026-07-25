@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 from typing import cast
 
-from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 
 from agent.states import GraphState
@@ -13,9 +12,8 @@ from core.factory import build_graph, build_retriever
 from core.settings import configure_logging, load_settings
 from core.rag_answer import format_retrieval_only_answer
 from evals.runner import parse_eval_runner_config, run_eval_suite
+from indexing.index_versions import activate_index_version, create_index_version
 from indexing.indexer import Indexer
-
-load_dotenv()  # 加载环境变量
 
 logger = logging.getLogger(__name__)
 
@@ -31,21 +29,34 @@ def _offline_answer(settings, question: str) -> str:
 def cmd_index(args: argparse.Namespace) -> int:
     settings = load_settings()
     configure_logging(settings)
+    index_mode = args.mode or settings.index_mode
+    if settings.index_write_mode == "versioned":
+        overrides = {}
+        if args.leaf_node_type:
+            overrides["leaf_node_type"] = args.leaf_node_type
+        if args.parent_embed_pooling:
+            overrides["parent_embed_pooling"] = args.parent_embed_pooling
+        version_id, version_dir = create_index_version(
+            settings,
+            source_paths=[Path(path) for path in args.paths],
+            index_mode=index_mode,
+            config_overrides=overrides,
+        )
+        activate_index_version(settings, version_id)
+        logger.info("Activated index version %s at %s", version_id, version_dir)
+        return 0
+
     cfg = settings.indexer_config()
-    if args.mode:
-        cfg["index_mode"] = args.mode
+    cfg["index_mode"] = index_mode
     if args.leaf_node_type:
         cfg["leaf_node_type"] = args.leaf_node_type
     if args.parent_embed_pooling:
         cfg["parent_embed_pooling"] = args.parent_embed_pooling
     indexer = Indexer(cfg)
-
-    for p in args.paths:
-        logger.info("Indexing: %s", p)
-        indexer.index(p)
-
-    logger.info("Index saved to %s", settings.faiss_dir)
-    logger.info("BM25 bundle saved to %s", settings.bm25_path)
+    for path in args.paths:
+        logger.info("Indexing: %s", path)
+        indexer.index(path)
+    logger.info("Legacy index saved to %s", settings.faiss_dir)
     return 0
 
 
@@ -74,6 +85,14 @@ def cmd_ask(args: argparse.Namespace) -> int:
         getattr(messages[-1], "content", str(messages[-1])) if messages else str(result)
     )
     logger.info("Answer:\n%s", content)
+    return 0
+
+
+def cmd_activate_index(args: argparse.Namespace) -> int:
+    settings = load_settings()
+    configure_logging(settings)
+    pointer = activate_index_version(settings, args.version_id)
+    logger.info("Activated index version %s via %s", args.version_id, pointer)
     return 0
 
 
@@ -153,6 +172,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_ask = sub.add_parser("ask", help="Ask a question against the local index")
     p_ask.add_argument("question", help="Question text")
     p_ask.set_defaults(func=cmd_ask)
+
+    p_activate = sub.add_parser(
+        "activate-index",
+        help="Activate a validated immutable index version for rollback.",
+    )
+    p_activate.add_argument("version_id", help="32-character index version id")
+    p_activate.set_defaults(func=cmd_activate_index)
 
     p_ui = sub.add_parser("ui", help="Launch Gradio UI")
     p_ui.set_defaults(func=cmd_ui)

@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import type { StreamToken } from "@/lib/types";
 
 type Handlers = {
-  onToken?: (payload: StreamToken) => void;
-  onCitations?: (payload: StreamToken) => void;
-  onDone?: (payload: StreamToken) => void;
+  onProgress?: (payload: StreamToken) => void;
+  onEvidence?: (payload: StreamToken) => void;
+  onFinal?: (payload: StreamToken) => void;
   onError?: (message: string) => void;
 };
 
@@ -36,21 +36,21 @@ export function useSSEStream(handlers: Handlers) {
     eventSourceRef.current = eventSource;
     setIsStreaming(true);
 
-    eventSource.addEventListener("token", (event) => {
-      handlersRef.current.onToken?.(
+    eventSource.addEventListener("progress", (event) => {
+      handlersRef.current.onProgress?.(
         JSON.parse((event as MessageEvent<string>).data) as StreamToken,
       );
     });
-    eventSource.addEventListener("citations", (event) => {
-      handlersRef.current.onCitations?.(
+    eventSource.addEventListener("evidence", (event) => {
+      handlersRef.current.onEvidence?.(
         JSON.parse((event as MessageEvent<string>).data) as StreamToken,
       );
     });
-    eventSource.addEventListener("done", (event) => {
+    eventSource.addEventListener("answer.final", (event) => {
       const payload = JSON.parse(
         (event as MessageEvent<string>).data,
       ) as StreamToken;
-      handlersRef.current.onDone?.(payload);
+      handlersRef.current.onFinal?.(payload);
       setIsStreaming(false);
       eventSource.close();
       eventSourceRef.current = null;

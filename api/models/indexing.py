@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
 
-IndexingJobStatus = Literal["pending", "running", "completed", "failed"]
+IndexingJobStatus = Literal[
+    "queued",
+    "running",
+    "completed",
+    "failed",
+    "cancelled",
+]
 
 
 class IndexingJobResponse(BaseModel):
@@ -17,6 +23,11 @@ class IndexingJobResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     error_message: str | None = None
+    attempt_count: int = 0
+    max_attempts: int = 3
+    progress: dict[str, Any] | None = None
+    active_version_before: str | None = None
+    target_version: str | None = None
 
 
 class FileUploadResponse(BaseModel):

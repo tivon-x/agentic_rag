@@ -1,12 +1,71 @@
 """Tests for settings module."""
 
 import os
+import pytest
+
 from core.settings import (
-    load_settings,
+    configure_logging,
     is_offline_mode,
     load_dotenv,
-    configure_logging,
+    load_settings,
 )
+
+SETTINGS_ENV_VARS = {
+    "APP_DB_PATH",
+    "BM25_PATH",
+    "CHUNK_OVERLAP",
+    "CHUNK_SIZE",
+    "DATA_DIR",
+    "DOC_TREES_PATH",
+    "EMBEDDING_API_BASE",
+    "EMBEDDING_API_KEY",
+    "EMBEDDING_CHECK_CONTEXT_LENGTH",
+    "EMBEDDING_DIMENSION",
+    "EMBEDDING_DIMENSIONS",
+    "EMBEDDING_INPUT_MODE",
+    "EMBEDDING_MAX_INPUT_CHARS",
+    "EMBEDDING_MODEL",
+    "EMBEDDING_PROVIDER",
+    "FAISS_DIR",
+    "INDEX_DIR",
+    "INDEX_ROOT",
+    "INDEX_WORKER_HEARTBEAT_SECONDS",
+    "INDEX_WORKER_LEASE_SECONDS",
+    "INDEX_WORKER_MAX_ATTEMPTS",
+    "INDEX_WORKER_POLL_SECONDS",
+    "INDEX_WRITE_MODE",
+    "LLM_MODEL",
+    "LLM_MODEL_AGGREGATE",
+    "LLM_MODEL_AGGREGATE_ANSWERS",
+    "LLM_MODEL_DECIDE_RETRIEVAL",
+    "LLM_MODEL_DECISION",
+    "LLM_MODEL_DIRECT",
+    "LLM_MODEL_DIRECT_ANSWER",
+    "LLM_MODEL_OUT_OF_SCOPE",
+    "LLM_MODEL_OUT_OF_SCOPE_ANSWER",
+    "LLM_MODEL_PLAN_QUERY",
+    "LLM_MODEL_RESEARCH_SEARCH",
+    "LLM_MODEL_REWRITE",
+    "LLM_MODEL_REWRITE_QUERY",
+    "LLM_MODEL_SUMMARIZE",
+    "LLM_MODEL_SUMMARIZE_HISTORY",
+    "LOG_DIR",
+    "LOG_FILE",
+    "NODES_PATH",
+    "OFFLINE_MODE",
+    "OPENAI_API_BASE",
+    "OPENAI_API_KEY",
+    "RETRIEVER_K",
+    "UPLOAD_ROOT",
+    "UPLOAD_MAX_BYTES",
+}
+
+
+@pytest.fixture(autouse=True)
+def isolate_settings_environment(monkeypatch):
+    """Keep every settings test independent from the host and root .env."""
+    for name in SETTINGS_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
 
 
 def test_load_settings_defaults(tmp_path, monkeypatch):
@@ -26,12 +85,20 @@ def test_load_settings_defaults(tmp_path, monkeypatch):
     assert settings.bm25_path == tmp_path / "data" / "index" / "bm25.pkl"
     assert settings.nodes_path == tmp_path / "data" / "index" / "nodes.jsonl"
     assert settings.doc_trees_path == tmp_path / "data" / "index" / "doc_trees.json"
+    assert settings.index_root == tmp_path / "data" / "indexes"
+    assert settings.upload_root == tmp_path / "data" / "uploads"
+    assert settings.app_db_path == tmp_path / "data" / "api" / "sessions.db"
     assert settings.log_level == "INFO"
     assert settings.llm_model == ""
     assert settings.llm_api_key == ""
     assert settings.llm_api_base == ""
     assert settings.llm_temperature == 0.2
     assert settings.embedding_model == "text-embedding-3-small"
+    assert settings.embedding_provider == "openai-compatible"
+    assert settings.embedding_dimensions == 1536
+    assert settings.embedding_input_mode == "raw"
+    assert settings.embedding_check_context_length is False
+    assert settings.embedding_max_input_chars == 6000
     assert settings.vector_backend == "faiss"
     assert settings.lexical_backend == "bm25"
     assert settings.node_backend == "json"
@@ -49,6 +116,7 @@ def test_load_settings_defaults(tmp_path, monkeypatch):
     assert settings.max_context_tokens == 5000
     assert settings.keep_messages == 20
     assert settings.offline_mode is False
+    assert settings.index_write_mode == "versioned"
 
 
 def test_load_settings_from_env(tmp_env_file, monkeypatch):
@@ -71,6 +139,8 @@ def test_load_settings_from_env(tmp_env_file, monkeypatch):
     assert settings.node_backend == "json"
     assert settings.retriever_k == 5
     assert settings.flashrank_top_n == 5
+    assert os.getenv("OPENAI_API_KEY") is None
+    assert os.getenv("LLM_MODEL") is None
 
 
 def test_is_offline_mode(monkeypatch):
@@ -130,6 +200,17 @@ def test_load_dotenv_nonexistent_file(tmp_path):
     nonexistent = tmp_path / "does_not_exist.env"
     values = load_dotenv(nonexistent)
     assert values == {}
+
+
+def test_load_settings_rejects_invalid_embedding_contract(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("EMBEDDING_INPUT_MODE", "raw")
+    monkeypatch.setenv("EMBEDDING_CHECK_CONTEXT_LENGTH", "true")
+
+    with pytest.raises(ValueError, match="Raw embedding input"):
+        load_settings(base_dir=tmp_path, env_file=tmp_path / "missing.env")
 
 
 def test_configure_logging(tmp_path):
@@ -203,6 +284,9 @@ def test_app_settings_methods(tmp_path):
     indexer_config = settings.indexer_config()
     assert indexer_config["embedding"]["model"] == "text-embedding-ada-002"
     assert indexer_config["embedding"]["api_key"] == "test-embed-key"
+    assert indexer_config["embedding"]["input_mode"] == "raw"
+    assert indexer_config["embedding"]["check_embedding_ctx_length"] is False
+    assert indexer_config["embedding"]["max_input_chars"] == 6000
     assert indexer_config["chunker"]["type"] == "token"
     assert indexer_config["chunker"]["params"] == {"chunk_size": 512}
     assert indexer_config["vector_backend"] == "faiss"

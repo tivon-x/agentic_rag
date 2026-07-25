@@ -4,6 +4,7 @@ from typing import Any
 
 from core.factory import build_graph
 from core.settings import AppSettings
+from indexing.index_versions import get_active_version_id
 
 
 _CACHE: dict[str, object] = {"graph": None, "fingerprint": None}
@@ -13,7 +14,11 @@ def _compute_cache_fingerprint(settings: AppSettings) -> str:
     return (
         f"{settings.faiss_dir}|{settings.bm25_path}|{settings.llm_model}|"
         f"{settings.llm_api_base}|{settings.embedding_model}|"
-        f"{settings.embedding_api_base}"
+        f"{settings.embedding_provider}|{settings.embedding_dimensions}|"
+        f"{settings.embedding_input_mode}|"
+        f"{settings.embedding_check_context_length}|"
+        f"{settings.embedding_max_input_chars}|"
+        f"{settings.embedding_api_base}|{get_active_version_id(settings)}"
     )
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
@@ -72,34 +73,56 @@ async def stream_chat_response(
         history = list(messages)
         model_messages = _to_langchain_messages(history)
         request_id = f"{session_id}:{len(history)}"
+        yield {
+            "event": "progress",
+            "data": _json_payload(
+                {
+                    "type": "progress",
+                    "session_id": session_id,
+                    "content": "answering",
+                }
+            ),
+        }
 
         try:
             graph = None if settings.offline_mode else get_cached_graph(settings)
-        except RuntimeError:
+        except RuntimeError as exc:
             graph = None
+            graph_error = str(exc)
+        else:
+            graph_error = None
 
         if graph is None:
-            retriever = build_retriever(settings)
+            try:
+                retriever = build_retriever(settings)
+            except RuntimeError as exc:
+                yield {
+                    "event": "stream-error",
+                    "data": _json_payload(
+                        {
+                            "type": "error",
+                            "session_id": session_id,
+                            "error": str(exc),
+                        }
+                    ),
+                }
+                return
             if retriever is None:
                 yield {
                     "event": "stream-error",
-                    "data": '{"type":"error","session_id":"%s","error":"No index loaded."}'
-                    % session_id,
+                    "data": _json_payload(
+                        {
+                            "type": "error",
+                            "session_id": session_id,
+                            "error": graph_error or "No index loaded.",
+                        }
+                    ),
                 }
                 return
 
             question = str(history[-1].get("content", "")).strip()
-            answer = format_retrieval_only_answer(question, retriever.invoke(question))
-            yield {
-                "event": "token",
-                "data": _json_payload(
-                    {
-                        "type": "token",
-                        "session_id": session_id,
-                        "content": answer,
-                    }
-                ),
-            }
+            documents = await asyncio.to_thread(retriever.invoke, question)
+            answer = format_retrieval_only_answer(question, documents)
             history.append({"role": "assistant", "content": answer})
             await upsert_chat_session_messages(
                 settings,
@@ -108,10 +131,10 @@ async def stream_chat_response(
                 updated_at=datetime.now(UTC).isoformat(),
             )
             yield {
-                "event": "done",
+                "event": "answer.final",
                 "data": _json_payload(
                     {
-                        "type": "done",
+                        "type": "answer.final",
                         "session_id": session_id,
                         "content": answer,
                     }
@@ -119,49 +142,32 @@ async def stream_chat_response(
             }
             return
 
-        streamed = ""
-        result: dict[str, Any] | None = None
-
-        async for event in graph.astream_events(
+        result = await asyncio.to_thread(
+            graph.invoke,
             {"messages": model_messages},  # type: ignore[arg-type]
-            config={"configurable": {"thread_id": request_id}},
-            version="v2",
-        ):
-            if event.get("event") != "on_chat_model_stream":
-                continue
-            chunk = event.get("data", {}).get("chunk")
-            content = getattr(chunk, "content", "")
-            if not content:
-                continue
-            streamed += str(content)
+            {"configurable": {"thread_id": request_id}},
+        )
+        final_messages = result.get("messages", []) if isinstance(result, dict) else []
+        answer = (
+            getattr(final_messages[-1], "content", str(final_messages[-1]))
+            if final_messages
+            else ""
+        )
+        if not answer:
             yield {
-                "event": "token",
+                "event": "stream-error",
                 "data": _json_payload(
                     {
-                        "type": "token",
+                        "type": "error",
                         "session_id": session_id,
-                        "content": str(content),
+                        "error": "The answer graph returned no final answer.",
                     }
                 ),
             }
+            return
 
-        if streamed:
-            snapshot = graph.get_state({"configurable": {"thread_id": request_id}})
-            result = snapshot.values if hasattr(snapshot, "values") else None
-        else:
-            result = graph.invoke(
-                {"messages": model_messages},  # type: ignore[arg-type]
-                config={"configurable": {"thread_id": request_id}},
-            )
-            final_messages = result.get("messages", []) if isinstance(result, dict) else []
-            streamed = (
-                getattr(final_messages[-1], "content", str(final_messages[-1]))
-                if final_messages
-                else ""
-            )
-
-        citations = _extract_citations(result)
-        history.append({"role": "assistant", "content": streamed})
+        citations = _extract_citations(result if isinstance(result, dict) else None)
+        history.append({"role": "assistant", "content": answer})
         await upsert_chat_session_messages(
             settings,
             session_id=session_id,
@@ -170,22 +176,22 @@ async def stream_chat_response(
         )
         if citations:
             yield {
-                "event": "citations",
+                "event": "evidence",
                 "data": _json_payload(
                     {
-                        "type": "citations",
+                        "type": "evidence",
                         "session_id": session_id,
                         "citations_markdown": citations,
                     }
                 ),
             }
         yield {
-            "event": "done",
+            "event": "answer.final",
             "data": _json_payload(
                 {
-                    "type": "done",
+                    "type": "answer.final",
                     "session_id": session_id,
-                    "content": streamed,
+                    "content": answer,
                 }
             ),
         }

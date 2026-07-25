@@ -2,45 +2,34 @@ from __future__ import annotations
 
 import json
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import aiosqlite
 
+from api.db.migrations import migrate_database
 from api.db.models import ChatSessionRecord, IndexingJobRecord
 from core.settings import AppSettings
 
 
+_INITIALIZED_DB_PATHS: set[Path] = set()
+
+
+class IdempotencyConflictError(ValueError):
+    """Raised when an idempotency key is reused for a different request."""
+
+
 def _db_path(settings: AppSettings) -> Path:
-    return settings.data_dir / "api" / "sessions.db"
+    return settings.app_db_path or settings.data_dir / "api" / "sessions.db"
 
 
 async def init_db(settings: AppSettings) -> Path:
     path = _db_path(settings)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    async with aiosqlite.connect(path) as db:
-        await db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS chat_sessions (
-                id TEXT PRIMARY KEY,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                messages TEXT NOT NULL DEFAULT '[]'
-            )
-            """
-        )
-        await db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS indexing_jobs (
-                id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                error_message TEXT
-            )
-            """
-        )
-        await db.commit()
+    resolved = path.resolve()
+    if resolved not in _INITIALIZED_DB_PATHS:
+        await migrate_database(path)
+        _INITIALIZED_DB_PATHS.add(resolved)
     return path
 
 
@@ -49,6 +38,7 @@ async def get_db(settings: AppSettings):
     path = await init_db(settings)
     async with aiosqlite.connect(path) as db:
         db.row_factory = aiosqlite.Row
+        await db.execute("PRAGMA foreign_keys = ON")
         yield db
 
 
@@ -90,11 +80,7 @@ async def get_chat_session_messages(
         row = await cursor.fetchone()
     if row is None:
         return None
-    value = row["messages"]
-    try:
-        data = json.loads(value)
-    except json.JSONDecodeError:
-        return []
+    data = _json_dict_or_list(row["messages"], default=[])
     return data if isinstance(data, list) else []
 
 
@@ -116,11 +102,7 @@ async def get_chat_session(
     if row is None:
         return None
 
-    try:
-        messages = json.loads(row["messages"])
-    except json.JSONDecodeError:
-        messages = []
-
+    messages = _json_dict_or_list(row["messages"], default=[])
     return {
         "session_id": str(row["id"]),
         "created_at": str(row["created_at"]),
@@ -158,43 +140,123 @@ async def create_indexing_job(
     status: str,
     created_at: str,
     error_message: str | None = None,
+    request: dict[str, Any] | None = None,
+    items: list[dict[str, str]] | None = None,
 ) -> IndexingJobRecord:
+    request_json = json.dumps(request or {}, ensure_ascii=False)
     async with get_db(settings) as db:
         await db.execute(
             """
-            INSERT INTO indexing_jobs (id, status, created_at, updated_at, error_message)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO indexing_jobs (
+                id, status, created_at, updated_at, error_message,
+                request_json, max_attempts
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (job_id, status, created_at, created_at, error_message),
+            (
+                job_id,
+                status,
+                created_at,
+                created_at,
+                error_message,
+                request_json,
+                settings.index_worker_max_attempts,
+            ),
         )
+        for item in items or []:
+            await db.execute(
+                """
+                INSERT INTO index_job_items (
+                    job_id, filename, source_path, status
+                )
+                VALUES (?, ?, ?, 'queued')
+                """,
+                (job_id, item["filename"], item["source_path"]),
+            )
         await db.commit()
-    return IndexingJobRecord(
-        id=job_id,
-        status=status,
-        created_at=_parse_timestamp(created_at),
-        updated_at=_parse_timestamp(created_at),
-        error_message=error_message,
-    )
+    record = await get_indexing_job(settings, job_id=job_id)
+    if record is None:
+        raise RuntimeError(f"Failed to create indexing job {job_id}.")
+    return record
 
 
-async def update_indexing_job(
+async def create_indexing_job_idempotent(
     settings: AppSettings,
     *,
     job_id: str,
-    status: str,
-    updated_at: str,
-    error_message: str | None = None,
-) -> None:
+    idempotency_key: str,
+    request_hash: str,
+    request: dict[str, Any],
+    items: list[dict[str, str]],
+    response: list[dict[str, Any]],
+    created_at: str,
+    active_version_before: str | None = None,
+) -> tuple[bool, list[dict[str, Any]]]:
+    """Create one job or return the response stored for an identical request."""
     async with get_db(settings) as db:
+        await db.execute("BEGIN IMMEDIATE")
+        cursor = await db.execute(
+            """
+            SELECT request_hash, response_json
+            FROM idempotency_records
+            WHERE scope = 'index-files' AND key = ?
+            """,
+            (idempotency_key,),
+        )
+        existing = await cursor.fetchone()
+        if existing is not None:
+            if str(existing["request_hash"]) != request_hash:
+                await db.rollback()
+                raise IdempotencyConflictError(
+                    "Idempotency-Key was already used for a different upload."
+                )
+            stored = _json_dict_or_list(existing["response_json"], default=[])
+            await db.rollback()
+            return False, stored if isinstance(stored, list) else []
+
         await db.execute(
             """
-            UPDATE indexing_jobs
-            SET status = ?, updated_at = ?, error_message = ?
-            WHERE id = ?
+            INSERT INTO indexing_jobs (
+                id, status, created_at, updated_at, request_json, max_attempts,
+                active_version_before
+            )
+            VALUES (?, 'queued', ?, ?, ?, ?, ?)
             """,
-            (status, updated_at, error_message, job_id),
+            (
+                job_id,
+                created_at,
+                created_at,
+                json.dumps(request, ensure_ascii=False),
+                settings.index_worker_max_attempts,
+                active_version_before,
+            ),
+        )
+        for item in items:
+            await db.execute(
+                """
+                INSERT INTO index_job_items (
+                    job_id, filename, source_path, status
+                )
+                VALUES (?, ?, ?, 'queued')
+                """,
+                (job_id, item["filename"], item["source_path"]),
+            )
+        await db.execute(
+            """
+            INSERT INTO idempotency_records (
+                scope, key, request_hash, response_json, created_at
+            )
+            VALUES ('index-files', ?, ?, ?, ?)
+            """,
+            (
+                idempotency_key,
+                request_hash,
+                json.dumps(response, ensure_ascii=False),
+                created_at,
+            ),
         )
         await db.commit()
+    return True, response
 
 
 async def get_indexing_job(
@@ -204,26 +266,470 @@ async def get_indexing_job(
 ) -> IndexingJobRecord | None:
     async with get_db(settings) as db:
         cursor = await db.execute(
-            """
-            SELECT id, status, created_at, updated_at, error_message
-            FROM indexing_jobs
-            WHERE id = ?
-            """,
+            "SELECT * FROM indexing_jobs WHERE id = ?",
             (job_id,),
         )
         row = await cursor.fetchone()
-    if row is None:
-        return None
+    return _indexing_job_from_row(row) if row is not None else None
+
+
+async def list_index_job_items(
+    settings: AppSettings,
+    *,
+    job_id: str,
+) -> list[dict[str, Any]]:
+    async with get_db(settings) as db:
+        cursor = await db.execute(
+            """
+            SELECT id, filename, source_path, status, error_code, error_detail
+            FROM index_job_items
+            WHERE job_id = ?
+            ORDER BY id
+            """,
+            (job_id,),
+        )
+        rows = await cursor.fetchall()
+    return [dict(row) for row in rows]
+
+
+async def recover_expired_indexing_jobs(
+    settings: AppSettings,
+    *,
+    now: datetime | None = None,
+) -> tuple[int, int]:
+    """Requeue expired leases up to the retry limit and fail exhausted jobs."""
+    current = (now or datetime.now(UTC)).isoformat()
+    async with get_db(settings) as db:
+        await db.execute("BEGIN IMMEDIATE")
+        requeued = await db.execute(
+            """
+            UPDATE indexing_jobs
+            SET
+                status = 'queued',
+                updated_at = ?,
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                heartbeat_at = NULL,
+                error_message = 'Index worker lease expired; retry queued.'
+            WHERE
+                status = 'running'
+                AND lease_expires_at IS NOT NULL
+                AND lease_expires_at <= ?
+                AND attempt_count < max_attempts
+            """,
+            (current, current),
+        )
+        failed = await db.execute(
+            """
+            UPDATE indexing_jobs
+            SET
+                status = 'failed',
+                updated_at = ?,
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                heartbeat_at = NULL,
+                error_message = 'Index worker lease expired; retry limit reached.'
+            WHERE
+                status = 'running'
+                AND lease_expires_at IS NOT NULL
+                AND lease_expires_at <= ?
+                AND attempt_count >= max_attempts
+            """,
+            (current, current),
+        )
+        await db.execute(
+            """
+            UPDATE index_job_items
+            SET status = 'queued'
+            WHERE job_id IN (
+                SELECT id FROM indexing_jobs WHERE status = 'queued'
+            )
+            AND status = 'running'
+            """
+        )
+        await db.commit()
+    return requeued.rowcount, failed.rowcount
+
+
+async def acquire_index_worker_lease(
+    settings: AppSettings,
+    *,
+    worker_id: str,
+    now: datetime | None = None,
+) -> bool:
+    current = now or datetime.now(UTC)
+    expires = current + timedelta(seconds=settings.index_worker_lease_seconds)
+    async with get_db(settings) as db:
+        await db.execute("BEGIN IMMEDIATE")
+        cursor = await db.execute(
+            """
+            SELECT owner, expires_at
+            FROM worker_leases
+            WHERE name = 'index'
+            """
+        )
+        row = await cursor.fetchone()
+        if (
+            row is not None
+            and str(row["owner"]) != worker_id
+            and str(row["expires_at"]) > current.isoformat()
+        ):
+            await db.rollback()
+            return False
+        await db.execute(
+            """
+            INSERT INTO worker_leases(name, owner, expires_at, heartbeat_at)
+            VALUES ('index', ?, ?, ?)
+            ON CONFLICT(name) DO UPDATE SET
+                owner = excluded.owner,
+                expires_at = excluded.expires_at,
+                heartbeat_at = excluded.heartbeat_at
+            """,
+            (
+                worker_id,
+                expires.isoformat(),
+                current.isoformat(),
+            ),
+        )
+        await db.commit()
+    return True
+
+
+async def release_index_worker_lease(
+    settings: AppSettings,
+    *,
+    worker_id: str,
+) -> None:
+    async with get_db(settings) as db:
+        await db.execute(
+            """
+            DELETE FROM worker_leases
+            WHERE name = 'index' AND owner = ?
+            """,
+            (worker_id,),
+        )
+        await db.commit()
+
+
+async def claim_next_indexing_job(
+    settings: AppSettings,
+    *,
+    worker_id: str,
+    now: datetime | None = None,
+) -> IndexingJobRecord | None:
+    current = now or datetime.now(UTC)
+    lease_expires = current + timedelta(seconds=settings.index_worker_lease_seconds)
+    async with get_db(settings) as db:
+        await db.execute("BEGIN IMMEDIATE")
+        lease_cursor = await db.execute(
+            """
+            SELECT 1
+            FROM worker_leases
+            WHERE name = 'index' AND owner = ? AND expires_at > ?
+            """,
+            (worker_id, current.isoformat()),
+        )
+        if await lease_cursor.fetchone() is None:
+            await db.rollback()
+            return None
+        cursor = await db.execute(
+            """
+            SELECT id
+            FROM indexing_jobs
+            WHERE status = 'queued' AND attempt_count < max_attempts
+            ORDER BY created_at, id
+            LIMIT 1
+            """
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            await db.rollback()
+            return None
+        job_id = str(row["id"])
+        result = await db.execute(
+            """
+            UPDATE indexing_jobs
+            SET
+                status = 'running',
+                attempt_count = attempt_count + 1,
+                lease_owner = ?,
+                lease_expires_at = ?,
+                heartbeat_at = ?,
+                updated_at = ?,
+                error_message = NULL,
+                progress_json = '{"stage":"indexing"}'
+            WHERE id = ? AND status = 'queued'
+            """,
+            (
+                worker_id,
+                lease_expires.isoformat(),
+                current.isoformat(),
+                current.isoformat(),
+                job_id,
+            ),
+        )
+        if result.rowcount != 1:
+            await db.rollback()
+            return None
+        await db.execute(
+            """
+            UPDATE index_job_items
+            SET status = 'running', error_code = NULL, error_detail = NULL
+            WHERE job_id = ? AND status = 'queued'
+            """,
+            (job_id,),
+        )
+        await db.commit()
+    return await get_indexing_job(settings, job_id=job_id)
+
+
+async def heartbeat_indexing_job(
+    settings: AppSettings,
+    *,
+    job_id: str,
+    worker_id: str,
+    progress: dict[str, Any] | None = None,
+) -> bool:
+    current = datetime.now(UTC)
+    lease_expires = current + timedelta(seconds=settings.index_worker_lease_seconds)
+    async with get_db(settings) as db:
+        result = await db.execute(
+            """
+            UPDATE indexing_jobs
+            SET heartbeat_at = ?, lease_expires_at = ?, updated_at = ?,
+                progress_json = COALESCE(?, progress_json)
+            WHERE id = ? AND status = 'running' AND lease_owner = ?
+            """,
+            (
+                current.isoformat(),
+                lease_expires.isoformat(),
+                current.isoformat(),
+                json.dumps(progress, ensure_ascii=False) if progress else None,
+                job_id,
+                worker_id,
+            ),
+        )
+        await db.commit()
+    return result.rowcount == 1
+
+
+async def complete_indexing_job(
+    settings: AppSettings,
+    *,
+    job_id: str,
+    worker_id: str,
+    target_version: str | None,
+) -> bool:
+    now = datetime.now(UTC).isoformat()
+    async with get_db(settings) as db:
+        result = await db.execute(
+            """
+            UPDATE indexing_jobs
+            SET
+                status = 'completed',
+                updated_at = ?,
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                heartbeat_at = NULL,
+                target_version = ?,
+                progress_json = '{"stage":"completed"}'
+            WHERE id = ? AND status = 'running' AND lease_owner = ?
+            """,
+            (now, target_version, job_id, worker_id),
+        )
+        if result.rowcount == 1:
+            await db.execute(
+                """
+                UPDATE index_job_items
+                SET status = 'completed'
+                WHERE job_id = ? AND status = 'running'
+                """,
+                (job_id,),
+            )
+        await db.commit()
+    return result.rowcount == 1
+
+
+async def fail_or_retry_indexing_job(
+    settings: AppSettings,
+    *,
+    job_id: str,
+    worker_id: str,
+    error_message: str,
+) -> str:
+    now = datetime.now(UTC).isoformat()
+    async with get_db(settings) as db:
+        await db.execute("BEGIN IMMEDIATE")
+        cursor = await db.execute(
+            """
+            SELECT attempt_count, max_attempts
+            FROM indexing_jobs
+            WHERE id = ? AND status = 'running' AND lease_owner = ?
+            """,
+            (job_id, worker_id),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            await db.rollback()
+            return "cancelled"
+        next_status = (
+            "queued"
+            if int(row["attempt_count"]) < int(row["max_attempts"])
+            else "failed"
+        )
+        await db.execute(
+            """
+            UPDATE indexing_jobs
+            SET
+                status = ?,
+                updated_at = ?,
+                error_message = ?,
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                heartbeat_at = NULL
+            WHERE id = ? AND lease_owner = ?
+            """,
+            (next_status, now, error_message, job_id, worker_id),
+        )
+        await db.execute(
+            """
+            UPDATE index_job_items
+            SET status = ?, error_code = 'indexing_failed', error_detail = ?
+            WHERE job_id = ? AND status = 'running'
+            """,
+            (next_status, error_message, job_id),
+        )
+        await db.commit()
+    return next_status
+
+
+async def retry_failed_indexing_job(
+    settings: AppSettings,
+    *,
+    job_id: str,
+) -> IndexingJobRecord | None:
+    now = datetime.now(UTC).isoformat()
+    async with get_db(settings) as db:
+        await db.execute("BEGIN IMMEDIATE")
+        await db.execute(
+            """
+            UPDATE indexing_jobs
+            SET
+                status = 'queued',
+                updated_at = ?,
+                error_message = NULL,
+                attempt_count = 0,
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                heartbeat_at = NULL
+            WHERE id = ? AND status = 'failed'
+            """,
+            (now, job_id),
+        )
+        await db.execute(
+            """
+            UPDATE index_job_items
+            SET status = 'queued', error_code = NULL, error_detail = NULL
+            WHERE job_id = ? AND status = 'failed'
+            """,
+            (job_id,),
+        )
+        await db.commit()
+    return await get_indexing_job(settings, job_id=job_id)
+
+
+async def create_index_version_record(
+    settings: AppSettings,
+    *,
+    version_id: str,
+) -> None:
+    now = datetime.now(UTC).isoformat()
+    async with get_db(settings) as db:
+        await db.execute(
+            """
+            INSERT INTO index_versions(id, status, created_at)
+            VALUES (?, 'building', ?)
+            """,
+            (version_id, now),
+        )
+        await db.commit()
+
+
+async def mark_index_version_ready(
+    settings: AppSettings,
+    *,
+    version_id: str,
+    manifest_path: str,
+) -> None:
+    async with get_db(settings) as db:
+        await db.execute(
+            """
+            UPDATE index_versions
+            SET status = 'ready', manifest_path = ?, error_message = NULL
+            WHERE id = ?
+            """,
+            (manifest_path, version_id),
+        )
+        await db.commit()
+
+
+async def mark_index_version_failed(
+    settings: AppSettings,
+    *,
+    version_id: str,
+    error_message: str,
+) -> None:
+    async with get_db(settings) as db:
+        await db.execute(
+            """
+            UPDATE index_versions
+            SET status = 'failed', error_message = ?
+            WHERE id = ?
+            """,
+            (error_message, version_id),
+        )
+        await db.commit()
+
+
+def _indexing_job_from_row(row: aiosqlite.Row) -> IndexingJobRecord:
+    request = _json_dict_or_list(row["request_json"], default={})
+    progress = _json_dict_or_list(row["progress_json"], default={})
     return IndexingJobRecord(
         id=str(row["id"]),
         status=str(row["status"]),
         created_at=_parse_timestamp(str(row["created_at"])),
         updated_at=_parse_timestamp(str(row["updated_at"])),
         error_message=str(row["error_message"]) if row["error_message"] else None,
+        request=request if isinstance(request, dict) else {},
+        attempt_count=int(row["attempt_count"]),
+        max_attempts=int(row["max_attempts"]),
+        lease_owner=str(row["lease_owner"]) if row["lease_owner"] else None,
+        lease_expires_at=(
+            _parse_timestamp(str(row["lease_expires_at"]))
+            if row["lease_expires_at"]
+            else None
+        ),
+        heartbeat_at=(
+            _parse_timestamp(str(row["heartbeat_at"]))
+            if row["heartbeat_at"]
+            else None
+        ),
+        progress=progress if isinstance(progress, dict) else {},
+        active_version_before=(
+            str(row["active_version_before"])
+            if row["active_version_before"]
+            else None
+        ),
+        target_version=str(row["target_version"]) if row["target_version"] else None,
     )
 
 
-def _parse_timestamp(value: str) -> Any:
-    from datetime import datetime
+def _json_dict_or_list(value: Any, *, default: Any) -> Any:
+    try:
+        return json.loads(str(value))
+    except (json.JSONDecodeError, TypeError):
+        return default
 
+
+def _parse_timestamp(value: str) -> datetime:
     return datetime.fromisoformat(value)

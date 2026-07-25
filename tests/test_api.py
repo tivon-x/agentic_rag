@@ -4,7 +4,7 @@ import time
 
 from fastapi.testclient import TestClient
 
-from api.db.database import create_indexing_job, update_indexing_job
+from api.db.database import create_indexing_job
 from api.main import app
 from api.services.graph_cache import invalidate_graph_cache
 from core.settings import load_settings
@@ -21,6 +21,12 @@ def _configure_tmp_paths(monkeypatch, tmp_path):
     monkeypatch.setenv("DOC_TREES_PATH", str(index_dir / "doc_trees.json"))
     monkeypatch.setenv("LOG_DIR", str(tmp_path / "logs"))
     monkeypatch.setenv("LOG_FILE", str(tmp_path / "logs" / "agentic_rag.log"))
+    monkeypatch.setenv("APP_DB_PATH", str(data_dir / "api" / "sessions.db"))
+    monkeypatch.setenv("INDEX_ROOT", str(data_dir / "indexes"))
+    monkeypatch.setenv("UPLOAD_ROOT", str(data_dir / "uploads"))
+    monkeypatch.setenv("INDEX_WRITE_MODE", "legacy")
+    monkeypatch.setenv("OFFLINE_MODE", "1")
+    monkeypatch.setenv("EMBEDDING_DIMENSION", "16")
     return data_dir, index_dir
 
 
@@ -79,7 +85,7 @@ def test_chat_session_persists_messages_and_can_be_loaded(monkeypatch, tmp_path)
     assert session_response.json()["messages"] == [{"role": "user", "content": "你好"}]
     assert stream_response.status_code == 200
     assert 'event: stream-error' in stream_response.text
-    assert '"error":"No index loaded."' in stream_response.text
+    assert '"error": "No index loaded."' in stream_response.text
 
 
 def test_upload_endpoint_creates_job_and_status_can_be_polled(
@@ -89,29 +95,24 @@ def test_upload_endpoint_creates_job_and_status_can_be_polled(
     _configure_tmp_paths(monkeypatch, tmp_path)
     invalidate_graph_cache()
 
-    async def fake_run_indexing_job(*, settings, job_id, file_path, index_mode):
-        assert file_path.exists()
-        assert index_mode == "flat"
-        await update_indexing_job(
-            settings,
-            job_id=job_id,
-            status="completed",
-            updated_at="2026-03-19T00:00:01+00:00",
-        )
-
-    monkeypatch.setattr("api.routers.indexing._run_indexing_job", fake_run_indexing_job)
-
     with TestClient(app) as client:
         upload_response = client.post(
             "/api/index/files",
             data={"index_mode": "flat"},
             files={"files": ("sample.txt", b"hello api", "text/plain")},
+            headers={"Idempotency-Key": "api-upload-test"},
         )
         assert upload_response.status_code == 200
         job_id = upload_response.json()[0]["job_id"]
 
-        time.sleep(0.05)
-        status_response = client.get(f"/api/indexing-jobs/{job_id}")
+        deadline = time.monotonic() + 5
+        while True:
+            status_response = client.get(f"/api/indexing-jobs/{job_id}")
+            if status_response.json()["status"] in {"completed", "failed"}:
+                break
+            if time.monotonic() >= deadline:
+                raise AssertionError("Index worker did not finish within five seconds.")
+            time.sleep(0.05)
 
     assert status_response.status_code == 200
     assert status_response.json()["status"] == "completed"
@@ -131,7 +132,7 @@ def test_indexing_job_detail_returns_created_job(monkeypatch, tmp_path):
         create_indexing_job(
             settings,
             job_id=job_id,
-            status="pending",
+            status="completed",
             created_at=created_at,
         )
     )
@@ -141,4 +142,40 @@ def test_indexing_job_detail_returns_created_job(monkeypatch, tmp_path):
 
     assert response.status_code == 200
     assert response.json()["id"] == job_id
-    assert response.json()["status"] == "pending"
+    assert response.json()["status"] == "completed"
+
+
+def test_versioned_index_worker_activates_only_completed_batch(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    data_dir, _ = _configure_tmp_paths(monkeypatch, tmp_path)
+    monkeypatch.setenv("INDEX_WRITE_MODE", "versioned")
+    invalidate_graph_cache()
+
+    with TestClient(app) as client:
+        upload_response = client.post(
+            "/api/index/files",
+            files=[
+                ("files", ("paper-a.txt", b"paper A", "text/plain")),
+                ("files", ("paper-b.txt", b"paper B", "text/plain")),
+            ],
+            headers={"Idempotency-Key": "versioned-batch"},
+        )
+        assert upload_response.status_code == 200
+        assert len({item["job_id"] for item in upload_response.json()}) == 1
+        job_id = upload_response.json()[0]["job_id"]
+
+        deadline = time.monotonic() + 5
+        while True:
+            status_response = client.get(f"/api/indexing-jobs/{job_id}")
+            payload = status_response.json()
+            if payload["status"] in {"completed", "failed"}:
+                break
+            if time.monotonic() >= deadline:
+                raise AssertionError("Versioned worker did not finish.")
+            time.sleep(0.05)
+
+    assert payload["status"] == "completed", payload["error_message"]
+    assert payload["target_version"]
+    assert (data_dir / "indexes" / "active.json").exists()

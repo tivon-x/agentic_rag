@@ -78,7 +78,7 @@ export default function KnowledgeBasePage() {
 
   useEffect(() => {
     const pendingJobs = jobs.filter(
-      (job) => job.status === "pending" || job.status === "running",
+      (job) => job.status === "queued" || job.status === "running",
     );
     if (pendingJobs.length === 0) {
       return;
@@ -147,8 +147,11 @@ export default function KnowledgeBasePage() {
           createdJobs.map((job: FileUploadResponse) => [job.job_id, job.filename]),
         ),
       }));
+      const jobIds = Array.from(
+        new Set(createdJobs.map((job: FileUploadResponse) => job.job_id)),
+      );
       const resolvedJobs = await Promise.all(
-        createdJobs.map((job: FileUploadResponse) => fetchIndexingJob(job.job_id)),
+        jobIds.map((jobId) => fetchIndexingJob(jobId)),
       );
       setJobs((current) =>
         [...resolvedJobs, ...current].sort((a, b) =>
@@ -165,7 +168,7 @@ export default function KnowledgeBasePage() {
   }
 
   const runningCount = jobs.filter(
-    (job) => job.status === "pending" || job.status === "running",
+    (job) => job.status === "queued" || job.status === "running",
   ).length;
   const completedCount = jobs.filter((job) => job.status === "completed").length;
   const failedCount = jobs.filter((job) => job.status === "failed").length;
@@ -269,7 +272,7 @@ export default function KnowledgeBasePage() {
             actionLabel={isUploading ? text.kb.uploading : text.kb.upload}
             helperText={
               isUploading
-                ? "文件已上传，正在为每个文件创建后台索引任务。"
+                ? "文件正在安全上传，并创建一个可恢复的批量索引任务。"
                 : "建议按同一主题分批上传，便于排查失败任务。"
             }
             onChange={setFiles}
@@ -446,10 +449,11 @@ function formatDateTime(value: string) {
 
 function StatusBadge({ status }: { status: IndexingJobResponse["status"] }) {
   const toneMap = {
-    pending: "bg-amber-400/15 text-amber-200 border-amber-300/30",
+    queued: "bg-amber-400/15 text-amber-200 border-amber-300/30",
     running: "bg-emerald-400/15 text-emerald-200 border-emerald-300/30",
     completed: "bg-sky-400/15 text-sky-200 border-sky-300/30",
     failed: "bg-rose-400/15 text-rose-200 border-rose-300/30",
+    cancelled: "bg-slate-400/15 text-slate-200 border-slate-300/30",
   } as const;
 
   return (

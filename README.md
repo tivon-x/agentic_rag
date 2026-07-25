@@ -67,7 +67,7 @@ agentic_rag/
 建议使用 `uv`：
 
 ```bash
-uv sync --dev
+uv sync --extra dev
 cp .env.example .env
 ```
 

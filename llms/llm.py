@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Any, TypeAlias
 
 from langchain_openai import ChatOpenAI
@@ -52,27 +51,6 @@ def configure_llm_router(config: dict) -> None:
 
 
 
-def _task_model_map_from_env() -> dict[str, str]:
-    mapping = {
-        "summarize_history": os.getenv("LLM_MODEL_SUMMARIZE_HISTORY", "").strip(),
-        "decide_retrieval": os.getenv("LLM_MODEL_DECIDE_RETRIEVAL", "").strip(),
-        "plan_query": os.getenv("LLM_MODEL_PLAN_QUERY", "").strip(),
-        "rewrite_query": os.getenv("LLM_MODEL_REWRITE_QUERY", "").strip(),
-        "direct_answer": os.getenv("LLM_MODEL_DIRECT_ANSWER", "").strip(),
-        "out_of_scope_answer": os.getenv("LLM_MODEL_OUT_OF_SCOPE_ANSWER", "").strip(),
-        "research_search": os.getenv("LLM_MODEL_RESEARCH_SEARCH", "").strip(),
-        "aggregate_answers": os.getenv("LLM_MODEL_AGGREGATE_ANSWERS", "").strip(),
-        "summarize": os.getenv("LLM_MODEL_SUMMARIZE", "").strip(),
-        "decision": os.getenv("LLM_MODEL_DECISION", "").strip(),
-        "rewrite": os.getenv("LLM_MODEL_REWRITE", "").strip(),
-        "direct": os.getenv("LLM_MODEL_DIRECT", "").strip(),
-        "out_of_scope": os.getenv("LLM_MODEL_OUT_OF_SCOPE", "").strip(),
-        "aggregate": os.getenv("LLM_MODEL_AGGREGATE", "").strip(),
-    }
-    return {k: v for k, v in mapping.items() if v}
-
-
-
 def _resolve_router_config(config: dict | None) -> dict[str, Any]:
     if config is not None:
         cfg = dict(config)
@@ -81,8 +59,7 @@ def _resolve_router_config(config: dict | None) -> dict[str, Any]:
     else:
         raise ValueError("LLM router is not configured. Call configure_llm_router() first.")
 
-    existing_task_models = cfg.get("task_models", {}) or {}
-    cfg["task_models"] = {**_task_model_map_from_env(), **existing_task_models}
+    cfg["task_models"] = dict(cfg.get("task_models", {}) or {})
     return cfg
 
 

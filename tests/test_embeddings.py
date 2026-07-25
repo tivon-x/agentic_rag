@@ -1,6 +1,8 @@
 """Tests for embedding provider configuration."""
 
-from indexing.embeddings import get_cloud_embeddings
+import pytest
+
+from indexing.embeddings import FakeEmbeddings, LengthLimitedEmbeddings, get_cloud_embeddings
 
 
 def test_get_cloud_embeddings_sends_raw_text_to_provider(monkeypatch) -> None:
@@ -19,3 +21,13 @@ def test_get_cloud_embeddings_sends_raw_text_to_provider(monkeypatch) -> None:
     )
 
     assert captured["check_embedding_ctx_length"] is False
+
+
+def test_length_limited_embeddings_rejects_oversized_raw_input() -> None:
+    embeddings = LengthLimitedEmbeddings(
+        delegate=FakeEmbeddings(dimensions=8),
+        max_input_chars=5,
+    )
+
+    with pytest.raises(ValueError, match="EMBEDDING_MAX_INPUT_CHARS=5"):
+        embeddings.embed_documents(["123456"])

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import os
+import pickle
+from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
@@ -15,11 +17,38 @@ from langchain_core.vectorstores.base import VectorStoreRetriever
 from indexing.stores.sqlite_vec_store import SqliteVecVectorStore
 
 
+def validate_faiss_persistence(
+    persist_directory: str | Path,
+    *,
+    expected_dimension: int,
+) -> None:
+    """Deserialize and cross-check persisted FAISS artifacts before activation."""
+    directory = Path(persist_directory)
+    try:
+        index = faiss.read_index(str(directory / "index.faiss"))
+        metadata = pickle.loads((directory / "index.pkl").read_bytes())
+    except Exception as exc:
+        raise ValueError(
+            f"Persisted FAISS artifacts are unreadable in {directory}."
+        ) from exc
+    if index.d != expected_dimension:
+        raise ValueError(
+            f"Persisted FAISS dimension {index.d} does not match "
+            f"manifest dimension {expected_dimension}."
+        )
+    if (
+        not isinstance(metadata, tuple)
+        or len(metadata) != 2
+        or not isinstance(metadata[1], dict)
+        or len(metadata[1]) != index.ntotal
+    ):
+        raise ValueError("Persisted FAISS metadata does not match the vector index.")
+
+
 class FaissVectorStore:
     """FAISS-backed vector store adapter."""
 
     def __init__(self, embeddings: Embeddings, persist_directory: str | None = None):
-        logger = logging.getLogger(__name__)
         loaded = False
         if persist_directory:
             index_path = os.path.join(persist_directory, "index.faiss")
@@ -33,11 +62,10 @@ class FaissVectorStore:
                     )
                     loaded = True
                 except Exception as exc:
-                    logger.warning(
-                        "Failed to load FAISS index from %s: %s; creating a new empty index",
-                        persist_directory,
-                        str(exc),
-                    )
+                    raise RuntimeError(
+                        f"Failed to load persisted FAISS index from "
+                        f"{persist_directory}; rebuild or roll back the index."
+                    ) from exc
 
         if not loaded:
             index = faiss.IndexFlatL2(len(embeddings.embed_query("dimension_probe")))

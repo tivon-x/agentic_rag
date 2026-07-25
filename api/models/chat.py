@@ -40,7 +40,7 @@ class ChatSessionResponse(BaseModel):
 class StreamToken(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    type: Literal["token", "citations", "done", "error"]
+    type: Literal["progress", "evidence", "answer.final", "error"]
     content: str | None = None
     session_id: str
     citations_markdown: str | None = None

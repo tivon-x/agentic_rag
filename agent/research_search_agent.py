@@ -24,7 +24,6 @@ from langgraph.types import Command
 from agent.prompts import get_fallback_response_prompt, get_research_search_prompt
 from agent.schemas import EvidenceGroup
 from agent.states import ResearchSearchState
-from core.config import KEEP_MESSAGES, MAX_CONTEXT_TOKENS, MAX_ITERATIONS, MAX_TOOL_CALLS
 from llms.llm import get_llm_by_type
 
 
@@ -263,16 +262,26 @@ def collect_answer(state: AgentState, runtime: Runtime) -> dict | None:
     }
 
 
-def create_research_search_agent(tools, tool_factory=None):
+def create_research_search_agent(
+    tools,
+    tool_factory=None,
+    *,
+    max_context_tokens: int = 5000,
+    keep_messages: int = 20,
+    max_iterations: int = 10,
+    max_tool_calls: int = 8,
+):
     llm = get_llm_by_type("research_search")
 
     summarization_middleware = SummarizationMiddleware(
         model=llm,
-        trigger=("tokens", MAX_CONTEXT_TOKENS),
-        keep=("messages", KEEP_MESSAGES),
+        trigger=("tokens", max_context_tokens),
+        keep=("messages", keep_messages),
     )
     fallback_middleware = FallbackMiddleware(
-        model=llm, max_iterations=MAX_ITERATIONS, max_tool_calls=MAX_TOOL_CALLS
+        model=llm,
+        max_iterations=max_iterations,
+        max_tool_calls=max_tool_calls,
     )
     middleware = [summarization_middleware, fallback_middleware, EvidenceCaptureMiddleware()]
     if tool_factory is not None:

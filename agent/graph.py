@@ -24,10 +24,22 @@ def create_agent_graph(
     corpus_profile: str = "",
     corpus_profile_data: dict | None = None,
     tool_factory=None,
+    *,
+    max_context_tokens: int = 5000,
+    keep_messages: int = 20,
+    max_iterations: int = 10,
+    max_tool_calls: int = 8,
 ):
     logger = logging.getLogger(__name__)
 
-    agent_subgraph = create_research_search_agent(tools_list, tool_factory=tool_factory)
+    agent_subgraph = create_research_search_agent(
+        tools_list,
+        tool_factory=tool_factory,
+        max_context_tokens=max_context_tokens,
+        keep_messages=keep_messages,
+        max_iterations=max_iterations,
+        max_tool_calls=max_tool_calls,
+    )
     checkpointer = InMemorySaver()
 
     graph_builder = StateGraph(GraphState)
