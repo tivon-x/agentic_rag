@@ -40,6 +40,7 @@ def get_cloud_embeddings(
         model=model,
         api_key=SecretStr(api_key),
         base_url=api_base,
+        check_embedding_ctx_length=False,
         **kwargs,
     )
 
