@@ -3,13 +3,14 @@ from __future__ import annotations
 import asyncio
 import json
 import sqlite3
+from argparse import Namespace
 from dataclasses import replace
 from datetime import timedelta
 
 import pytest
 from langchain_core.documents import Document
 
-from core.persistence import save_bm25_bundle
+from core.persistence import load_bm25_bundle, save_bm25_bundle
 from core.settings import load_settings
 from api.db.database import (
     acquire_index_worker_lease,
@@ -25,11 +26,13 @@ from indexing.index_versions import (
     active_pointer_path,
     create_index_version,
     embedding_contract,
+    reconcile_active_pointer,
     resolve_indexer_config,
 )
+from indexing.indexer import Indexer
 from indexing.embeddings import FakeEmbeddings
 from indexing.vectorstore import FaissVectorStore
-from main import build_parser
+from main import build_parser, cmd_index
 
 
 def _settings(tmp_path, monkeypatch, *, offline: bool):
@@ -126,6 +129,31 @@ def test_legacy_read_adapter_remains_available(tmp_path, monkeypatch) -> None:
 
     assert version == "legacy"
     assert config["vectorstore"]["persist_directory"] == str(settings.faiss_dir)
+
+
+def test_versioned_mode_refuses_and_does_not_seed_uncontracted_legacy_index(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    settings = _settings(tmp_path, monkeypatch, offline=True)
+    legacy_source = tmp_path / "legacy.txt"
+    legacy_source.write_text("legacy model A vector", encoding="utf-8")
+    Indexer(settings.indexer_config()).index(str(legacy_source))
+
+    with pytest.raises(IndexCompatibilityError, match="INDEX_WRITE_MODE=legacy"):
+        resolve_indexer_config(settings)
+
+    new_source = tmp_path / "new.txt"
+    new_source.write_text("new model B vector", encoding="utf-8")
+    _, version_dir = create_index_version(
+        settings,
+        source_paths=[new_source],
+        index_mode="flat",
+    )
+    bundle = load_bm25_bundle(version_dir / "bm25.pkl")
+    contents = [document.page_content for document in bundle.documents]
+    assert any("new model B" in content for content in contents)
+    assert all("legacy model A" not in content for content in contents)
 
 
 def test_corrupt_faiss_refuses_silent_empty_fallback(
@@ -227,6 +255,111 @@ def test_corrupt_version_cannot_replace_active_pointer(
         activate_index_version(settings, corrupt_id)
 
     assert active_pointer_path(settings).read_text(encoding="utf-8") == original_pointer
+
+
+def test_database_activation_survives_pointer_mirror_failure(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    settings = _settings(tmp_path, monkeypatch, offline=False)
+    asyncio.run(init_db(settings))
+    version_id = "6" * 32
+    _write_dummy_version(settings, version_id)
+
+    with monkeypatch.context() as context:
+        context.setattr(
+            "indexing.index_versions.os.replace",
+            lambda *_: (_ for _ in ()).throw(OSError("injected pointer failure")),
+        )
+        activate_index_version(settings, version_id)
+
+    with sqlite3.connect(settings.app_db_path) as db:
+        active = db.execute(
+            "SELECT status FROM index_versions WHERE id = ?",
+            (version_id,),
+        ).fetchone()
+        state = json.loads(
+            db.execute(
+                """
+                SELECT value_json FROM app_state
+                WHERE key = 'active_index_version'
+                """
+            ).fetchone()[0]
+        )
+    assert active == ("active",)
+    assert state["version_id"] == version_id
+    assert not active_pointer_path(settings).exists()
+
+    reconcile_active_pointer(settings)
+    pointer = json.loads(active_pointer_path(settings).read_text(encoding="utf-8"))
+    assert pointer["version_id"] == version_id
+
+
+def test_cli_first_index_initializes_authoritative_database(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    settings = _settings(tmp_path, monkeypatch, offline=True)
+    source = tmp_path / "paper.txt"
+    source.write_text("CLI first index must initialize SQLite.", encoding="utf-8")
+    monkeypatch.setattr("main.load_settings", lambda: settings)
+
+    assert settings.app_db_path is not None
+    assert not settings.app_db_path.exists()
+    result = cmd_index(
+        Namespace(
+            paths=[str(source)],
+            mode="flat",
+            leaf_node_type=None,
+            parent_embed_pooling=None,
+        )
+    )
+
+    assert result == 0
+    with sqlite3.connect(settings.app_db_path) as db:
+        state = json.loads(
+            db.execute(
+                """
+                SELECT value_json FROM app_state
+                WHERE key = 'active_index_version'
+                """
+            ).fetchone()[0]
+        )
+        active = db.execute(
+            "SELECT id FROM index_versions WHERE status = 'active'"
+        ).fetchall()
+    assert active == [(state["version_id"],)]
+
+
+def test_startup_imports_valid_file_only_active_pointer(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    settings = _settings(tmp_path, monkeypatch, offline=False)
+    version_id = "7" * 32
+    _write_dummy_version(settings, version_id)
+    activate_index_version(settings, version_id)
+
+    assert settings.app_db_path is not None
+    assert not settings.app_db_path.exists()
+    asyncio.run(init_db(settings))
+    reconcile_active_pointer(settings)
+
+    with sqlite3.connect(settings.app_db_path) as db:
+        state = json.loads(
+            db.execute(
+                """
+                SELECT value_json FROM app_state
+                WHERE key = 'active_index_version'
+                """
+            ).fetchone()[0]
+        )
+        status = db.execute(
+            "SELECT status FROM index_versions WHERE id = ?",
+            (version_id,),
+        ).fetchone()
+    assert state["version_id"] == version_id
+    assert status == ("active",)
 
 
 def test_activate_index_cli_contract() -> None:

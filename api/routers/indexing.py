@@ -88,6 +88,14 @@ async def upload_and_index_files(
         raise HTTPException(status_code=400, detail="Unsupported index mode.")
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded.")
+    if settings.index_write_mode == "legacy":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "API indexing is disabled while INDEX_WRITE_MODE=legacy; "
+                "legacy mode is read-only."
+            ),
+        )
 
     upload_root = (
         settings.upload_root or settings.data_dir / "uploads"

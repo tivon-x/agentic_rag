@@ -347,6 +347,26 @@ async def recover_expired_indexing_jobs(
             AND status = 'running'
             """
         )
+        await db.execute(
+            """
+            UPDATE index_job_items
+            SET
+                status = 'failed',
+                error_code = 'lease_expired',
+                error_detail = 'Index worker lease expired; retry limit reached.'
+            WHERE job_id IN (
+                SELECT id
+                FROM indexing_jobs
+                WHERE
+                    status = 'failed'
+                    AND updated_at = ?
+                    AND error_message =
+                        'Index worker lease expired; retry limit reached.'
+            )
+            AND status = 'running'
+            """,
+            (current,),
+        )
         await db.commit()
     return requeued.rowcount, failed.rowcount
 
@@ -513,49 +533,13 @@ async def heartbeat_indexing_job(
     return result.rowcount == 1
 
 
-async def complete_indexing_job(
-    settings: AppSettings,
-    *,
-    job_id: str,
-    worker_id: str,
-    target_version: str | None,
-) -> bool:
-    now = datetime.now(UTC).isoformat()
-    async with get_db(settings) as db:
-        result = await db.execute(
-            """
-            UPDATE indexing_jobs
-            SET
-                status = 'completed',
-                updated_at = ?,
-                lease_owner = NULL,
-                lease_expires_at = NULL,
-                heartbeat_at = NULL,
-                target_version = ?,
-                progress_json = '{"stage":"completed"}'
-            WHERE id = ? AND status = 'running' AND lease_owner = ?
-            """,
-            (now, target_version, job_id, worker_id),
-        )
-        if result.rowcount == 1:
-            await db.execute(
-                """
-                UPDATE index_job_items
-                SET status = 'completed'
-                WHERE job_id = ? AND status = 'running'
-                """,
-                (job_id,),
-            )
-        await db.commit()
-    return result.rowcount == 1
-
-
 async def fail_or_retry_indexing_job(
     settings: AppSettings,
     *,
     job_id: str,
     worker_id: str,
     error_message: str,
+    retryable: bool = True,
 ) -> str:
     now = datetime.now(UTC).isoformat()
     async with get_db(settings) as db:
@@ -574,7 +558,8 @@ async def fail_or_retry_indexing_job(
             return "cancelled"
         next_status = (
             "queued"
-            if int(row["attempt_count"]) < int(row["max_attempts"])
+            if retryable
+            and int(row["attempt_count"]) < int(row["max_attempts"])
             else "failed"
         )
         await db.execute(
@@ -684,7 +669,7 @@ async def mark_index_version_failed(
             """
             UPDATE index_versions
             SET status = 'failed', error_message = ?
-            WHERE id = ?
+            WHERE id = ? AND status != 'active'
             """,
             (error_message, version_id),
         )

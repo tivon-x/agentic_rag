@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
+import sqlite3
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 
 from api.db.database import (
     acquire_index_worker_lease,
@@ -9,6 +11,7 @@ from api.db.database import (
     create_indexing_job,
     fail_or_retry_indexing_job,
     get_indexing_job,
+    list_index_job_items,
     recover_expired_indexing_jobs,
     retry_failed_indexing_job,
 )
@@ -25,6 +28,9 @@ def _settings(tmp_path, monkeypatch):
     monkeypatch.setenv("INDEX_WORKER_LEASE_SECONDS", "2")
     monkeypatch.setenv("INDEX_WORKER_HEARTBEAT_SECONDS", "1")
     monkeypatch.setenv("INDEX_WORKER_MAX_ATTEMPTS", "3")
+    monkeypatch.setenv("INDEX_WORKER_POLL_SECONDS", "0.01")
+    monkeypatch.setenv("OFFLINE_MODE", "1")
+    monkeypatch.setenv("EMBEDDING_DIMENSION", "8")
     return load_settings(base_dir=tmp_path, env_file=tmp_path / "missing.env")
 
 
@@ -131,3 +137,121 @@ def test_index_worker_start_is_singleton_per_app(tmp_path, monkeypatch) -> None:
         await worker.stop()
 
     asyncio.run(scenario())
+
+
+def test_worker_loop_recovers_from_transient_sqlite_error(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    settings = _settings(tmp_path, monkeypatch)
+    worker = IndexWorker(settings)
+    calls = 0
+
+    async def flaky_acquire(*args, **kwargs) -> bool:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise sqlite3.OperationalError("database is locked")
+        worker._stop.set()
+        return False
+
+    monkeypatch.setattr(
+        "api.services.index_worker.acquire_index_worker_lease",
+        flaky_acquire,
+    )
+    asyncio.run(worker._run_loop())
+
+    assert calls == 2
+
+
+def test_exhausted_recovery_fails_running_items(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    settings = _settings(tmp_path, monkeypatch)
+
+    async def scenario() -> None:
+        await create_indexing_job(
+            settings,
+            job_id="exhausted-job",
+            status="queued",
+            created_at="2026-01-01T00:00:00+00:00",
+            items=[
+                {
+                    "filename": "paper.txt",
+                    "source_path": str(settings.upload_root / "paper.txt"),
+                }
+            ],
+        )
+        current = datetime(2026, 1, 1, tzinfo=UTC)
+        outcome = (0, 0)
+        for attempt in range(3):
+            worker_id = f"worker-{attempt}"
+            assert await acquire_index_worker_lease(
+                settings,
+                worker_id=worker_id,
+                now=current,
+            )
+            claimed = await claim_next_indexing_job(
+                settings,
+                worker_id=worker_id,
+                now=current,
+            )
+            assert claimed is not None
+            assert claimed.lease_expires_at is not None
+            current = claimed.lease_expires_at + timedelta(seconds=1)
+            outcome = await recover_expired_indexing_jobs(
+                settings,
+                now=current,
+            )
+        assert outcome == (0, 1)
+        failed = await get_indexing_job(settings, job_id="exhausted-job")
+        assert failed is not None
+        assert failed.status == "failed"
+        items = await list_index_job_items(settings, job_id="exhausted-job")
+        assert items[0]["status"] == "failed"
+        assert items[0]["error_code"] == "lease_expired"
+
+    asyncio.run(scenario())
+
+
+def test_legacy_worker_rejects_mutable_index_writes(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    settings = replace(_settings(tmp_path, monkeypatch), index_write_mode="legacy")
+    source = settings.upload_root / "jobs" / "legacy-job" / "paper.txt"
+    source.parent.mkdir(parents=True)
+    source.write_text("must not reach mutable legacy index", encoding="utf-8")
+
+    async def scenario() -> None:
+        await create_indexing_job(
+            settings,
+            job_id="legacy-job",
+            status="queued",
+            created_at="2026-01-01T00:00:00+00:00",
+            items=[
+                {
+                    "filename": source.name,
+                    "source_path": str(source),
+                }
+            ],
+        )
+        worker = IndexWorker(settings)
+        assert await acquire_index_worker_lease(
+            settings,
+            worker_id=worker.worker_id,
+        )
+        claimed = await claim_next_indexing_job(
+            settings,
+            worker_id=worker.worker_id,
+        )
+        assert claimed is not None
+        await worker._run_job(claimed.id, claimed.request or {})
+        record = await get_indexing_job(settings, job_id=claimed.id)
+        assert record is not None
+        assert record.status == "failed"
+        assert record.attempt_count == 1
+
+    asyncio.run(scenario())
+    assert not (settings.faiss_dir / "index.faiss").exists()

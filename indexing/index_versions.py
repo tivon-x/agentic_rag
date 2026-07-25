@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -22,6 +23,7 @@ from indexing.vectorstore import validate_faiss_persistence
 MANIFEST_NAME = "manifest.json"
 ACTIVE_POINTER_NAME = "active.json"
 _VERSION_ID_RE = re.compile(r"^[0-9a-f]{32}$")
+logger = logging.getLogger(__name__)
 
 
 class IndexCompatibilityError(RuntimeError):
@@ -50,6 +52,10 @@ def get_active_version_id(settings: AppSettings) -> str | None:
     database_version = _active_version_from_database(settings)
     if database_version is not None:
         return database_version
+    return _active_version_from_pointer(settings)
+
+
+def _active_version_from_pointer(settings: AppSettings) -> str | None:
     path = active_pointer_path(settings)
     if not path.exists():
         return None
@@ -118,7 +124,13 @@ def resolve_indexer_config(settings: AppSettings) -> tuple[dict[str, Any], str]:
         return settings.indexer_config(), "legacy"
     version_dir = get_active_version_dir(settings)
     if version_dir is None:
-        return settings.indexer_config(), "legacy"
+        if _legacy_index_exists(settings):
+            raise IndexCompatibilityError(
+                "A legacy index has no embedding contract. Set "
+                "INDEX_WRITE_MODE=legacy for read-only rollback, or rebuild "
+                "a versioned index from source files."
+            )
+        return settings.indexer_config(), "uninitialized"
     manifest = load_manifest(version_dir)
     validate_embedding_compatibility(settings, manifest)
     validate_index_version(version_dir)
@@ -197,30 +209,53 @@ def activate_index_version(
     validate_index_version(version_dir)
 
     pointer = active_pointer_path(settings)
-    temporary = pointer.with_name(f".{pointer.name}.{uuid4().hex}.tmp")
-    temporary.write_text(
-        json.dumps(
-            {
-                "version_id": version_id,
-                "activated_at": datetime.now(UTC).isoformat(),
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        encoding="utf-8",
+    database_updated = _mirror_active_version_to_database(
+        settings,
+        version_id=version_id,
+        manifest=manifest,
+        job_id=job_id,
+        worker_id=worker_id,
     )
     try:
-        _mirror_active_version_to_database(
+        _write_active_pointer(settings, version_id)
+    except OSError:
+        if not database_updated:
+            raise
+        logger.warning(
+            "Active index database state committed, but active.json mirror "
+            "could not be replaced; startup reconciliation will retry.",
+            exc_info=True,
+        )
+    return pointer
+
+
+def reconcile_active_pointer(settings: AppSettings) -> Path | None:
+    """Reconcile a validated file-only deployment into authoritative SQLite."""
+    version_id = _active_version_from_database(settings)
+    if version_id is None:
+        version_id = _active_version_from_pointer(settings)
+        if version_id is None:
+            return None
+        version_dir = _index_root(settings) / version_id
+        manifest = load_manifest(version_dir)
+        validate_embedding_compatibility(settings, manifest)
+        validate_index_version(version_dir, expected_version_id=version_id)
+        if not _mirror_active_version_to_database(
             settings,
             version_id=version_id,
             manifest=manifest,
-            job_id=job_id,
-            worker_id=worker_id,
+        ):
+            raise IndexCompatibilityError(
+                "Cannot import active.json without an initialized database."
+            )
+    try:
+        return _write_active_pointer(settings, version_id)
+    except OSError:
+        logger.warning(
+            "Could not reconcile active.json from SQLite active state.",
+            exc_info=True,
         )
-        os.replace(temporary, pointer)
-    finally:
-        temporary.unlink(missing_ok=True)
-    return pointer
+        return None
 
 
 def validate_index_version(
@@ -283,21 +318,6 @@ def _seed_staging_version(settings: AppSettings, staging_dir: Path) -> None:
                 shutil.copy2(child, destination)
         return
 
-    legacy_sources = (
-        (settings.faiss_dir, staging_dir / "faiss"),
-        (settings.bm25_path, staging_dir / "bm25.pkl"),
-        (settings.nodes_path, staging_dir / "nodes.jsonl"),
-        (settings.doc_trees_path, staging_dir / "doc_trees.json"),
-    )
-    for source, destination in legacy_sources:
-        if not source.exists():
-            continue
-        if source.is_dir():
-            shutil.copytree(source, destination)
-        else:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, destination)
-
 
 def _preserve_failed_version(
     root: Path,
@@ -346,6 +366,7 @@ def _active_version_from_database(settings: AppSettings) -> str | None:
         return None
     try:
         with sqlite3.connect(db_path) as db:
+            db.execute("BEGIN")
             table = db.execute(
                 """
                 SELECT 1 FROM sqlite_master
@@ -360,21 +381,29 @@ def _active_version_from_database(settings: AppSettings) -> str | None:
                 WHERE key = 'active_index_version'
                 """
             ).fetchone()
+            if row is None:
+                return None
+            try:
+                version_id = str(json.loads(row[0]).get("version_id") or "")
+            except (AttributeError, json.JSONDecodeError, TypeError) as exc:
+                raise IndexCompatibilityError(
+                    "Database active index state is invalid."
+                ) from exc
+            if not _VERSION_ID_RE.fullmatch(version_id):
+                raise IndexCompatibilityError(
+                    "Database active index state contains an invalid version."
+                )
+            status_row = db.execute(
+                "SELECT status FROM index_versions WHERE id = ?",
+                (version_id,),
+            ).fetchone()
     except sqlite3.Error as exc:
         raise IndexCompatibilityError(
             f"Cannot read active index state from {db_path}: {exc}"
         ) from exc
-    if row is None:
-        return None
-    try:
-        version_id = str(json.loads(row[0]).get("version_id") or "")
-    except (AttributeError, json.JSONDecodeError, TypeError) as exc:
+    if status_row is None or status_row[0] != "active":
         raise IndexCompatibilityError(
-            "Database active index state is invalid."
-        ) from exc
-    if not _VERSION_ID_RE.fullmatch(version_id):
-        raise IndexCompatibilityError(
-            "Database active index state contains an invalid version."
+            "Database active index state does not reference an active version."
         )
     return version_id
 
@@ -386,14 +415,14 @@ def _mirror_active_version_to_database(
     manifest: dict[str, Any],
     job_id: str | None = None,
     worker_id: str | None = None,
-) -> None:
+) -> bool:
     db_path = settings.app_db_path
     if db_path is None or not db_path.exists():
         if job_id is not None:
             raise IndexCompatibilityError(
                 "Index job database is unavailable during activation."
             )
-        return
+        return False
     activated_at = datetime.now(UTC).isoformat()
     try:
         with sqlite3.connect(db_path) as db:
@@ -408,7 +437,7 @@ def _mirror_active_version_to_database(
                     raise IndexCompatibilityError(
                         "Index version tables are unavailable during activation."
                     )
-                return
+                return False
             db.execute("BEGIN IMMEDIATE")
             if (job_id is None) != (worker_id is None):
                 raise ValueError("job_id and worker_id must be provided together.")
@@ -511,10 +540,45 @@ def _mirror_active_version_to_database(
                 ),
             )
             db.commit()
+            return True
     except sqlite3.Error as exc:
         raise IndexCompatibilityError(
             f"Cannot update active index state in {db_path}: {exc}"
         ) from exc
+
+
+def _write_active_pointer(settings: AppSettings, version_id: str) -> Path:
+    pointer = active_pointer_path(settings)
+    temporary = pointer.with_name(f".{pointer.name}.{uuid4().hex}.tmp")
+    temporary.write_text(
+        json.dumps(
+            {
+                "version_id": version_id,
+                "activated_at": datetime.now(UTC).isoformat(),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    try:
+        os.replace(temporary, pointer)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return pointer
+
+
+def _legacy_index_exists(settings: AppSettings) -> bool:
+    return any(
+        path.is_file()
+        for path in (
+            settings.faiss_dir / "index.faiss",
+            settings.faiss_dir / "index.pkl",
+            settings.bm25_path,
+            settings.nodes_path,
+            settings.doc_trees_path,
+        )
+    )
 
 
 def _index_root(settings: AppSettings) -> Path:

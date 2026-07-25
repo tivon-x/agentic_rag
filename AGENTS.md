@@ -1,7 +1,7 @@
 # PROJECT KNOWLEDGE BASE
 
-**Updated:** 2026-03-09
-**Branch:** master
+**Updated:** 2026-07-26
+**Branch:** codex/v2-core
 
 ## OVERVIEW
 
@@ -12,10 +12,12 @@ Python 3.12+ Agentic RAG system: LangGraph-based agent graph, hybrid BM25+FAISS 
 ```
 agentic_rag/
 ├── agent/          # graph wiring, nodes, edges, prompts, tools, schemas, states
+├── api/            # FastAPI routes, SQLite migrations, persistent index worker
 ├── core/           # AppSettings, factory, persistence, corpus_profile, rag_answer
 ├── indexing/       # data_processor, chunker, embeddings, vectorstore, bm25_index, retriever, indexer
 ├── llms/           # ChatOpenAI adapter + task-type LLM router
 ├── ui/             # Gradio UI (gradio.py)
+├── web/            # Next.js frontend
 ├── tests/          # pytest suite
 ├── main.py         # CLI entrypoint (index / ask / ui sub-commands)
 └── pyproject.toml  # deps + tool config
@@ -36,6 +38,11 @@ agentic_rag/
 | LLM router | llms/llm.py | get_llm_by_type(task_type) — cached per model+task |
 | Settings | core/settings.py | AppSettings dataclass + load_settings() |
 | Factory | core/factory.py | wire up settings → LLM router + indexer |
+| Database migrations | api/db/migrations.py | forward-only versions + pre-migration backup |
+| Persistent index jobs | api/db/database.py | job state, idempotency, leases, recovery |
+| Index worker | api/services/index_worker.py | single leased worker + heartbeat/retry |
+| Upload API | api/routers/indexing.py | safe staging, validation, idempotency |
+| Index versions | indexing/index_versions.py | immutable builds, manifest, activation/rollback |
 | Corpus profile | core/corpus_profile.py | read/write corpus_profile.json |
 | Indexing pipeline | indexing/indexer.py | end-to-end ingest flow |
 | Chunkers | indexing/chunker.py | Recursive / Token / SemanticNLTK |
@@ -51,19 +58,21 @@ agentic_rag/
 ```bash
 # Install (use uv)
 uv sync            # production deps
-uv sync --dev      # + dev deps (pytest, ruff)
+uv sync --extra dev  # + dev deps (pytest, ruff)
 
 # Run
-python main.py ui                   # launch Gradio
-python main.py index <path>         # index files
-python main.py ask "your question"  # CLI query
+python main.py ui                         # launch Gradio
+python main.py api                        # launch FastAPI
+python main.py index <path>               # build and activate an index
+python main.py activate-index <version>   # roll back to a ready version
+python main.py ask "your question"        # CLI query
 
 # Lint
 uv run ruff check .
 uv run ruff check . --fix
 
 # Tests — full suite
-uv run pytest -v
+uv run --extra dev python -m pytest -q
 
 # Tests — single file
 uv run pytest tests/test_retriever.py -v
@@ -150,11 +159,20 @@ LangGraph `GraphState` fields use **camelCase** (matching LangGraph conventions)
 
 ### LLM Router
 - Access LLMs exclusively via `get_llm_by_type(task_type)`. Never instantiate `ChatOpenAI` directly in nodes.
-- New task types: add the env var name to `_task_model_map_from_env()` in `llms/llm.py`.
+- New task types: add the env var name to `_TASK_MODEL_ENV_NAMES` in `core/settings.py`.
 
 ### Settings
 - All configuration flows through `AppSettings` (frozen dataclass). No naked `os.getenv()` calls outside `core/settings.py`.
-- `load_settings()` is called once at startup (in `core/factory.py` or `main.py`); the result is passed down.
+- `load_settings()` is called once at startup (FastAPI lifespan or `main.py`); the result is passed down.
+
+### Index Reliability
+- API indexing runs only in `INDEX_WRITE_MODE=versioned`; legacy mode is API read-only, does not reconcile versioned pointers or consume queued jobs, and exists solely for explicit rollback.
+- Versioned mode must never silently read or seed a legacy index without an embedding manifest.
+- SQLite `app_state` is the authoritative active pointer; `active.json` is an atomic, startup-reconciled mirror.
+- Versioned CLI index/activation commands initialize and migrate SQLite before activation; API startup imports a validated file-only pointer only when SQLite has no active state.
+- Index jobs are persisted before execution and claimed only through the SQLite global/job leases.
+- Schema migrations are forward-only and create a SQLite recovery backup before changing an existing database.
+- User upload paths must remain under `UPLOAD_ROOT` after resolution; never concatenate an unchecked filename into a destination path.
 
 ### Testing
 - Test files live in `tests/`, named `test_<module>.py`.

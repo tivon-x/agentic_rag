@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import logging
 from pathlib import Path
 from typing import cast
@@ -8,6 +9,7 @@ from typing import cast
 from langchain_core.messages import HumanMessage
 
 from agent.states import GraphState
+from api.db.database import init_db
 from core.factory import build_graph, build_retriever
 from core.settings import configure_logging, load_settings
 from core.rag_answer import format_retrieval_only_answer
@@ -31,6 +33,7 @@ def cmd_index(args: argparse.Namespace) -> int:
     configure_logging(settings)
     index_mode = args.mode or settings.index_mode
     if settings.index_write_mode == "versioned":
+        asyncio.run(init_db(settings))
         overrides = {}
         if args.leaf_node_type:
             overrides["leaf_node_type"] = args.leaf_node_type
@@ -91,6 +94,7 @@ def cmd_ask(args: argparse.Namespace) -> int:
 def cmd_activate_index(args: argparse.Namespace) -> int:
     settings = load_settings()
     configure_logging(settings)
+    asyncio.run(init_db(settings))
     pointer = activate_index_version(settings, args.version_id)
     logger.info("Activated index version %s via %s", args.version_id, pointer)
     return 0

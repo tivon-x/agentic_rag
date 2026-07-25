@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import sqlite3
+from dataclasses import replace
 
 from fastapi.testclient import TestClient
 
+from api.db.database import create_indexing_job, get_indexing_job
 from api.main import create_app
 from api.services.index_worker import IndexWorker
 from core.settings import load_settings
@@ -108,3 +111,71 @@ def test_duplicate_idempotency_key_reuses_one_job(tmp_path, monkeypatch) -> None
     uploaded = list((settings.upload_root / "jobs").rglob("paper.txt"))
     assert len(uploaded) == 1
     assert uploaded[0].resolve().is_relative_to(settings.upload_root.resolve())
+
+
+def test_api_upload_is_read_only_in_legacy_mode(tmp_path, monkeypatch) -> None:
+    settings = replace(
+        _settings(tmp_path, monkeypatch),
+        index_write_mode="legacy",
+    )
+    source = settings.upload_root / "jobs" / "queued-job" / "paper.txt"
+    source.parent.mkdir(parents=True)
+    source.write_text("queued before rollback", encoding="utf-8")
+    asyncio.run(
+        create_indexing_job(
+            settings,
+            job_id="queued-job",
+            status="queued",
+            created_at="2026-01-01T00:00:00+00:00",
+            items=[
+                {
+                    "filename": source.name,
+                    "source_path": str(source),
+                }
+            ],
+        )
+    )
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        assert not app.state.index_worker.is_running
+        response = client.post(
+            "/api/index/files",
+            files={"files": ("paper.txt", b"paper", "text/plain")},
+            headers={"Idempotency-Key": "legacy-read-only"},
+        )
+
+    assert response.status_code == 409
+    queued = asyncio.run(get_indexing_job(settings, job_id="queued-job"))
+    assert queued is not None
+    assert queued.status == "queued"
+    with sqlite3.connect(settings.app_db_path) as db:
+        count = db.execute("SELECT COUNT(*) FROM indexing_jobs").fetchone()[0]
+    assert count == 1
+
+
+def test_legacy_api_ignores_broken_versioned_pointer(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    settings = replace(
+        _settings(tmp_path, monkeypatch),
+        index_write_mode="legacy",
+    )
+    assert settings.index_root is not None
+    settings.index_root.mkdir(parents=True, exist_ok=True)
+    (settings.index_root / "active.json").write_text(
+        '{"version_id":"' + ("a" * 32) + '"}',
+        encoding="utf-8",
+    )
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        assert not app.state.index_worker.is_running
+        response = client.post(
+            "/api/index/files",
+            files={"files": ("paper.txt", b"paper", "text/plain")},
+            headers={"Idempotency-Key": "legacy-broken-pointer"},
+        )
+
+    assert response.status_code == 409

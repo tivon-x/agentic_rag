@@ -1,6 +1,6 @@
 # Agentic RAG V2 M1 验收记录
 
-> 验收日期：2026-07-25
+> 验收日期：2026-07-26
 > 分支：`codex/v2-core`
 > 范围：M1“运行与索引可靠性”，未开始 M2 至 M6
 
@@ -36,12 +36,13 @@ Embedding 索引契约包含：
 
 ## 3. 数据库迁移
 
-- 当前 schema version：2
+- 当前 schema version：3
 - 版本表：`schema_migrations(version, applied_at)`
 - 迁移策略：整数版本、只前进、每个版本在事务中执行
-- 每步迁移拿到 SQLite 写锁后重新读取版本，多个 API 首次并发启动不会重复执行 DDL
+- 每步迁移拿到 SQLite 写锁后重新读取版本，多个 API 首次并发启动不会重复执行 DDL；WAL 初始化遇到短暂锁竞争时有限退避重试
 - 高于当前代码支持范围的未来 schema version 会拒绝启动，不会按旧结构继续运行
-- 旧的 `pending` job 在迁移时转换为 `queued`
+- pre-M1 的 `pending`/`running` job 没有持久 source item，迁移时明确转为 `failed` 并提示重新上传
+- schema v2 中已存在的无 lease `running` 或无 item `queued` job 由 migration 3 同样修复为明确失败
 - SQLite 启用 foreign keys 和 WAL
 - 已存在且需要迁移的 `sessions.db` 会先通过 SQLite backup API 创建一致性副本
 - 备份命名：`sessions.db.backup-v<from_version>-<UTC timestamp>`
@@ -69,6 +70,8 @@ queued -> running -> completed
 - worker 通过 SQLite 事务领取 job，并写入 owner、lease expiry 和 heartbeat。
 - 启动和每轮扫描过期 `running` job。
 - lease 过期且未达到上限时重新排队；达到上限后转为 `failed`。
+- worker 主循环会记录并退避重试瞬时 SQLite/heartbeat 异常，不会因一次错误永久退出。
+- 父 job 因 lease 耗尽失败时，同一事务把仍为 `running` 的 item 转为 `failed`。
 - 默认最多 3 次 attempt。
 - retry 只把 `failed` job 重置为 `queued`；重复 retry 返回当前 job，不复制任务。
 - worker 只接受 `UPLOAD_ROOT` 内已存在的普通文件。
@@ -84,6 +87,7 @@ queued -> running -> completed
 - 默认单文件上限为 50 MiB，可通过 `UPLOAD_MAX_BYTES` 配置。
 - staging、最终 job 目录和 worker 读取路径都执行 resolve 后的 `UPLOAD_ROOT` 边界检查。
 - 任一失败只清理本请求创建且验证过的隔离目录。
+- `INDEX_WRITE_MODE=legacy` 下上传 API 返回 409，不创建 job，也不写 mutable legacy index。
 
 ## 6. 不可变索引版本
 
@@ -93,13 +97,15 @@ queued -> running -> completed
 - 校验 FAISS、BM25 和 manifest 后，staging 原子重命名为最终 UUID 目录。
 - manifest 记录 embedding 完整契约、index mode、hierarchical 参数和 Git code version。
 - 校验失败的 partial version 保存到 `INDEX_ROOT/failed/<version>/failure.json`。
-- active version 同时记录在 SQLite `app_state` 和原子替换的 `active.json`；SQLite 是 API 运行时的优先来源。
+- SQLite `app_state` 是唯一 authoritative active pointer；`active.json` 是原子替换、启动时自动修复的镜像。
+- versioned CLI 首次建索引或回滚前会初始化并迁移 SQLite；历史 file-only 部署仅在 DB 无 active state 时，经完整 manifest、embedding 和索引校验后导入。
 - worker job 完成、旧 active 降为 ready、新版本激活和 `app_state` 更新在同一 SQLite 事务内完成；租约丢失时事务拒绝激活。
+- DB activation 成功但 `active.json` 替换失败时不回滚或误标 active version；运行继续使用 DB，重启时重建镜像。
 - model、dimension、input mode、provider、context-length check 或 max input chars 不兼容时拒绝加载并要求重建。
 - 激活前实际反序列化并交叉校验 FAISS dimension/vector metadata 和 BM25 bundle；损坏文件不会切换 active。
 - 已存在但无法反序列化的 FAISS 不再静默退化为空索引。
-- 无 active pointer 时保留旧索引只读适配器。
-- `INDEX_WRITE_MODE=legacy` 保留旧读写回滚路径。
+- versioned 模式无 active pointer 时不会读取或复制无 manifest 的 legacy 向量。
+- `INDEX_WRITE_MODE=legacy` 显式保留旧索引只读适配器；API 不校验 versioned pointer、不启动 worker，已有 queued job 保持待处理；legacy CLI 写入只允许在 API 停止后由操作者执行。
 
 ## 7. SSE
 
@@ -119,7 +125,7 @@ uv run --extra dev python --version
 Python 3.12.11
 
 uv run --extra dev python -m pytest -q
-179 passed, 3 warnings in 17.00s
+189 passed, 3 warnings in 17.78s
 
 uv run --extra dev ruff check .
 All checks passed!
@@ -132,6 +138,7 @@ Next.js 16.2.0，编译、TypeScript、静态页面生成全部通过
 ```
 
 3 个 warning 均来自 FAISS/SWIG 第三方类型缺少 `__module__`，不是 M1 回归。
+并发首次迁移测试使用 4 个同时调用者，最终只记录 schema 1、2、3 各一次。
 
 ## 9. 故障注入与人工检查
 
@@ -170,7 +177,11 @@ Next.js 16.2.0，编译、TypeScript、静态页面生成全部通过
 - 缺少 `Idempotency-Key` 返回 422。
 - 相同 key、不同文件返回 409。
 - SSE 测试注入了 routing/plan 私有字段，响应中没有这些内容，也没有 `token`/`citations` 旧事件。
-- active version 可以先切换到新版本，再通过相同激活入口切回旧 ready version；SQLite 和 `active.json` 保持一致。
+- active version 可以先切换到新版本，再通过相同激活入口切回旧 ready version；SQLite 是权威状态，`active.json` 作为镜像在正常写入或下次启动时收敛。
+- 注入临时 SQLite 错误后 worker 会继续下一轮，不需要重启 API。
+- 注入 `active.json` 替换失败时 SQLite 保持唯一 active，启动 reconciliation 可恢复镜像。
+- pre-M1 pending/running 和 schema v2 的无 lease/无 item job 均明确失败，不会永久卡住或空转重试。
+- versioned 模式拒绝查询无 embedding contract 的 legacy 索引，也不会把 legacy 向量复制进新版本。
 
 ## 10. 已知坏例
 
@@ -190,7 +201,7 @@ Next.js 16.2.0，编译、TypeScript、静态页面生成全部通过
 python main.py activate-index <previous-version-id>
 ```
 
-该命令先校验 manifest 和 embedding contract，再同步 SQLite active state 和 `active.json`。
+该命令先初始化或迁移 SQLite，再校验 manifest 和 embedding contract，最后切换 SQLite active state；`active.json` 作为镜像同步或在下次 API 启动时修复。
 
 ### 回滚到 legacy 索引
 
@@ -198,7 +209,7 @@ python main.py activate-index <previous-version-id>
 INDEX_WRITE_MODE=legacy
 ```
 
-重启 API/CLI 后读写原 `INDEX_DIR`、`FAISS_DIR` 和 `BM25_PATH`。
+重启后 API 只读取原 `INDEX_DIR`、`FAISS_DIR` 和 `BM25_PATH`，上传会返回 409。若必须用 CLI 重建 legacy 索引，先停止 API，再显式执行 `python main.py index <path>`；默认仍应使用 versioned 模式。
 
 ### 恢复数据库
 
@@ -215,6 +226,7 @@ INDEX_WRITE_MODE=legacy
 
 - `.env.example`
 - `.gitignore`
+- `AGENTS.md`
 - `README.md`
 - `main.py`
 - `docs/implementation/m1_acceptance.md`
@@ -272,6 +284,7 @@ Settings、LLM 和 Agent 构建边界：
 
 - SQLite/global lease 设计只面向 local-first 单机共享文件系统，不承诺多主机部署。
 - legacy index 没有 manifest，无法证明历史 embedding 契约；只能通过显式 `INDEX_WRITE_MODE=legacy` 使用。
+- legacy CLI 写入没有 worker fencing，必须由操作者先停止 API 并保证单写；API 永远不执行 legacy 写入。
 - 当前 `Indexer.index()` 是同步工作，强制进程终止依靠 lease 恢复；Core 不提供运行中单文件的硬取消。
 - FAISS pickle 仍只允许加载本机可信索引目录。
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import sqlite3
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
@@ -10,7 +11,10 @@ from pathlib import Path
 import aiosqlite
 
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
+LEGACY_JOB_FAILURE = (
+    "Legacy in-flight job cannot be recovered; re-upload the files."
+)
 Migration = Callable[[aiosqlite.Connection], Awaitable[None]]
 
 
@@ -102,17 +106,20 @@ async def _migration_2(db: aiosqlite.Connection) -> None:
         SELECT
             id,
             CASE
-                WHEN status = 'pending' THEN 'queued'
-                WHEN status IN (
-                    'queued', 'running', 'completed', 'failed', 'cancelled'
-                ) THEN status
+                WHEN status IN ('pending', 'running') THEN 'failed'
+                WHEN status IN ('queued', 'completed', 'failed', 'cancelled')
+                    THEN status
                 ELSE 'failed'
             END,
             created_at,
             updated_at,
-            error_message
+            CASE
+                WHEN status IN ('pending', 'running') THEN ?
+                ELSE error_message
+            END
         FROM indexing_jobs_legacy
-        """
+        """,
+        (LEGACY_JOB_FAILURE,),
     )
     await db.execute("DROP TABLE indexing_jobs_legacy")
     await db.execute(
@@ -185,9 +192,53 @@ async def _migration_2(db: aiosqlite.Connection) -> None:
     )
 
 
+async def _migration_3(db: aiosqlite.Connection) -> None:
+    await db.execute(
+        """
+        UPDATE indexing_jobs
+        SET
+            status = 'failed',
+            updated_at = ?,
+            error_message = ?,
+            lease_owner = NULL,
+            lease_expires_at = NULL,
+            heartbeat_at = NULL
+        WHERE
+            (status = 'running' AND lease_expires_at IS NULL)
+            OR (
+                status = 'queued'
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM index_job_items
+                    WHERE index_job_items.job_id = indexing_jobs.id
+                )
+            )
+        """,
+        (datetime.now(UTC).isoformat(), LEGACY_JOB_FAILURE),
+    )
+    await db.execute(
+        """
+        UPDATE index_job_items
+        SET
+            status = 'failed',
+            error_code = 'legacy_job_unrecoverable',
+            error_detail = ?
+        WHERE
+            status IN ('queued', 'running')
+            AND job_id IN (
+                SELECT id
+                FROM indexing_jobs
+                WHERE status = 'failed' AND error_message = ?
+            )
+        """,
+        (LEGACY_JOB_FAILURE, LEGACY_JOB_FAILURE),
+    )
+
+
 MIGRATIONS: dict[int, Migration] = {
     1: _migration_1,
     2: _migration_2,
+    3: _migration_3,
 }
 
 
@@ -206,8 +257,9 @@ async def migrate_database(path: Path) -> list[Path]:
         backups.append(create_recovery_backup(path, initial_version))
 
     async with aiosqlite.connect(path) as db:
+        await db.execute("PRAGMA busy_timeout = 5000")
         await db.execute("PRAGMA foreign_keys = ON")
-        await db.execute("PRAGMA journal_mode = WAL")
+        await _enable_wal(db)
         had_unversioned_schema = (
             initial_version == 0
             and existed
@@ -265,6 +317,17 @@ async def migrate_database(path: Path) -> list[Path]:
             else:
                 await db.commit()
     return backups
+
+
+async def _enable_wal(db: aiosqlite.Connection) -> None:
+    for attempt in range(5):
+        try:
+            await db.execute("PRAGMA journal_mode = WAL")
+            return
+        except sqlite3.OperationalError as exc:
+            if "locked" not in str(exc).lower() or attempt == 4:
+                raise
+            await asyncio.sleep(0.05 * (attempt + 1))
 
 
 async def _table_exists(db: aiosqlite.Connection, table_name: str) -> bool:

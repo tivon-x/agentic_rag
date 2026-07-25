@@ -11,7 +11,6 @@ from uuid import uuid4
 from api.db.database import (
     acquire_index_worker_lease,
     claim_next_indexing_job,
-    complete_indexing_job,
     create_index_version_record,
     fail_or_retry_indexing_job,
     heartbeat_indexing_job,
@@ -28,10 +27,13 @@ from indexing.index_versions import (
     activate_index_version,
     create_index_version,
 )
-from indexing.indexer import Indexer
 
 
 logger = logging.getLogger(__name__)
+
+
+class _NonRetryableIndexingError(RuntimeError):
+    """An indexing failure that must transition directly to failed."""
 
 
 class IndexWorker:
@@ -85,84 +87,79 @@ class IndexWorker:
 
     async def _run_loop(self) -> None:
         while not self._stop.is_set():
-            owns_lease = await acquire_index_worker_lease(
-                self.settings,
-                worker_id=self.worker_id,
+            try:
+                owns_lease = await acquire_index_worker_lease(
+                    self.settings,
+                    worker_id=self.worker_id,
+                )
+                if not owns_lease:
+                    await self._wait_for_work()
+                    continue
+                await recover_expired_indexing_jobs(self.settings)
+                job = await claim_next_indexing_job(
+                    self.settings,
+                    worker_id=self.worker_id,
+                )
+                if job is None:
+                    await self._wait_for_work()
+                    continue
+                await self._run_job(job.id, job.request or {})
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Index worker loop failed; retrying after backoff.")
+                await self._wait_for_work()
+
+    async def _wait_for_work(self) -> None:
+        self._wake.clear()
+        try:
+            await asyncio.wait_for(
+                self._wake.wait(),
+                timeout=self.settings.index_worker_poll_seconds,
             )
-            if not owns_lease:
-                await asyncio.sleep(self.settings.index_worker_poll_seconds)
-                continue
-            await recover_expired_indexing_jobs(self.settings)
-            job = await claim_next_indexing_job(
-                self.settings,
-                worker_id=self.worker_id,
-            )
-            if job is None:
-                self._wake.clear()
-                try:
-                    await asyncio.wait_for(
-                        self._wake.wait(),
-                        timeout=self.settings.index_worker_poll_seconds,
-                    )
-                except TimeoutError:
-                    pass
-                continue
-            await self._run_job(job.id, job.request or {})
+        except TimeoutError:
+            pass
 
     async def _run_job(self, job_id: str, request: dict[str, object]) -> None:
         heartbeat_task = asyncio.create_task(self._heartbeat(job_id))
         version_id: str | None = None
         version_activated = False
         try:
+            if self.settings.index_write_mode == "legacy":
+                raise _NonRetryableIndexingError(
+                    "API indexing is disabled while INDEX_WRITE_MODE=legacy; "
+                    "legacy mode is read-only."
+                )
             items = await list_index_job_items(self.settings, job_id=job_id)
             source_paths = self._validated_source_paths(items)
             index_mode = str(request.get("index_mode") or self.settings.index_mode)
-            if self.settings.index_write_mode == "legacy":
-                await asyncio.to_thread(
-                    _build_legacy_index,
-                    self.settings,
-                    source_paths,
-                    index_mode,
-                )
-            else:
-                version_id = uuid4().hex
-                await create_index_version_record(
-                    self.settings,
-                    version_id=version_id,
-                )
-                _, version_dir = await asyncio.to_thread(
-                    create_index_version,
-                    self.settings,
-                    source_paths=source_paths,
-                    index_mode=index_mode,
-                    version_id=version_id,
-                )
-                await self._assert_lease_owned(job_id)
-                await mark_index_version_ready(
-                    self.settings,
-                    version_id=version_id,
-                    manifest_path=str(version_dir / MANIFEST_NAME),
-                )
-                await asyncio.to_thread(
-                    activate_index_version,
-                    self.settings,
-                    version_id,
-                    job_id=job_id,
-                    worker_id=self.worker_id,
-                )
-                version_activated = True
+            version_id = uuid4().hex
+            await create_index_version_record(
+                self.settings,
+                version_id=version_id,
+            )
+            _, version_dir = await asyncio.to_thread(
+                create_index_version,
+                self.settings,
+                source_paths=source_paths,
+                index_mode=index_mode,
+                version_id=version_id,
+            )
+            await self._assert_lease_owned(job_id)
+            await mark_index_version_ready(
+                self.settings,
+                version_id=version_id,
+                manifest_path=str(version_dir / MANIFEST_NAME),
+            )
+            await asyncio.to_thread(
+                activate_index_version,
+                self.settings,
+                version_id,
+                job_id=job_id,
+                worker_id=self.worker_id,
+            )
+            version_activated = True
             invalidate_graph_cache()
-            if self.settings.index_write_mode == "legacy":
-                completed = await complete_indexing_job(
-                    self.settings,
-                    job_id=job_id,
-                    worker_id=self.worker_id,
-                    target_version=None,
-                )
-                if not completed:
-                    raise RuntimeError(
-                        "Index job lease was lost before legacy index completion."
-                    )
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -178,11 +175,19 @@ class IndexWorker:
                 job_id=job_id,
                 worker_id=self.worker_id,
                 error_message=str(exc),
+                retryable=not isinstance(exc, _NonRetryableIndexingError),
             )
         finally:
             heartbeat_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
+            try:
                 await heartbeat_task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                logger.exception(
+                    "Indexing job %s heartbeat failed; lease checks guard activation.",
+                    job_id,
+                )
 
     async def _assert_lease_owned(self, job_id: str) -> None:
         owns_worker_lease = await acquire_index_worker_lease(
@@ -236,17 +241,3 @@ class IndexWorker:
         if not paths:
             raise ValueError("Indexing job has no uploaded files.")
         return paths
-
-
-def _build_legacy_index(
-    settings: AppSettings,
-    source_paths: list[Path],
-    index_mode: str,
-) -> None:
-    config = settings.indexer_config()
-    config["index_mode"] = index_mode
-    indexer = Indexer(config)
-    for source_path in source_paths:
-        result = indexer.index(str(source_path))
-        if result is None:
-            raise ValueError(f"No indexable content found in {source_path.name}.")

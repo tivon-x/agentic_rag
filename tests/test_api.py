@@ -24,7 +24,7 @@ def _configure_tmp_paths(monkeypatch, tmp_path):
     monkeypatch.setenv("APP_DB_PATH", str(data_dir / "api" / "sessions.db"))
     monkeypatch.setenv("INDEX_ROOT", str(data_dir / "indexes"))
     monkeypatch.setenv("UPLOAD_ROOT", str(data_dir / "uploads"))
-    monkeypatch.setenv("INDEX_WRITE_MODE", "legacy")
+    monkeypatch.setenv("INDEX_WRITE_MODE", "versioned")
     monkeypatch.setenv("OFFLINE_MODE", "1")
     monkeypatch.setenv("EMBEDDING_DIMENSION", "16")
     return data_dir, index_dir

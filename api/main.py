@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -12,6 +13,7 @@ from api.routers.health import router as health_router
 from api.routers.indexing import router as indexing_router
 from api.services.index_worker import IndexWorker
 from core.settings import AppSettings, load_settings
+from indexing.index_versions import reconcile_active_pointer
 
 
 def get_app_settings() -> AppSettings:
@@ -26,7 +28,9 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
         worker = IndexWorker(resolved_settings)
         application.state.settings = resolved_settings
         application.state.index_worker = worker
-        await worker.start()
+        if resolved_settings.index_write_mode == "versioned":
+            await asyncio.to_thread(reconcile_active_pointer, resolved_settings)
+            await worker.start()
         try:
             yield
         finally:

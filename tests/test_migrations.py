@@ -5,6 +5,7 @@ import sqlite3
 
 import pytest
 
+import api.db.migrations as migrations
 from api.db.database import init_db
 from api.db.migrations import CURRENT_SCHEMA_VERSION, migrate_database
 from core.settings import load_settings
@@ -41,6 +42,12 @@ def test_legacy_sessions_db_is_backed_up_and_migrated(tmp_path, monkeypatch) -> 
             VALUES ('legacy-job', 'pending', '2026-01-01', '2026-01-01')
             """
         )
+        db.execute(
+            """
+            INSERT INTO indexing_jobs(id, status, created_at, updated_at)
+            VALUES ('legacy-running', 'running', '2026-01-01', '2026-01-01')
+            """
+        )
         db.commit()
 
     monkeypatch.setenv("APP_DB_PATH", str(db_path))
@@ -64,12 +71,72 @@ def test_legacy_sessions_db_is_backed_up_and_migrated(tmp_path, monkeypatch) -> 
             db.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0]
             == CURRENT_SCHEMA_VERSION
         )
-        assert (
-            db.execute(
-                "SELECT status FROM indexing_jobs WHERE id = 'legacy-job'"
-            ).fetchone()[0]
-            == "queued"
+        migrated = db.execute(
+            """
+            SELECT id, status, error_message
+            FROM indexing_jobs
+            WHERE id IN ('legacy-job', 'legacy-running')
+            ORDER BY id
+            """
+        ).fetchall()
+    assert migrated == [
+        (
+            "legacy-job",
+            "failed",
+            "Legacy in-flight job cannot be recovered; re-upload the files.",
+        ),
+        (
+            "legacy-running",
+            "failed",
+            "Legacy in-flight job cannot be recovered; re-upload the files.",
+        ),
+    ]
+
+
+def test_schema_v2_stuck_jobs_are_explicitly_failed(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    db_path = tmp_path / "sessions.db"
+    monkeypatch.setattr(migrations, "CURRENT_SCHEMA_VERSION", 2)
+    asyncio.run(migrate_database(db_path))
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            """
+            INSERT INTO indexing_jobs(
+                id, status, created_at, updated_at, request_json,
+                attempt_count, max_attempts
+            )
+            VALUES
+                ('stuck-running', 'running', '2026-01-01', '2026-01-01', '{}', 1, 3),
+                ('empty-queued', 'queued', '2026-01-01', '2026-01-01', '{}', 0, 3)
+            """
         )
+        db.commit()
+
+    monkeypatch.setattr(migrations, "CURRENT_SCHEMA_VERSION", 3)
+    asyncio.run(migrate_database(db_path))
+
+    with sqlite3.connect(db_path) as db:
+        rows = db.execute(
+            """
+            SELECT id, status, error_message
+            FROM indexing_jobs
+            ORDER BY id
+            """
+        ).fetchall()
+    assert rows == [
+        (
+            "empty-queued",
+            "failed",
+            "Legacy in-flight job cannot be recovered; re-upload the files.",
+        ),
+        (
+            "stuck-running",
+            "failed",
+            "Legacy in-flight job cannot be recovered; re-upload the files.",
+        ),
+    ]
 
 
 def test_future_database_schema_is_rejected(tmp_path) -> None:
@@ -98,8 +165,7 @@ def test_concurrent_new_database_migration_is_serialized(tmp_path) -> None:
 
     async def migrate_twice() -> None:
         await asyncio.gather(
-            migrate_database(db_path),
-            migrate_database(db_path),
+            *(migrate_database(db_path) for _ in range(4)),
         )
 
     asyncio.run(migrate_twice())
@@ -114,5 +180,8 @@ def test_concurrent_new_database_migration_is_serialized(tmp_path) -> None:
             WHERE type = 'table' AND name = 'indexing_jobs'
             """
         ).fetchone()
-    assert versions == [(1,), (2,)]
+    assert versions == [
+        (version,)
+        for version in range(1, CURRENT_SCHEMA_VERSION + 1)
+    ]
     assert jobs_table == (1,)
