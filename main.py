@@ -88,6 +88,18 @@ def cmd_ui(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_api(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    uvicorn.run(
+        "api.main:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+    )
+    return 0
+
+
 def cmd_eval(args: argparse.Namespace) -> int:
     settings = load_settings()
     configure_logging(settings)
@@ -144,6 +156,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_ui = sub.add_parser("ui", help="Launch Gradio UI")
     p_ui.set_defaults(func=cmd_ui)
+
+    p_api = sub.add_parser("api", help="Launch FastAPI server")
+    p_api.add_argument("--host", default="127.0.0.1", help="Host for FastAPI server")
+    p_api.add_argument("--port", type=int, default=8000, help="Port for FastAPI server")
+    p_api.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for FastAPI development",
+    )
+    p_api.set_defaults(func=cmd_api)
 
     p_eval = sub.add_parser("eval", help="Run routing/retrieval/answer evaluation suites")
     p_eval.add_argument(
