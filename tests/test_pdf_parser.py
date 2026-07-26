@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import multiprocessing
+from queue import Queue
+import threading
 import time
 
 import pymupdf
@@ -47,6 +50,12 @@ def _never_returns(result_queue) -> None:
 
 def _returns_large_result(result_queue) -> None:
     result_queue.put(("ok", "x" * 1_000_000))
+
+
+def _returns_after_long_page_signal(result_queue) -> None:
+    result_queue.put(("page_count", 101))
+    time.sleep(1.2)
+    result_queue.put(("ok", "extended"))
 
 
 def test_pymupdf4llm_parser_preserves_page_numbers_and_sections(tmp_path) -> None:
@@ -106,7 +115,7 @@ def test_parser_falls_back_to_legacy_when_primary_fails(
     _write_structured_pdf(path)
     legacy = LegacyPaperParser().parse(str(path))
 
-    def parse_with_failure(parser_name, _file_path, _timeout):
+    def parse_with_failure(parser_name, _file_path, _timeout, **_kwargs):
         if parser_name == "pymupdf4llm":
             raise RuntimeError("synthetic primary failure")
         return legacy
@@ -125,6 +134,108 @@ def test_parser_falls_back_to_legacy_when_primary_fails(
     assert parsed.fallback_reason == (
         "primary_parser_failed: synthetic primary failure"
     )
+
+
+def test_parser_uses_legacy_when_primary_needs_ocr_but_legacy_has_text(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    path = tmp_path / "fallback.pdf"
+    _write_structured_pdf(path)
+    legacy = LegacyPaperParser().parse(str(path))
+    primary = deepcopy(legacy)
+    primary.parser_name = "pymupdf4llm"
+    for page in primary.pages:
+        page.text = ""
+
+    def parse_with_low_text_primary(
+        parser_name,
+        _file_path,
+        _timeout,
+        **_kwargs,
+    ):
+        return primary if parser_name == "pymupdf4llm" else legacy
+
+    monkeypatch.setattr(
+        "indexing.paper_ingestion._parse_with_timeout",
+        parse_with_low_text_primary,
+    )
+
+    parsed = parse_paper_with_fallback(
+        str(path),
+        load_settings(base_dir=tmp_path),
+    )
+
+    assert parsed.status == "degraded"
+    assert parsed.parser_name == "legacy"
+    assert "primary_needs_ocr" in str(parsed.fallback_reason)
+
+
+def test_parser_marks_legacy_needs_ocr_after_primary_failure(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    path = tmp_path / "fallback.pdf"
+    _write_structured_pdf(path)
+    legacy = LegacyPaperParser().parse(str(path))
+    for page in legacy.pages:
+        page.text = ""
+
+    def parse_with_failed_primary(
+        parser_name,
+        _file_path,
+        _timeout,
+        **_kwargs,
+    ):
+        if parser_name == "pymupdf4llm":
+            raise RuntimeError("synthetic primary failure")
+        return legacy
+
+    monkeypatch.setattr(
+        "indexing.paper_ingestion._parse_with_timeout",
+        parse_with_failed_primary,
+    )
+
+    parsed = parse_paper_with_fallback(
+        str(path),
+        load_settings(base_dir=tmp_path),
+    )
+
+    assert parsed.status == "needs_ocr"
+    assert parsed.parser_name == "legacy"
+    assert "primary_parser_failed" in str(parsed.fallback_reason)
+    assert "needs_ocr" in str(parsed.fallback_reason)
+
+
+def test_parent_process_does_not_open_pdf_before_timeout_guard(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    path = tmp_path / "guarded.pdf"
+    _write_structured_pdf(path)
+    parsed = LegacyPaperParser().parse(str(path))
+
+    def forbidden_parent_open(*_args, **_kwargs):
+        raise AssertionError("PDF opened outside the supervised parser process")
+
+    def parse_without_child(_parser_name, _file_path, _timeout, **_kwargs):
+        return deepcopy(parsed)
+
+    monkeypatch.setattr(
+        "indexing.paper_ingestion._parse_with_timeout",
+        parse_without_child,
+    )
+    monkeypatch.setattr(
+        "indexing.paper_ingestion.pymupdf.open",
+        forbidden_parent_open,
+    )
+
+    result = parse_paper_with_fallback(
+        str(path),
+        load_settings(base_dir=tmp_path),
+    )
+
+    assert result.status in {"parsed", "degraded"}
 
 
 def test_parser_timeout_terminates_child_process() -> None:
@@ -163,4 +274,25 @@ def test_parser_result_reader_drains_large_payload_before_join() -> None:
     result_queue.join_thread()
     assert kind == "ok"
     assert len(payload) == 1_000_000
+    assert not process.is_alive()
+
+
+def test_long_document_signal_extends_total_parser_deadline() -> None:
+    result_queue = Queue(maxsize=1)
+    process = threading.Thread(
+        target=_returns_after_long_page_signal,
+        args=(result_queue,),
+    )
+    process.start()
+
+    kind, payload = _get_process_result(
+        process,
+        result_queue,
+        parser_name="long",
+        timeout_seconds=1,
+        long_document_timeout_seconds=3,
+    )
+    process.join(3)
+
+    assert (kind, payload) == ("ok", "extended")
     assert not process.is_alive()

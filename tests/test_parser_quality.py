@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from evals.parser_eval import evaluate_page_evidence
 from indexing.parsers.paper_parser import (
     MetadataField,
     PaperMetadata,
@@ -155,3 +156,92 @@ def test_catalog_fails_when_metadata_prefix_exceeds_embedding_limit() -> None:
         assert "Metadata prefix exceeds" in str(exc)
     else:
         raise AssertionError("Expected an oversized metadata prefix failure.")
+
+
+def test_page_evidence_rejects_expected_page_with_wrong_content() -> None:
+    pages = {
+        1: ParsedPage(
+            page_number=1,
+            text="Content copied from another page.",
+            source_fingerprint="page-one",
+        ),
+        2: ParsedPage(
+            page_number=2,
+            text="The unique amber evidence belongs on page one.",
+            source_fingerprint="page-two",
+        ),
+    }
+
+    evidence = evaluate_page_evidence(
+        {
+            "page": 1,
+            "source_fingerprint": "page-one",
+            "text_anchors": ["unique amber evidence"],
+        },
+        pages,
+    )
+
+    assert evidence["page_exists"]
+    assert evidence["fingerprint_correct"]
+    assert not evidence["anchors_correct"]
+    assert not evidence["markdown_evidence_correct"]
+    assert not evidence["page_correct"]
+
+
+def test_page_evidence_rejects_reversed_reading_order() -> None:
+    pages = {
+        1: ParsedPage(
+            page_number=1,
+            text="right column evidence then left column evidence",
+            source_fingerprint="page-one",
+        )
+    }
+
+    evidence = evaluate_page_evidence(
+        {
+            "page": 1,
+            "source_fingerprint": "page-one",
+            "text_anchors": ["left column evidence", "right column evidence"],
+            "ordered_anchors": [
+                "left column evidence",
+                "right column evidence",
+            ],
+        },
+        pages,
+    )
+
+    assert evidence["anchors_correct"]
+    assert not evidence["order_correct"]
+    assert not evidence["page_correct"]
+
+
+def test_source_evidence_keeps_ligature_identity_for_page_uniqueness() -> None:
+    pages = {
+        1: ParsedPage(
+            page_number=1,
+            text="three challenging geometric problems finding",
+            source_fingerprint="page-one",
+            source_text="three challenging geometric problems ﬁnding",
+        ),
+        2: ParsedPage(
+            page_number=2,
+            text="different geometric evidence",
+            source_fingerprint="page-two",
+            source_text="three challenging geometric problems finding",
+        ),
+    }
+
+    evidence = evaluate_page_evidence(
+        {
+            "page": 1,
+            "source_fingerprint": "page-one",
+            "text_anchors": [
+                "three challenging geometric problems ﬁnding"
+            ],
+        },
+        pages,
+    )
+
+    assert evidence["anchors_correct"]
+    assert evidence["markdown_evidence_correct"]
+    assert evidence["page_correct"]

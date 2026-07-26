@@ -12,6 +12,7 @@ from indexing.parsers.paper_parser import (
     NORMALIZATION_VERSION,
     ParsedPage,
     ParsedPaper,
+    pdf_page_evidence,
 )
 from indexing.parsers.structure_normalizer import normalize_structure
 
@@ -26,6 +27,7 @@ class PyMuPDF4LLMPaperParser:
         started = time.monotonic()
         with pymupdf.open(file_path) as document:
             page_count = document.page_count
+        page_evidence = pdf_page_evidence(file_path)
         chunks = pymupdf4llm.to_markdown(
             file_path,
             page_chunks=True,
@@ -43,6 +45,16 @@ class PyMuPDF4LLMPaperParser:
                     for table in chunk.get("tables", [])
                     if table
                 ],
+                source_fingerprint=(
+                    page_evidence[index - 1][0]
+                    if index <= len(page_evidence)
+                    else None
+                ),
+                source_text=(
+                    page_evidence[index - 1][1]
+                    if index <= len(page_evidence)
+                    else None
+                ),
             )
             for index, chunk in enumerate(chunks, start=1)
         ]

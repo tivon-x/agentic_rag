@@ -13,6 +13,7 @@ from indexing.parsers.paper_parser import (
     ParsedPage,
     ParsedPaper,
     ParsedSection,
+    pdf_page_evidence,
 )
 from indexing.parsers.pdf_parser import _clean_pdf_page
 
@@ -26,10 +27,21 @@ class LegacyPaperParser:
     def parse(self, file_path: str) -> ParsedPaper:
         started = time.monotonic()
         documents = list(PyPDFLoader(file_path).lazy_load())
+        page_evidence = pdf_page_evidence(file_path)
         pages = [
             ParsedPage(
                 page_number=index,
                 text=_clean_pdf_page(document.page_content),
+                source_fingerprint=(
+                    page_evidence[index - 1][0]
+                    if index <= len(page_evidence)
+                    else None
+                ),
+                source_text=(
+                    page_evidence[index - 1][1]
+                    if index <= len(page_evidence)
+                    else None
+                ),
             )
             for index, document in enumerate(documents, start=1)
         ]

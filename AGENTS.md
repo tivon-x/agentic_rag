@@ -187,6 +187,9 @@ LangGraph `GraphState` fields use **camelCase** (matching LangGraph conventions)
 - Enforce `EMBEDDING_MAX_INPUT_CHARS` on the complete metadata prefix + passage before calling the embedding provider.
 - PDF parsing defaults to PyMuPDF4LLM and the deterministic normalizer. `PAPER_PARSER=legacy` remains the rollback path.
 - Parser failure, fallback, and `needs_ocr` are product states; do not hide them or promise OCR.
+- `ParsedPage.source_text` and `source_fingerprint` are deterministic page-evidence fields; they do not replace PyMuPDF4LLM Markdown used for sections, passages, and quotes.
+- A failed reparse must not downgrade a paper with a successful `latest_version_id`; retain the last usable catalog and record the latest attempt error separately.
+- Catalog materialization must read current metadata while holding the SQLite write transaction. Metadata updates, passage-prefix refresh, and their reindex job are one atomic transaction.
 
 ### Testing
 - Test files live in `tests/`, named `test_<module>.py`.

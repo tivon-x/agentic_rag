@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 import time
 
 import pymupdf
@@ -128,3 +129,49 @@ def test_invalid_or_multiple_range_is_rejected(monkeypatch, tmp_path) -> None:
         )
 
     assert response.status_code == 416
+
+
+def test_metadata_patch_rolls_back_when_reindex_job_cannot_be_queued(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    _configure(monkeypatch, tmp_path)
+    invalidate_graph_cache()
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        uploaded = client.post(
+            "/api/index/files",
+            files={"files": ("paper.pdf", _pdf_bytes(), "application/pdf")},
+            headers={"Idempotency-Key": "paper-metadata-atomicity"},
+        )
+        job = _wait_for_job(client, uploaded.json()[0]["job_id"])
+        assert job["status"] == "completed"
+        paper = client.get("/api/papers").json()["items"][0]
+        paper_id = paper["id"]
+        original_title = paper["title"]
+        original_version = paper["metadata_version"]
+
+        with sqlite3.connect(
+            tmp_path / "data" / "api" / "sessions.db",
+        ) as db:
+            db.execute(
+                """
+                CREATE TRIGGER reject_metadata_reindex
+                BEFORE INSERT ON indexing_jobs
+                WHEN NEW.request_json LIKE '%metadata_reindex%'
+                BEGIN
+                    SELECT RAISE(ABORT, 'synthetic reindex insert failure');
+                END
+                """
+            )
+
+        response = client.patch(
+            f"/api/papers/{paper_id}",
+            headers={"If-Match": str(original_version)},
+            json={"title": "Must Roll Back"},
+        )
+        after = client.get(f"/api/papers/{paper_id}").json()
+
+    assert response.status_code == 500
+    assert after["title"] == original_title
+    assert after["metadata_version"] == original_version

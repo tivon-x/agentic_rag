@@ -7,6 +7,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
+import pymupdf
+
 
 NORMALIZATION_VERSION = "structure-v1"
 
@@ -22,6 +24,34 @@ def paper_id_for_file(path: str | Path) -> str:
         while chunk := source.read(1024 * 1024):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def pdf_page_evidence(path: str | Path) -> list[tuple[str, str]]:
+    """Return a stable page fingerprint and deterministic source-word order."""
+    evidence: list[tuple[str, str]] = []
+    with pymupdf.open(path) as document:
+        for page in document:
+            digest = hashlib.sha256()
+            digest.update(
+                document.xref_object(page.xref, compressed=True).encode(
+                    "utf-8",
+                    errors="ignore",
+                )
+            )
+            referenced_xrefs = {
+                *page.get_contents(),
+                *(int(image[0]) for image in page.get_images(full=True)),
+            }
+            for xref in sorted(referenced_xrefs):
+                stream = document.xref_stream(xref)
+                if stream:
+                    digest.update(stream)
+            source_text = " ".join(
+                str(word[4])
+                for word in page.get_text("words", sort=True)
+            ).strip()
+            evidence.append((digest.hexdigest(), source_text))
+    return evidence
 
 
 @dataclass(slots=True)
@@ -72,6 +102,8 @@ class ParsedPage:
     page_number: int
     text: str
     tables: list[str] = field(default_factory=list)
+    source_fingerprint: str | None = None
+    source_text: str | None = None
 
 
 @dataclass(slots=True)

@@ -12,7 +12,7 @@ from langchain_core.documents import Document
 from api.db.database import get_db
 from core.settings import AppSettings
 from indexing.parsers.paper_parser import ParsedPaper
-from indexing.passages import PassageRecord, SectionRecord, build_retrieval_prefix
+from indexing.passages import build_catalog_records, build_retrieval_prefix
 
 
 class PaperVersionConflictError(ValueError):
@@ -28,7 +28,12 @@ async def mark_paper_parsing(
         await db.execute(
             """
             UPDATE papers
-            SET parse_status = 'parsing', parse_error = NULL, updated_at = ?
+            SET parse_status = CASE
+                    WHEN latest_version_id IS NULL THEN 'parsing'
+                    ELSE parse_status
+                END,
+                parse_error = NULL,
+                updated_at = ?
             WHERE id = ?
             """,
             (datetime.now(UTC).isoformat(), paper_id),
@@ -43,6 +48,7 @@ async def resolve_effective_metadata(
     parsed: ParsedPaper,
 ) -> tuple[dict[str, Any], dict[str, dict[str, Any]], str]:
     async with get_db(settings) as db:
+        await db.execute("BEGIN IMMEDIATE")
         cursor = await db.execute(
             """
             SELECT title, authors_json, year, venue, doi, arxiv_id,
@@ -54,10 +60,12 @@ async def resolve_effective_metadata(
         )
         row = await cursor.fetchone()
         if row is None:
+            await db.rollback()
             raise ValueError(f"Paper {paper_id} does not exist.")
         if str(row["metadata_status"]) == "verified":
             values = _metadata_values_from_row(row)
             evidence = _json_object(row["metadata_json"])
+            await db.commit()
             return values, evidence, "verified"
 
         values = parsed.metadata.values()
@@ -102,8 +110,6 @@ async def save_parsed_catalog(
     version_id: str,
     parsed: ParsedPaper,
     artifact_path: str,
-    sections: list[SectionRecord],
-    passages: list[PassageRecord],
 ) -> None:
     now = datetime.now(UTC).isoformat()
     quality = parsed.quality
@@ -127,6 +133,26 @@ async def save_parsed_catalog(
     )
     async with get_db(settings) as db:
         await db.execute("BEGIN IMMEDIATE")
+        paper_cursor = await db.execute(
+            "SELECT * FROM papers WHERE id = ? AND archived_at IS NULL",
+            (paper_id,),
+        )
+        paper_row = await paper_cursor.fetchone()
+        if paper_row is None:
+            await db.rollback()
+            raise ValueError(f"Paper {paper_id} does not exist.")
+        current_version_id, sections, passages = build_catalog_records(
+            parsed,
+            paper_id=paper_id,
+            metadata_values=_metadata_values_from_row(paper_row),
+            metadata_evidence=_json_object(paper_row["metadata_json"]),
+            max_input_chars=settings.embedding_max_input_chars,
+        )
+        if current_version_id != version_id:
+            await db.rollback()
+            raise ValueError(
+                "Paper version changed while materializing catalog records."
+            )
         await db.execute(
             "DELETE FROM paper_versions WHERE id = ?",
             (version_id,),
@@ -226,7 +252,15 @@ async def mark_paper_failed(
         await db.execute(
             """
             UPDATE papers
-            SET parse_status = 'failed', parse_error = ?, fallback_reason = ?,
+            SET parse_status = CASE
+                    WHEN latest_version_id IS NULL THEN 'failed'
+                    ELSE parse_status
+                END,
+                parse_error = ?,
+                fallback_reason = CASE
+                    WHEN latest_version_id IS NULL THEN ?
+                    ELSE fallback_reason
+                END,
                 updated_at = ?
             WHERE id = ?
             """,
@@ -343,8 +377,9 @@ async def update_paper_metadata(
     paper_id: str,
     expected_version: int,
     updates: dict[str, Any],
-) -> dict[str, Any] | None:
+) -> tuple[dict[str, Any] | None, str | None]:
     now = datetime.now(UTC).isoformat()
+    job_id = uuid4().hex
     async with get_db(settings) as db:
         await db.execute("BEGIN IMMEDIATE")
         cursor = await db.execute(
@@ -354,7 +389,7 @@ async def update_paper_metadata(
         row = await cursor.fetchone()
         if row is None:
             await db.rollback()
-            return None
+            return None, None
         current_version = int(row["metadata_version"])
         if current_version != expected_version:
             await db.rollback()
@@ -428,18 +463,6 @@ async def update_paper_metadata(
                 expected_version,
             ),
         )
-        await db.commit()
-    return await get_paper(settings, paper_id=paper_id)
-
-
-async def create_metadata_reindex_job(
-    settings: AppSettings,
-    *,
-    paper_id: str,
-) -> str:
-    job_id = uuid4().hex
-    now = datetime.now(UTC).isoformat()
-    async with get_db(settings) as db:
         await db.execute(
             """
             INSERT INTO indexing_jobs (
@@ -459,7 +482,7 @@ async def create_metadata_reindex_job(
             ),
         )
         await db.commit()
-    return job_id
+    return await get_paper(settings, paper_id=paper_id), job_id
 
 
 async def list_catalog_documents(settings: AppSettings) -> list[Document]:

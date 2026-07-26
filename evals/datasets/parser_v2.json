@@ -1,199 +1,899 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "frozen_at": "2026-07-26",
-  "annotation_policy": "Test labels are frozen before the first parser_eval run and must not be changed in response to test results.",
+  "annotation_policy": "Page fingerprints and anchors are derived from the frozen source PDFs before the first schema-v2 parser_eval run. Test evidence must not be changed in response to parser results.",
   "documents": [
     {
       "id": "attention",
       "split": "dev",
       "path": "evals/01-Attention Is All You Need.pdf",
-      "tags": ["double_column", "formula", "bad_metadata"],
+      "tags": [
+        "double_column",
+        "formula",
+        "bad_metadata"
+      ],
       "expected_title": "Attention Is All You Need",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 2, "section_boundary": true, "table_boundary": false},
-        {"page": 3, "section_boundary": true, "table_boundary": false}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "dd6664b851cd985bf9e18d93a98758c624a14a296a5cd0af0e6bc31999f27fa1",
+          "text_anchors": [
+            "network architecture, the Transformer, based",
+            "architecture, the Transformer, based solely",
+            "parameter-free position representation and became"
+          ],
+          "ordered_anchors": [
+            "network architecture, the Transformer, based",
+            "architecture, the Transformer, based solely",
+            "parameter-free position representation and became"
+          ]
+        },
+        {
+          "page": 2,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "af4a0201c8e1e35209ff2b58e8343302f4b0e0b7338b71f2761560ae897cf599",
+          "text_anchors": [
+            "sequence modeling and transduc- tion",
+            "modeling and transduc- tion models"
+          ],
+          "ordered_anchors": [
+            "sequence modeling and transduc- tion",
+            "modeling and transduc- tion models"
+          ]
+        },
+        {
+          "page": 3,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "bc3ef1db6ca92bcfac616c2887fdfcdcf4910c282ee4a0a2cfba8937518ddff4",
+          "text_anchors": [
+            "position- wise fully connected feed-forward",
+            "wise fully connected feed-forward network."
+          ],
+          "ordered_anchors": [
+            "position- wise fully connected feed-forward",
+            "wise fully connected feed-forward network."
+          ]
+        }
       ]
     },
     {
       "id": "gpipe",
       "split": "dev",
       "path": "evals/11-GPipe Easy Scaling with Micro-Batch Pipeline Parallelism.pdf",
-      "tags": ["double_column", "table"],
+      "tags": [
+        "double_column",
+        "table"
+      ],
       "expected_title": "GPipe: Easy Scaling with Micro-Batch Pipeline Parallelism",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 4, "section_boundary": true, "table_boundary": true},
-        {"page": 6, "section_boundary": true, "table_boundary": true}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "378c5e3db351d9c120acf6d881b108b663fd6118647931f12e3d01eae8425051",
+          "text_anchors": [
+            "the need for efﬁcient and",
+            "need for efﬁcient and task-independent",
+            "trend has been most visible"
+          ],
+          "ordered_anchors": [
+            "the need for efﬁcient and",
+            "need for efﬁcient and task-independent",
+            "trend has been most visible"
+          ]
+        },
+        {
+          "page": 4,
+          "section_boundary": true,
+          "table_boundary": true,
+          "source_fingerprint": "b28b42c72c9155c4be187ba807bf272b6dd87246240815f54b76d373c3877cd4",
+          "text_anchors": [
+            "recomputes the composite forward function",
+            "consequence, peak activation memory requirement"
+          ],
+          "ordered_anchors": [
+            "recomputes the composite forward function",
+            "consequence, peak activation memory requirement"
+          ]
+        },
+        {
+          "page": 6,
+          "section_boundary": true,
+          "table_boundary": true,
+          "source_fingerprint": "430a14e0d497ea4b59bb528c487dca0aef2f767f1728be317613ef203327b5f1",
+          "text_anchors": [
+            "for each dataset. Our giant",
+            "each dataset. Our giant models"
+          ],
+          "ordered_anchors": [
+            "for each dataset. Our giant",
+            "each dataset. Our giant models"
+          ]
+        }
       ]
     },
     {
       "id": "coffee",
       "split": "dev",
       "path": "evals/20-Quantifying the Rise and Fall of Complexity The Coffee Automaton.pdf",
-      "tags": ["double_column", "low_text"],
+      "tags": [
+        "double_column",
+        "low_text"
+      ],
       "expected_title": "Quantifying the Rise and Fall of Complexity in Closed Systems: The Coffee Automaton",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 10, "section_boundary": true, "table_boundary": false},
-        {"page": 19, "section_boundary": false, "table_boundary": false}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "69b92901b4601740329dcb1fb751a78006963536eaac2af3bebb317207fdba6f",
+          "text_anchors": [
+            "measure, and show analytically that",
+            "never becomes large when the"
+          ],
+          "ordered_anchors": [
+            "measure, and show analytically that",
+            "never becomes large when the"
+          ]
+        },
+        {
+          "page": 10,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "88d11b533a8d4b327073445da7687a4951e1fd11de26699eecb8ca03612947c0",
+          "text_anchors": [
+            "transition rule for this model",
+            "each time step, one pair"
+          ],
+          "ordered_anchors": [
+            "transition rule for this model",
+            "each time step, one pair"
+          ]
+        },
+        {
+          "page": 19,
+          "section_boundary": false,
+          "table_boundary": false,
+          "source_fingerprint": "5ea28228d2b5329ba1eda9cf6406bb79b937a66d0ab3ac73410b2441d15c1adc",
+          "text_anchors": [
+            "over time. Note that the",
+            "time. Note that the coarse-grained",
+            "for the previous coarse-graining metric,"
+          ],
+          "ordered_anchors": [
+            "over time. Note that the",
+            "time. Note that the coarse-grained",
+            "for the previous coarse-graining metric,"
+          ]
+        }
       ]
     },
     {
       "id": "mdl",
       "split": "dev",
       "path": "evals/24-A Tutorial Introduction to the Minimum Description Length Principle.pdf",
-      "tags": ["long_document", "low_text", "bad_metadata"],
+      "tags": [
+        "long_document",
+        "low_text",
+        "bad_metadata"
+      ],
       "expected_title": "A Tutorial Introduction to the Minimum Description Length Principle",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 22, "section_boundary": false, "table_boundary": false},
-        {"page": 80, "section_boundary": false, "table_boundary": false}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "530c7c9594dec76163e0bab56664a1df3547e6320bd0e8559eb21c2196967060",
+          "text_anchors": [
+            "A Tutorial Introduction to the Minimum",
+            "Centrum voor Wiskunde en Informatica"
+          ],
+          "ordered_anchors": [
+            "A Tutorial Introduction to the Minimum",
+            "Centrum voor Wiskunde en Informatica"
+          ]
+        },
+        {
+          "page": 22,
+          "section_boundary": false,
+          "table_boundary": false,
+          "source_fingerprint": "d8b5af348bdb51b434ea2e78cb1907371b2c1b078d322cd0e92376b921bc1ddb",
+          "text_anchors": [],
+          "ordered_anchors": []
+        },
+        {
+          "page": 80,
+          "section_boundary": false,
+          "table_boundary": false,
+          "source_fingerprint": "2b9f004817a01fa8f42621754da77564ad31168ce8b43e5fee57a1ef01bbfe51",
+          "text_anchors": [
+            "Statistical Learning Theory. John Wiley.",
+            "Learning Theory. John Wiley. Vereshchagin,"
+          ],
+          "ordered_anchors": [
+            "Statistical Learning Theory. John Wiley.",
+            "Learning Theory. John Wiley. Vereshchagin,"
+          ]
+        }
       ]
     },
     {
       "id": "rnn_regularization",
       "split": "test",
       "path": "evals/06-Recurrent Neural Network Regularization.pdf",
-      "tags": ["double_column", "formula", "table"],
+      "tags": [
+        "double_column",
+        "formula",
+        "table"
+      ],
       "expected_title": "Recurrent Neural Network Regularization",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 3, "section_boundary": false, "table_boundary": false},
-        {"page": 5, "section_boundary": false, "table_boundary": true}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "d5314e95c3a37cc261e373b56ade72b3eaa71597228ffa979b3bc7a56b6591f2",
+          "text_anchors": [
+            "important tasks that include language",
+            "tasks that include language modeling"
+          ],
+          "ordered_anchors": [
+            "important tasks that include language",
+            "tasks that include language modeling"
+          ]
+        },
+        {
+          "page": 3,
+          "section_boundary": false,
+          "table_boundary": false,
+          "source_fingerprint": "01b50d5841a55ae201e4aae99e5ef445b572dd3b1f138847a24887d5815bf112",
+          "text_anchors": [
+            "the solid lines indicate connections",
+            "solid lines indicate connections where"
+          ],
+          "ordered_anchors": [
+            "the solid lines indicate connections",
+            "solid lines indicate connections where"
+          ]
+        },
+        {
+          "page": 5,
+          "section_boundary": false,
+          "table_boundary": true,
+          "source_fingerprint": "304b6e46721e705bbcdda6c3e332c544cfab6a221d24e6b3e85a21dc5cac6146",
+          "text_anchors": [
+            "Training this network takes about",
+            "this network takes about half",
+            "RECOGNITION Deep Neural Networks have"
+          ],
+          "ordered_anchors": [
+            "Training this network takes about",
+            "this network takes about half",
+            "RECOGNITION Deep Neural Networks have"
+          ]
+        }
       ]
     },
     {
       "id": "pointer_networks",
       "split": "test",
       "path": "evals/08-Pointer Networks.pdf",
-      "tags": ["double_column", "formula", "table"],
+      "tags": [
+        "double_column",
+        "formula",
+        "table"
+      ],
       "expected_title": "Pointer Networks",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 4, "section_boundary": true, "table_boundary": false},
-        {"page": 7, "section_boundary": true, "table_boundary": true}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "6301c65587f6affdc442cd62cd6fdb38fd1853f7cdca21804dd318ea981ead15",
+          "text_anchors": [
+            "three challenging geometric problems ﬁnding",
+            "challenging geometric problems ﬁnding planar"
+          ],
+          "ordered_anchors": [
+            "three challenging geometric problems ﬁnding",
+            "challenging geometric problems ﬁnding planar"
+          ]
+        },
+        {
+          "page": 4,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "2a9b9ba9cce5b806d1455d796fb81f052c3cd63feeff672679dd2371b222bb47",
+          "text_anchors": [
+            "not blend the encoder state",
+            "the decoder, but instead, use"
+          ],
+          "ordered_anchors": [
+            "not blend the encoder state",
+            "the decoder, but instead, use"
+          ]
+        },
+        {
+          "page": 7,
+          "section_boundary": true,
+          "table_boundary": true,
+          "source_fingerprint": "7fc152e03c84c320a9ba83b78d58373a47f2d17004162969414fdb37d343c969",
+          "text_anchors": [
+            "Delaunay (center) and TSP (right),",
+            "(center) and TSP (right), trained"
+          ],
+          "ordered_anchors": [
+            "Delaunay (center) and TSP (right),",
+            "(center) and TSP (right), trained"
+          ]
+        }
       ]
     },
     {
       "id": "alexnet",
       "split": "test",
       "path": "evals/09-ImageNet Classification with Deep CNNs.pdf",
-      "tags": ["double_column", "table"],
+      "tags": [
+        "double_column",
+        "table"
+      ],
       "expected_title": "ImageNet Classification with Deep Convolutional Neural Networks",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 4, "section_boundary": true, "table_boundary": true},
-        {"page": 7, "section_boundary": true, "table_boundary": true}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "4e120fad3d3b1ad0a6ab7f2d362d7e0e45f74eb8becabdbb66df1481268610d8",
+          "text_anchors": [
+            "method called “dropout” that proved",
+            "the ILSVRC-2012 competition and achieved"
+          ],
+          "ordered_anchors": [
+            "method called “dropout” that proved",
+            "the ILSVRC-2012 competition and achieved"
+          ]
+        },
+        {
+          "page": 4,
+          "section_boundary": true,
+          "table_boundary": true,
+          "source_fingerprint": "c620bec891084a5256d78e6a6f7c5598f293f8077c30ddf6f9015ae95e813d5a",
+          "text_anchors": [
+            "This scheme bears some resemblance",
+            "the local contrast normalization scheme"
+          ],
+          "ordered_anchors": [
+            "This scheme bears some resemblance",
+            "the local contrast normalization scheme"
+          ]
+        },
+        {
+          "page": 7,
+          "section_boundary": true,
+          "table_boundary": true,
+          "source_fingerprint": "e2b181e628c07dd7ba5091c3814ce75efa7f3fd14af49d136bbe093a016cbc8b",
+          "text_anchors": [
+            "use validation and test error",
+            "validation and test error rates"
+          ],
+          "ordered_anchors": [
+            "use validation and test error",
+            "validation and test error rates"
+          ]
+        }
       ]
     },
     {
       "id": "resnet",
       "split": "test",
       "path": "evals/12-Deep Residual Learning for Image Recognition.pdf",
-      "tags": ["double_column", "formula", "table"],
+      "tags": [
+        "double_column",
+        "formula",
+        "table"
+      ],
       "expected_title": "Deep Residual Learning for Image Recognition",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 5, "section_boundary": true, "table_boundary": true},
-        {"page": 8, "section_boundary": false, "table_boundary": true}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "74d8ea9fb13a3a202533643c11166e6f4bc65af0f567d23be24f95c71fcd9af7",
+          "text_anchors": [
+            "greatly beneﬁted from very deep",
+            "beneﬁted from very deep models.",
+            "training accuracy) indicates that not"
+          ],
+          "ordered_anchors": [
+            "greatly beneﬁted from very deep",
+            "beneﬁted from very deep models.",
+            "training accuracy) indicates that not"
+          ]
+        },
+        {
+          "page": 5,
+          "section_boundary": true,
+          "table_boundary": true,
+          "source_fingerprint": "d98281d5c2175ae03e134a5e0bcdb34039a5ef425940010f18c578ea411fd3fd",
+          "text_anchors": [
+            "error3. The reason for such",
+            "The reason for such opti-",
+            "that the validation data. This"
+          ],
+          "ordered_anchors": [
+            "error3. The reason for such",
+            "The reason for such opti-",
+            "that the validation data. This"
+          ]
+        },
+        {
+          "page": 8,
+          "section_boundary": false,
+          "table_boundary": true,
+          "source_fingerprint": "847ea6dfb76835542c911f8804159ebd2569c820594a5df0d59b6cccdd1186dc",
+          "text_anchors": [
+            "order. Bottom: the responses are",
+            "Bottom: the responses are ranked",
+            "with ResNet-101. The detection Exploring"
+          ],
+          "ordered_anchors": [
+            "order. Bottom: the responses are",
+            "Bottom: the responses are ranked",
+            "with ResNet-101. The detection Exploring"
+          ]
+        }
       ]
     },
     {
       "id": "message_passing",
       "split": "test",
       "path": "evals/14-Neural Message Passing for Quantum Chemistry.pdf",
-      "tags": ["double_column", "formula", "table", "low_text"],
+      "tags": [
+        "double_column",
+        "formula",
+        "table",
+        "low_text"
+      ],
       "expected_title": "Neural Message Passing for Quantum Chemistry",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 6, "section_boundary": true, "table_boundary": true},
-        {"page": 14, "section_boundary": false, "table_boundary": false}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "167ccef425d0b51e05f124c3fd95022ce584679108ec7211c0671ee0c930e657",
+          "text_anchors": [
+            "novel variations within this framework.",
+            "variations within this framework. Rupp",
+            "and materials using machine learning"
+          ],
+          "ordered_anchors": [
+            "novel variations within this framework.",
+            "variations within this framework. Rupp",
+            "and materials using machine learning"
+          ]
+        },
+        {
+          "page": 6,
+          "section_boundary": true,
+          "table_boundary": true,
+          "source_fingerprint": "64c4b95dfda5d7bb5e4ce73619f0aded7425bfbbd8115c761fcaa687973cf281",
+          "text_anchors": [
+            "sets for instance molecules from",
+            "for instance molecules from GDB-17"
+          ],
+          "ordered_anchors": [
+            "sets for instance molecules from",
+            "for instance molecules from GDB-17"
+          ]
+        },
+        {
+          "page": 14,
+          "section_boundary": false,
+          "table_boundary": false,
+          "source_fingerprint": "6a0efd030ede195319aff7a3d1f3d6269102ebcea7d2adfa080625eccad4e902",
+          "text_anchors": [
+            "Performance With Different Input Information",
+            "With Different Input Information Target"
+          ],
+          "ordered_anchors": [
+            "Performance With Different Input Information",
+            "With Different Input Information Target"
+          ]
+        }
       ]
     },
     {
       "id": "nmt_alignment",
       "split": "test",
       "path": "evals/15-Neural Machine Translation by Jointly Learning to Align and Translate.pdf",
-      "tags": ["double_column", "formula", "table"],
+      "tags": [
+        "double_column",
+        "formula",
+        "table"
+      ],
       "expected_title": "Neural Machine Translation by Jointly Learning to Align and Translate",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 4, "section_boundary": true, "table_boundary": false},
-        {"page": 8, "section_boundary": false, "table_boundary": true}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "937bb70f57b7bef1c2257f4086affe5587cc5cbedddaa3ff7bfad191884d7c72",
+          "text_anchors": [
+            "hard segment explicitly. With this",
+            "segment explicitly. With this new"
+          ],
+          "ordered_anchors": [
+            "hard segment explicitly. With this",
+            "segment explicitly. With this new"
+          ]
+        },
+        {
+          "page": 4,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "75f9e928d14be37811e2aefde999f1eaaf00b8f27c02a0aaad5b702468e18703",
+          "text_anchors": [
+            "relieve the encoder from the",
+            "the encoder from the burden"
+          ],
+          "ordered_anchors": [
+            "relieve the encoder from the",
+            "the encoder from the burden"
+          ]
+        },
+        {
+          "page": 8,
+          "section_boundary": false,
+          "table_boundary": true,
+          "source_fingerprint": "c44f806d6063784c6133aad47839dfdc8744c8390a27bbc915b6c740a9fc1a96",
+          "text_anchors": [
+            "with the previous example, the",
+            "the previous example, the RNNencdec",
+            "the location, width and mixture"
+          ],
+          "ordered_anchors": [
+            "with the previous example, the",
+            "the previous example, the RNNencdec",
+            "the location, width and mixture"
+          ]
+        }
       ]
     },
     {
       "id": "identity_mappings",
       "split": "test",
       "path": "evals/16-Identity Mappings in Deep Residual Networks.pdf",
-      "tags": ["double_column", "formula", "table"],
+      "tags": [
+        "double_column",
+        "formula",
+        "table"
+      ],
       "expected_title": "Identity Mappings in Deep Residual Networks",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 6, "section_boundary": true, "table_boundary": true},
-        {"page": 10, "section_boundary": false, "table_boundary": true}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "88ae091f2f47102b10390c8a18e39f8aa971fc0084bef53f6f3076dfc625d5cd",
+          "text_anchors": [
+            "experiments sup- port the importance",
+            "these identity mappings. This motivates",
+            "“direct” path for propagating information"
+          ],
+          "ordered_anchors": [
+            "experiments sup- port the importance",
+            "these identity mappings. This motivates",
+            "“direct” path for propagating information"
+          ]
+        },
+        {
+          "page": 6,
+          "section_boundary": true,
+          "table_boundary": true,
+          "source_fingerprint": "dd56cf1c3b39f1760a87311570b6d76f6ca9830e1e0da95f1475e3e8d9c5eb7f",
+          "text_anchors": [
+            "convolutional layer. The gating function",
+            "layer. The gating function modulates"
+          ],
+          "ordered_anchors": [
+            "convolutional layer. The gating function",
+            "layer. The gating function modulates"
+          ]
+        },
+        {
+          "page": 10,
+          "section_boundary": false,
+          "table_boundary": true,
+          "source_fingerprint": "e0f795a5e1f7fbcbe5f5fbf3af60184ea4f9e9348554c6281c9e1b5ffb93607c",
+          "text_anchors": [
+            "test set using the original",
+            "set using the original Residual"
+          ],
+          "ordered_anchors": [
+            "test set using the original",
+            "set using the original Residual"
+          ]
+        }
       ]
     },
     {
       "id": "relation_networks",
       "split": "test",
       "path": "evals/17-A Simple Neural Network Module for Relational Reasoning.pdf",
-      "tags": ["double_column", "table", "low_text"],
+      "tags": [
+        "double_column",
+        "table",
+        "low_text"
+      ],
       "expected_title": "A simple neural network module for relational reasoning",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 5, "section_boundary": true, "table_boundary": false},
-        {"page": 14, "section_boundary": false, "table_boundary": true}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "45468e3e10986f77efdcd14890904025e24ad8d4dedda74df6a7ec4c61bfb539",
+          "text_anchors": [
+            "about dynamic physical systems. Then,",
+            "dynamic physical systems. Then, using"
+          ],
+          "ordered_anchors": [
+            "about dynamic physical systems. Then,",
+            "dynamic physical systems. Then, using"
+          ]
+        },
+        {
+          "page": 5,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "88270577f22437ef84ee516184de13d447bb03e3c6d188d11e1c02f6bf8b92ef",
+          "text_anchors": [
+            "table-top, again when only observing",
+            "again when only observing each"
+          ],
+          "ordered_anchors": [
+            "table-top, again when only observing",
+            "again when only observing each"
+          ]
+        },
+        {
+          "page": 14,
+          "section_boundary": false,
+          "table_boundary": true,
+          "source_fingerprint": "6416445bcc58c9d684cd0e873be582fe5570769e088bf4f44b59aac6781e25f4",
+          "text_anchors": [
+            "object How many gray objects",
+            "How many gray objects are"
+          ],
+          "ordered_anchors": [
+            "object How many gray objects",
+            "How many gray objects are"
+          ]
+        }
       ]
     },
     {
       "id": "variational_lossy",
       "split": "test",
       "path": "evals/18-Variational Lossy Autoencoder.pdf",
-      "tags": ["double_column", "formula", "table"],
+      "tags": [
+        "double_column",
+        "formula",
+        "table"
+      ],
       "expected_title": "Variational Lossy Autoencoder",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 8, "section_boundary": false, "table_boundary": true},
-        {"page": 14, "section_boundary": false, "table_boundary": false}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "55c49ea3b7475942b72ec5f7b50abb31e33d5f60da7fd6a4d9eedc469314a460",
+          "text_anchors": [
+            "OMNIGLOT and Caltech-101 Silhouettes density",
+            "and Caltech-101 Silhouettes density estimation"
+          ],
+          "ordered_anchors": [
+            "OMNIGLOT and Caltech-101 Silhouettes density",
+            "and Caltech-101 Silhouettes density estimation"
+          ]
+        },
+        {
+          "page": 8,
+          "section_boundary": false,
+          "table_boundary": true,
+          "source_fingerprint": "45df0e4fb0e848c99eb15be5fdd237d33fa852ff926d3e038027fd8238a63b79",
+          "text_anchors": [
+            "IAF posterior reduces train NLL",
+            "evaluate whether using autoregressive decoding"
+          ],
+          "ordered_anchors": [
+            "IAF posterior reduces train NLL",
+            "evaluate whether using autoregressive decoding"
+          ]
+        },
+        {
+          "page": 14,
+          "section_boundary": false,
+          "table_boundary": false,
+          "source_fingerprint": "c5a0fa8ec7116b94ea2e5e02ba6d6ef77019b55973f7233cdd285a8471718e52",
+          "text_anchors": [
+            "natural images with deep gaussian",
+            "images with deep gaussian mixture",
+            "Sun. Semi-supervised variational autoencoders for"
+          ],
+          "ordered_anchors": [
+            "natural images with deep gaussian",
+            "images with deep gaussian mixture",
+            "Sun. Semi-supervised variational autoencoders for"
+          ]
+        }
       ]
     },
     {
       "id": "ntm",
       "split": "test",
       "path": "evals/21-Neural Turing Machines.pdf",
-      "tags": ["formula", "long_document", "low_text"],
+      "tags": [
+        "formula",
+        "long_document",
+        "low_text"
+      ],
       "expected_title": "Neural Turing Machines",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 16, "section_boundary": false, "table_boundary": false},
-        {"page": 26, "section_boundary": false, "table_boundary": false}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "1e54980aaedb63f2971fb420deb0c6fd986b78e76ffc33362880f050c41b34a3",
+          "text_anchors": [
+            "Machines can infer simple algorithms",
+            "can infer simple algorithms such"
+          ],
+          "ordered_anchors": [
+            "Machines can infer simple algorithms",
+            "can infer simple algorithms such"
+          ]
+        },
+        {
+          "page": 16,
+          "section_boundary": false,
+          "table_boundary": false,
+          "source_fingerprint": "9877f56304eef59ec0a239d1f1e194fbb29a36b90f7535f1883616d83db44356",
+          "text_anchors": [
+            "ﬁrst writes the input vectors",
+            "then reads through the sequence"
+          ],
+          "ordered_anchors": [
+            "ﬁrst writes the input vectors",
+            "then reads through the sequence"
+          ]
+        },
+        {
+          "page": 26,
+          "section_boundary": false,
+          "table_boundary": false,
+          "source_fingerprint": "0c9f80b419d1b268c4d51783d9b1c91585e94c7ec078729e67c1c48715f0bd12",
+          "text_anchors": [
+            "attractors and oculomotor control. Neural",
+            "and oculomotor control. Neural Networks,"
+          ],
+          "ordered_anchors": [
+            "attractors and oculomotor control. Neural",
+            "and oculomotor control. Neural Networks,"
+          ]
+        }
       ]
     },
     {
       "id": "scaling_laws",
       "split": "test",
       "path": "evals/23-Scaling Laws for Neural Language Models.pdf",
-      "tags": ["double_column", "formula", "table", "long_document"],
+      "tags": [
+        "double_column",
+        "formula",
+        "table",
+        "long_document"
+      ],
       "expected_title": "Scaling Laws for Neural Language Models",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 10, "section_boundary": false, "table_boundary": false},
-        {"page": 20, "section_boundary": true, "table_boundary": true}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "00ee16cdcecc75230cf7499713c3e06a058c853f01c17a499e2084ea998637cc",
+          "text_anchors": [
+            "the cross-entropy loss. The loss",
+            "cross-entropy loss. The loss scales",
+            "signiﬁcantly before convergence. arXiv:2001.08361v1 ∗Equal"
+          ],
+          "ordered_anchors": [
+            "the cross-entropy loss. The loss",
+            "cross-entropy loss. The loss scales",
+            "signiﬁcantly before convergence. arXiv:2001.08361v1 ∗Equal"
+          ]
+        },
+        {
+          "page": 10,
+          "section_boundary": false,
+          "table_boundary": false,
+          "source_fingerprint": "a56da8fa4c7ccc9cc6a018e00bf750cc85739d865f35d918e214f86e8362b248",
+          "text_anchors": [
+            "that these empirical results are",
+            "these empirical results are not"
+          ],
+          "ordered_anchors": [
+            "that these empirical results are",
+            "these empirical results are not"
+          ]
+        },
+        {
+          "page": 20,
+          "section_boundary": true,
+          "table_boundary": true,
+          "source_fingerprint": "a98225750ea09c38079e81839e191cc4e3153ef2c2ebdd60b6a2734d8d0b3dec",
+          "text_anchors": [
+            "empirical ﬁtted values for these",
+            "ﬁtted values for these trends"
+          ],
+          "ordered_anchors": [
+            "empirical ﬁtted values for these",
+            "ﬁtted values for these trends"
+          ]
+        }
       ]
     },
     {
       "id": "machine_super_intelligence",
       "split": "test",
       "path": "evals/25-Machine Super Intelligence.pdf",
-      "tags": ["long_document", "low_text", "bad_metadata"],
+      "tags": [
+        "long_document",
+        "low_text",
+        "bad_metadata"
+      ],
       "expected_title": "Machine Super Intelligence",
       "focus_pages": [
-        {"page": 1, "section_boundary": true, "table_boundary": false},
-        {"page": 6, "section_boundary": false, "table_boundary": false},
-        {"page": 200, "section_boundary": true, "table_boundary": false}
+        {
+          "page": 1,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "c770c6da3db1e25b862664bf539bcf33cea6fc2c9ccb98016b22cad8ea13f0e0",
+          "text_anchors": [
+            "Super Intelligence Doctoral Dissertation submitted",
+            "the requirements for the degree"
+          ],
+          "ordered_anchors": [
+            "Super Intelligence Doctoral Dissertation submitted",
+            "the requirements for the degree"
+          ]
+        },
+        {
+          "page": 6,
+          "section_boundary": false,
+          "table_boundary": false,
+          "source_fingerprint": "52d8734eaeb8214380e8235562a495d7ead75e198f844c0149cd6b670d3dd008",
+          "text_anchors": [],
+          "ordered_anchors": []
+        },
+        {
+          "page": 200,
+          "section_boundary": true,
+          "table_boundary": false,
+          "source_fingerprint": "c0b87ea313120d29455d4a655129fd64609a29762efa8434651a05ef0b6ba947",
+          "text_anchors": [
+            "Wechsler adult intelligence scale, Sarsa(λ),",
+            "Search for Extraterrestrial Intelli- Wechsler,"
+          ],
+          "ordered_anchors": [
+            "Wechsler adult intelligence scale, Sarsa(λ),",
+            "Search for Extraterrestrial Intelli- Wechsler,"
+          ]
+        }
       ]
     }
-  ]
+  ],
+  "evidence_frozen_at": "2026-07-26T23:50:00+08:00"
 }

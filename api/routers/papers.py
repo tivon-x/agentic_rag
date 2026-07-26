@@ -18,7 +18,6 @@ from fastapi.responses import StreamingResponse
 
 from api.db.papers import (
     PaperVersionConflictError,
-    create_metadata_reindex_job,
     get_paper,
     list_papers,
     update_paper_metadata,
@@ -85,7 +84,7 @@ async def patch_paper(
             if author.strip()
         ]
     try:
-        paper = await update_paper_metadata(
+        paper, reindex_job_id = await update_paper_metadata(
             settings,
             paper_id=paper_id,
             expected_version=expected_version,
@@ -97,10 +96,6 @@ async def patch_paper(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if paper is None:
         raise HTTPException(status_code=404, detail="Paper not found.")
-    reindex_job_id = await create_metadata_reindex_job(
-        settings,
-        paper_id=paper_id,
-    )
     worker = getattr(request.app.state, "index_worker", None)
     if isinstance(worker, IndexWorker):
         worker.notify()

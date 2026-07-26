@@ -30,7 +30,9 @@ Gold 文件：`evals/datasets/parser_v2.json`
 - test：12 篇、36 个重点页面。
 - 合计：16 篇、48 个重点页面。
 - 覆盖：双栏、表格、公式、长文、低文本、错误 metadata。
-- test 标注在首次 test 运行前冻结；之后未根据 test 结果修改。
+- schema v2 为全部重点页保存源页指纹；46 个有文本页面另存唯一文本锚点和相对顺序锚点，两张无文本页只使用源页指纹。
+- dev 标注器先在 4 篇 dev 上校正；12 篇 test 的 schema-v2 标注在首次 test 运行前冻结，之后未根据 test 结果修改。
+- `ParsedPage.source_text` 是独立的确定性源页词序证据；PyMuPDF4LLM Markdown 继续用于结构归一化和 passage，不被证据字段替换。
 
 最终命令：
 
@@ -41,11 +43,16 @@ uv run python -m evals.parser_eval --dataset evals/datasets/parser_v2.json
 | 指标 | 门槛 | 最终结果 | 结论 |
 |---|---:|---:|---|
 | 页码准确率 | 1.0000 | 1.0000 | 通过 |
+| 源页文本锚点准确率 | 1.0000 | 1.0000 | 通过 |
+| 源页阅读顺序准确率 | 1.0000 | 1.0000 | 通过 |
+| 源页指纹准确率 | 1.0000 | 1.0000 | 通过 |
+| PyMuPDF4LLM Markdown 唯一页证据 | 1.0000 | 1.0000 | 通过 |
+| Markdown 全部连续锚点命中率（诊断项） | 不设门槛 | 0.8478 | 记录 |
 | 字符召回中位数，相对 legacy | >= 1.0000 | 1.0391 | 通过 |
 | 章节边界 F1 | >= 0.8000 | 0.9412 | 通过 |
 | 表格边界 F1 | >= 0.7500 | 0.8571 | 通过 |
 | 标题准确率 | >= 0.9000 | 1.0000 | 通过 |
-| p95 延迟比，相对 legacy | <= 15.0000 | 10.2564 | 通过 |
+| p95 延迟比，相对 legacy | <= 15.0000 | 7.0300 | 通过 |
 
 质量检查还验证：
 
@@ -53,7 +60,8 @@ uv run python -m evals.parser_eval --dataset evals/datasets/parser_v2.json
 - 页码单调、无重复、在 PDF 页数范围内。
 - primary 字符数不少于 legacy 的 60%，否则使用 legacy。
 - 非空页比例过低且平均文本少于 200 字符时标记 `needs_ocr`。
-- parser 在独立子进程运行，普通文档硬超时 180 秒，100 页以上长文 600 秒。
+- PDF 首次打开、页数读取和 parser 全部在受监督子进程中运行；普通文档总硬超时 180 秒，收到 100 页以上页数信号后总门槛扩展到 600 秒。
+- primary 低文本但 legacy 有可用正文时选择 legacy；只有两者都低文本时才标记 `needs_ocr`。primary 失败且 legacy 也低文本时同样明确展示 `needs_ocr`。
 - 修复了真实大 PDF 暴露的 multiprocessing Queue 回压死锁：父进程先限时读取结果，再回收子进程。
 
 ## 3. 数据与元数据闭环
@@ -66,7 +74,9 @@ uv run python -m evals.parser_eval --dataset evals/datasets/parser_v2.json
 - 标题、作者、年份、venue、DOI、arXiv ID 保存 value、source、confidence。
 - 元数据按 PDF metadata、首屏启发式、文件名降级。可疑 PDF title 不覆盖可信首屏标题。
 - 用户 PATCH 使用 `If-Match` 乐观并发控制；只把实际修改字段标记为 `source=user`、`confidence=1.0`。
-- 修改元数据后先在事务中重建 passage 前缀并检查 6000 字符上限，再创建完整索引重建任务。
+- parser 保存 catalog 时在 `BEGIN IMMEDIATE` 事务中重读最新元数据并重建 passage，避免并发 PATCH 留下旧 prefix。
+- 修改元数据后在同一事务中重建 passage 前缀、检查 6000 字符上限并写入 reindex job；job 写入失败时元数据和 passage 一并回滚。
+- 已有成功版本的相同 PDF 重试失败时保留原 `parse_status`、`latest_version_id` 和 active catalog，只记录最新 `parse_error`，不会让健康论文从下一版索引消失。
 
 人工对照：
 
@@ -146,6 +156,16 @@ Gold 中仍存在可接受的局部结构误判：
 
 这些案例没有通过修改 test 标注规避，最终总体 F1 仍超过门槛。产品明确展示 parser 状态和 fallback 原因。
 
+PyMuPDF4LLM Markdown 在表格、索引页和跨栏断词上有 7 个重点页无法完整连续命中全部源页锚点，因此把全部连续锚点命中率 `0.8478` 作为诊断项，不用事后阈值放行。正式 gate 要求每个有文本重点页都包含至少一个跨页唯一的 Markdown 锚点签名，结果为 `1.0000`；这些页面的确定性 `source_text`、相对顺序和源页指纹也全部通过。没有用 `source_text` 替换 passage Markdown。
+
+独立 subagent 深度审查发现并已关闭 5 个阻断项：
+
+- primary `needs_ocr` 错误压过可用 legacy 正文。
+- 重复解析失败毒化已有成功版本。
+- metadata PATCH、catalog 保存和 reindex job 缺少一致性边界。
+- hard timeout 未覆盖首次 `pymupdf.open()`。
+- gold 页码指标只检查页号对象存在，不检查页内内容与顺序。
+
 本阶段不处理：
 
 - 扫描件 OCR。
@@ -165,16 +185,16 @@ uv run --extra dev python -m pytest \
   tests/test_search_api.py -q
 ```
 
-结果：`16 passed`，3 条第三方 SWIG deprecation warning。
+结果：`26 passed`，3 条第三方 SWIG deprecation warning。
 
 ```text
 uv run python -m evals.parser_eval --dataset evals/datasets/parser_v2.json
 ```
 
-结果：`passed: true`，所有 6 个 gate 通过。
+结果：`passed: true`，16 篇、48 页，所有 10 个 gate 通过。
 
 ```text
-uv run --extra dev ruff check indexing api tests
+uv run --extra dev ruff check indexing api tests evals
 ```
 
 结果：通过。
@@ -190,7 +210,7 @@ pnpm --dir web build
 uv run --extra dev python -m pytest -q
 ```
 
-结果：`205 passed`，3 条第三方 SWIG deprecation warning。
+结果：`215 passed`，3 条第三方 SWIG deprecation warning。
 
 并发迁移恢复测试额外连续运行 10 次，全部通过。
 

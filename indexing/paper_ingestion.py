@@ -43,37 +43,59 @@ def parse_paper_with_fallback(
 ) -> ParsedPaper:
     if Path(file_path).suffix.lower() != ".pdf":
         raise ValueError("Structured paper parsing currently requires a PDF.")
-    timeout = _timeout_for_document(file_path, settings)
     if settings.paper_parser == "legacy":
-        parsed = _parse_with_timeout("legacy", file_path, timeout)
-        parsed.status = "degraded"
-        parsed.fallback_reason = "configured_legacy_parser"
-        parsed.quality = assess_parser_quality(parsed, parsed)
+        parsed = _parse_pdf_with_timeout("legacy", file_path, settings)
+        quality = assess_parser_quality(parsed, parsed)
+        parsed.quality = quality
+        if quality.needs_ocr:
+            parsed.status = "needs_ocr"
+            parsed.fallback_reason = "configured_legacy_parser; needs_ocr"
+        else:
+            parsed.status = "degraded"
+            parsed.fallback_reason = "configured_legacy_parser"
         return parsed
 
     try:
-        primary = _parse_with_timeout("pymupdf4llm", file_path, timeout)
+        primary = _parse_pdf_with_timeout("pymupdf4llm", file_path, settings)
     except (ParserTimeoutError, RuntimeError, ValueError) as exc:
-        legacy = _parse_with_timeout("legacy", file_path, timeout)
-        legacy.status = "degraded"
-        legacy.fallback_reason = f"primary_parser_failed: {exc}"
-        legacy.quality = assess_parser_quality(legacy, legacy)
+        legacy = _parse_pdf_with_timeout("legacy", file_path, settings)
+        quality = assess_parser_quality(legacy, legacy)
+        legacy.quality = quality
+        reason = f"primary_parser_failed: {exc}"
+        if quality.needs_ocr:
+            legacy.status = "needs_ocr"
+            legacy.fallback_reason = f"{reason}; needs_ocr"
+        else:
+            legacy.status = "degraded"
+            legacy.fallback_reason = reason
         return legacy
 
-    legacy = _parse_with_timeout("legacy", file_path, timeout)
+    legacy = _parse_pdf_with_timeout("legacy", file_path, settings)
     quality = assess_parser_quality(primary, legacy)
     primary.quality = quality
     if quality.needs_ocr:
-        primary.status = "needs_ocr"
-        primary.fallback_reason = "needs_ocr"
-        return primary
+        legacy_quality = assess_parser_quality(legacy, legacy)
+        legacy.quality = legacy_quality
+        if not legacy_quality.needs_ocr:
+            legacy.status = "degraded"
+            reasons = ["primary_needs_ocr", *quality.reasons]
+            legacy.fallback_reason = ", ".join(dict.fromkeys(reasons))
+            return legacy
+        selected = (
+            legacy
+            if _text_character_count(legacy) > _text_character_count(primary)
+            else primary
+        )
+        selected.status = "needs_ocr"
+        selected.fallback_reason = "needs_ocr"
+        return selected
     if quality.passed:
         primary.status = "parsed"
         return primary
 
     legacy.status = "degraded"
     legacy.fallback_reason = ", ".join(quality.reasons)
-    legacy.quality = quality
+    legacy.quality = assess_parser_quality(legacy, legacy)
     return legacy
 
 
@@ -101,13 +123,16 @@ def write_parsed_artifact(
     return target
 
 
-def _timeout_for_document(file_path: str, settings: AppSettings) -> int:
-    with pymupdf.open(file_path) as document:
-        page_count = document.page_count
-    return (
-        settings.long_document_timeout_seconds
-        if page_count > 100
-        else settings.parser_timeout_seconds
+def _parse_pdf_with_timeout(
+    parser_name: str,
+    file_path: str,
+    settings: AppSettings,
+) -> ParsedPaper:
+    return _parse_with_timeout(
+        parser_name,
+        file_path,
+        settings.parser_timeout_seconds,
+        long_document_timeout_seconds=settings.long_document_timeout_seconds,
     )
 
 
@@ -115,6 +140,8 @@ def _parse_with_timeout(
     parser_name: str,
     file_path: str,
     timeout_seconds: int,
+    *,
+    long_document_timeout_seconds: int | None = None,
 ) -> ParsedPaper:
     context = multiprocessing.get_context("spawn")
     result_queue: multiprocessing.Queue[Any] = context.Queue(maxsize=1)
@@ -130,6 +157,7 @@ def _parse_with_timeout(
             result_queue,
             parser_name=parser_name,
             timeout_seconds=timeout_seconds,
+            long_document_timeout_seconds=long_document_timeout_seconds,
         )
     finally:
         result_queue.close()
@@ -151,17 +179,32 @@ def _get_process_result(
     *,
     parser_name: str,
     timeout_seconds: int,
+    long_document_timeout_seconds: int | None = None,
 ) -> tuple[str, Any]:
-    deadline = monotonic() + timeout_seconds
+    started = monotonic()
+    deadline = started + timeout_seconds
     while True:
         remaining = deadline - monotonic()
         if remaining <= 0:
             _terminate_process(process)
+            active_timeout = max(1, int(round(deadline - started)))
             raise ParserTimeoutError(
-                f"{parser_name} exceeded {timeout_seconds} seconds."
+                f"{parser_name} exceeded {active_timeout} seconds."
             )
         try:
-            return result_queue.get(timeout=min(0.25, remaining))
+            kind, payload = result_queue.get(timeout=min(0.25, remaining))
+            if kind == "page_count":
+                if (
+                    isinstance(payload, int)
+                    and payload > 100
+                    and long_document_timeout_seconds is not None
+                ):
+                    deadline = max(
+                        deadline,
+                        started + long_document_timeout_seconds,
+                    )
+                continue
+            return kind, payload
         except queue.Empty as exc:
             if process.is_alive():
                 continue
@@ -188,6 +231,9 @@ def _parser_process_entry(
     result_queue: multiprocessing.Queue[Any],
 ) -> None:
     try:
+        with pymupdf.open(file_path) as document:
+            page_count = document.page_count
+        result_queue.put(("page_count", page_count))
         parser = (
             PyMuPDF4LLMPaperParser()
             if parser_name == "pymupdf4llm"
@@ -198,10 +244,14 @@ def _parser_process_entry(
         result_queue.put(("error", f"{type(exc).__name__}: {exc}"))
 
 
+def _text_character_count(parsed: ParsedPaper) -> int:
+    return sum(len(page.text.strip()) for page in parsed.pages)
+
+
 def _parse_text_source(file_path: str) -> ParsedPaper:
     path = Path(file_path)
     text = path.read_text(encoding="utf-8", errors="replace").strip()
-    page = ParsedPage(page_number=1, text=text)
+    page = ParsedPage(page_number=1, text=text, source_text=text)
     title = path.stem
     def unknown() -> MetadataField:
         return MetadataField(None, "unknown", 0.0)

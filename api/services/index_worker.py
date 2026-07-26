@@ -36,7 +36,7 @@ from indexing.index_versions import (
 )
 from indexing.paper_ingestion import parse_source, write_parsed_artifact
 from indexing.parsers.paper_parser import paper_id_for_file
-from indexing.passages import build_catalog_records
+from indexing.passages import paper_version_id
 
 
 logger = logging.getLogger(__name__)
@@ -250,19 +250,16 @@ class IndexWorker:
                     str(source_path),
                     self.settings,
                 )
-                metadata_values, metadata_evidence, _ = (
-                    await resolve_effective_metadata(
-                        self.settings,
-                        paper_id=paper_id,
-                        parsed=parsed,
-                    )
-                )
-                version_id, sections, passages = build_catalog_records(
-                    parsed,
+                await resolve_effective_metadata(
+                    self.settings,
                     paper_id=paper_id,
-                    metadata_values=metadata_values,
-                    metadata_evidence=metadata_evidence,
-                    max_input_chars=self.settings.embedding_max_input_chars,
+                    parsed=parsed,
+                )
+                version_id = paper_version_id(
+                    paper_id=paper_id,
+                    parser_name=parsed.parser_name,
+                    parser_version=parsed.parser_version,
+                    normalization_version=parsed.normalization_version,
                 )
                 artifact_path = await asyncio.to_thread(
                     write_parsed_artifact,
@@ -277,8 +274,6 @@ class IndexWorker:
                     version_id=version_id,
                     parsed=parsed,
                     artifact_path=str(artifact_path),
-                    sections=sections,
-                    passages=passages,
                 )
             except Exception as exc:
                 await mark_paper_failed(
