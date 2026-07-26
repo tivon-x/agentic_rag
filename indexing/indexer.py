@@ -175,7 +175,17 @@ class Indexer:
             self._logger.warning("No chunks generated from input: %s", file_path)
             return None
 
-        self.vector_store.add_documents(chunks)
+        return self.index_documents(chunks)
+
+    def index_documents(
+        self,
+        documents: list[Document],
+    ) -> None | tuple[VectorStoreProtocol, LexicalStore]:
+        """Persist already-normalized retrieval documents."""
+        if not documents:
+            self._logger.warning("No documents supplied for indexing.")
+            return None
+        self.vector_store.add_documents(documents)
 
         vectorstore_config = self.config.get("vectorstore", {})
         persist_directory = vectorstore_config.get("persist_directory")

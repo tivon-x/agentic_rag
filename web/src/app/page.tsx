@@ -1,66 +1,68 @@
 import Link from "next/link";
 
 import { Card } from "@/components/ui/card";
-import { text } from "@/lib/i18n";
+
+const features = [
+  {
+    number: "01",
+    title: "论文目录",
+    body: "查看每份 PDF 的解析状态、元数据来源与置信度，需要时直接校正。",
+  },
+  {
+    number: "02",
+    title: "页码证据",
+    body: "搜索结果保留章节、页码和原文摘录，一步回到 PDF 原页核验。",
+  },
+  {
+    number: "03",
+    title: "可恢复索引",
+    body: "解析失败或需要 OCR 时保留上一版可用索引，原因对你可见。",
+  },
+];
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-10">
-      <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="overflow-hidden border-0 bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(251,191,36,0.10),rgba(255,255,255,0.92))]">
-          <div className="space-y-5">
-            <p className="inline-flex rounded-full bg-white/80 px-3 py-1 text-sm font-semibold tracking-[0.25em] text-emerald-800 uppercase">
-              Agentic RAG
-            </p>
-            <div className="space-y-3">
-              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-                {text.home.heroTitle}
-              </h1>
-              <p className="max-w-2xl text-base leading-8 text-slate-700 sm:text-lg">
-                {text.home.heroDescription}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/chat"
-                className="inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
-                {text.home.chatCta}
-              </Link>
-              <Link
-                href="/kb"
-                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white/80 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-emerald-500 hover:text-emerald-700"
-              >
-                {text.home.kbCta}
-              </Link>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="bg-slate-950 text-slate-50">
-          <div className="space-y-4">
-            <p className="text-sm font-semibold tracking-[0.25em] text-emerald-300 uppercase">
-              {text.home.panelTitle}
-            </p>
-            <ul className="space-y-3 text-sm leading-7 text-slate-300">
-              <li>{text.home.panelItems.streaming}</li>
-              <li>{text.home.panelItems.citations}</li>
-              <li>{text.home.panelItems.kb}</li>
-            </ul>
-          </div>
-        </Card>
+    <main
+      id="main-content"
+      className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-5 py-12 sm:px-8 sm:py-20"
+    >
+      <section className="grid items-end gap-10 border-b border-[var(--line)] pb-14 lg:grid-cols-[1.35fr_0.65fr]">
+        <div className="space-y-6">
+          <p className="editorial-kicker">Personal research library</p>
+          <h1 className="page-title max-w-4xl">
+            每条结论，都能回到论文原页。
+          </h1>
+          <p className="page-description">
+            Paper Index 把散落的 PDF 变成可管理的论文目录。搜索章节与原文证据，
+            校正错误元数据，并从结果直接打开对应页码。
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 lg:items-end">
+          <Link
+            href="/library"
+            className="inline-flex min-h-12 items-center justify-center bg-[var(--foreground)] px-6 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-strong)]"
+          >
+            打开论文库
+          </Link>
+          <Link
+            href="/search"
+            className="inline-flex min-h-12 items-center justify-center border border-[var(--line)] bg-[var(--panel)] px-6 text-sm font-semibold transition-colors hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+          >
+            搜索页码证据
+          </Link>
+        </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        {text.home.featureCards.map((item) => (
-          <Card key={item.title} className="bg-white/88">
-            <div className="space-y-3">
-              <p className="text-sm font-semibold tracking-wide text-emerald-700">
-                {item.kicker}
-              </p>
-              <h2 className="text-xl font-semibold text-slate-950">{item.title}</h2>
-              <p className="text-sm leading-7 text-slate-600">{item.body}</p>
-            </div>
+      <section className="grid gap-px bg-[var(--line)] md:grid-cols-3">
+        {features.map((item) => (
+          <Card key={item.number} className="rounded-none bg-[var(--panel)] shadow-none">
+            <p className="font-mono text-xs text-[var(--accent-strong)]">
+              {item.number}
+            </p>
+            <h2 className="mt-10 font-serif text-2xl text-slate-950">
+              {item.title}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-slate-600">{item.body}</p>
           </Card>
         ))}
       </section>

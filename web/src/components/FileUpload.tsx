@@ -30,7 +30,7 @@ export function FileUpload({
   const [isDragging, setIsDragging] = useState(false);
 
   return (
-    <Card className="space-y-4 bg-white/78">
+    <Card className="space-y-4 rounded-none border border-[var(--line)]">
       <label
         htmlFor={inputId}
         onDragOver={(event) => {
@@ -46,10 +46,10 @@ export function FileUpload({
           onChange(Array.from(event.dataTransfer.files));
         }}
         className={cn(
-          "flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed px-6 py-8 text-center transition",
+          "flex min-h-44 cursor-pointer flex-col items-center justify-center border-2 border-dashed px-6 py-8 text-center transition-colors",
           isDragging
             ? "border-emerald-600 bg-emerald-50"
-            : "border-amber-200 bg-amber-50/70",
+            : "border-amber-300 bg-amber-50",
         )}
       >
         <input
@@ -64,7 +64,7 @@ export function FileUpload({
         />
         <p className="text-base font-semibold text-slate-900">{text.kb.sections.upload}</p>
         <p className="mt-2 text-sm leading-7 text-slate-600">
-          支持 `.pdf`、`.md`、`.txt`。可以点击选择，也可以直接拖拽到这里。
+          支持 PDF、Markdown 和 TXT。可以点击选择，也可以直接拖拽到这里。
         </p>
       </label>
 
@@ -79,7 +79,7 @@ export function FileUpload({
             {files.map((file) => (
               <div
                 key={`${file.name}-${file.size}`}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
+                className="border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700"
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="truncate">{file.name}</span>

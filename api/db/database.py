@@ -141,7 +141,7 @@ async def create_indexing_job(
     created_at: str,
     error_message: str | None = None,
     request: dict[str, Any] | None = None,
-    items: list[dict[str, str]] | None = None,
+    items: list[dict[str, Any]] | None = None,
 ) -> IndexingJobRecord:
     request_json = json.dumps(request or {}, ensure_ascii=False)
     async with get_db(settings) as db:
@@ -164,14 +164,20 @@ async def create_indexing_job(
             ),
         )
         for item in items or []:
+            await _upsert_uploaded_paper(db, item=item, created_at=created_at)
             await db.execute(
                 """
                 INSERT INTO index_job_items (
-                    job_id, filename, source_path, status
+                    job_id, filename, source_path, status, paper_id
                 )
-                VALUES (?, ?, ?, 'queued')
+                VALUES (?, ?, ?, 'queued', ?)
                 """,
-                (job_id, item["filename"], item["source_path"]),
+                (
+                    job_id,
+                    item["filename"],
+                    item["source_path"],
+                    item.get("paper_id"),
+                ),
             )
         await db.commit()
     record = await get_indexing_job(settings, job_id=job_id)
@@ -187,7 +193,7 @@ async def create_indexing_job_idempotent(
     idempotency_key: str,
     request_hash: str,
     request: dict[str, Any],
-    items: list[dict[str, str]],
+    items: list[dict[str, Any]],
     response: list[dict[str, Any]],
     created_at: str,
     active_version_before: str | None = None,
@@ -232,14 +238,20 @@ async def create_indexing_job_idempotent(
             ),
         )
         for item in items:
+            await _upsert_uploaded_paper(db, item=item, created_at=created_at)
             await db.execute(
                 """
                 INSERT INTO index_job_items (
-                    job_id, filename, source_path, status
+                    job_id, filename, source_path, status, paper_id
                 )
-                VALUES (?, ?, ?, 'queued')
+                VALUES (?, ?, ?, 'queued', ?)
                 """,
-                (job_id, item["filename"], item["source_path"]),
+                (
+                    job_id,
+                    item["filename"],
+                    item["source_path"],
+                    item.get("paper_id"),
+                ),
             )
         await db.execute(
             """
@@ -281,7 +293,8 @@ async def list_index_job_items(
     async with get_db(settings) as db:
         cursor = await db.execute(
             """
-            SELECT id, filename, source_path, status, error_code, error_detail
+            SELECT id, filename, source_path, status, error_code, error_detail,
+                   paper_id
             FROM index_job_items
             WHERE job_id = ?
             ORDER BY id
@@ -718,3 +731,34 @@ def _json_dict_or_list(value: Any, *, default: Any) -> Any:
 
 def _parse_timestamp(value: str) -> datetime:
     return datetime.fromisoformat(value)
+
+
+async def _upsert_uploaded_paper(
+    db: aiosqlite.Connection,
+    *,
+    item: dict[str, Any],
+    created_at: str,
+) -> None:
+    paper_id = str(item.get("paper_id") or "")
+    if not paper_id:
+        return
+    await db.execute(
+        """
+        INSERT INTO papers (
+            id, content_hash, file_name, source_path, source_type, size_bytes,
+            created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO NOTHING
+        """,
+        (
+            paper_id,
+            str(item.get("content_hash") or paper_id),
+            str(item["filename"]),
+            str(item["source_path"]),
+            str(item.get("source_type") or "application/octet-stream"),
+            int(item.get("size_bytes") or 0),
+            created_at,
+            created_at,
+        ),
+    )

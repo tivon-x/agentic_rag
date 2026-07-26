@@ -90,6 +90,7 @@ class AppSettings:
     log_level: str = "INFO"
     index_root: Path | None = None
     upload_root: Path | None = None
+    parsed_artifact_root: Path | None = None
     app_db_path: Path | None = None
 
     llm_model: str = ""
@@ -135,6 +136,9 @@ class AppSettings:
     index_worker_poll_seconds: float = 0.25
     index_worker_max_attempts: int = 3
     upload_max_bytes: int = 50 * 1024 * 1024
+    paper_parser: str = "pymupdf4llm"
+    parser_timeout_seconds: int = 180
+    long_document_timeout_seconds: int = 600
 
     def __post_init__(self) -> None:
         if self.embedding_input_mode not in {"raw", "tokenized"}:
@@ -167,6 +171,15 @@ class AppSettings:
             raise ValueError("INDEX_WORKER_MAX_ATTEMPTS must be positive.")
         if self.upload_max_bytes <= 0:
             raise ValueError("UPLOAD_MAX_BYTES must be positive.")
+        if self.paper_parser not in {"pymupdf4llm", "legacy"}:
+            raise ValueError("PAPER_PARSER must be pymupdf4llm or legacy.")
+        if self.parser_timeout_seconds <= 0:
+            raise ValueError("PARSER_TIMEOUT_SECONDS must be positive.")
+        if self.long_document_timeout_seconds < self.parser_timeout_seconds:
+            raise ValueError(
+                "LONG_DOCUMENT_TIMEOUT_SECONDS must be greater than or equal to "
+                "PARSER_TIMEOUT_SECONDS."
+            )
 
     def ensure_dirs(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -180,6 +193,8 @@ class AppSettings:
             self.index_root.mkdir(parents=True, exist_ok=True)
         if self.upload_root is not None:
             self.upload_root.mkdir(parents=True, exist_ok=True)
+        if self.parsed_artifact_root is not None:
+            self.parsed_artifact_root.mkdir(parents=True, exist_ok=True)
         if self.app_db_path is not None:
             self.app_db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -337,6 +352,9 @@ def load_settings(
     )
     index_root = Path(get_env("INDEX_ROOT") or (data_dir / "indexes"))
     upload_root = Path(get_env("UPLOAD_ROOT") or (data_dir / "uploads"))
+    parsed_artifact_root = Path(
+        get_env("PARSED_ARTIFACT_ROOT") or (data_dir / "parsed")
+    )
     app_db_path = Path(
         get_env("APP_DB_PATH") or (data_dir / "api" / "sessions.db")
     )
@@ -458,6 +476,19 @@ def load_settings(
         if upload_max_bytes_value is not None
         else 50 * 1024 * 1024
     )
+    paper_parser = (
+        get_env("PAPER_PARSER", default="pymupdf4llm") or "pymupdf4llm"
+    ).strip().lower()
+    parser_timeout_value = get_env_int("PARSER_TIMEOUT_SECONDS")
+    parser_timeout_seconds = (
+        parser_timeout_value if parser_timeout_value is not None else 180
+    )
+    long_document_timeout_value = get_env_int("LONG_DOCUMENT_TIMEOUT_SECONDS")
+    long_document_timeout_seconds = (
+        long_document_timeout_value
+        if long_document_timeout_value is not None
+        else 600
+    )
 
     settings = AppSettings(
         base_dir=base,
@@ -469,6 +500,7 @@ def load_settings(
         doc_trees_path=doc_trees_path,
         index_root=index_root,
         upload_root=upload_root,
+        parsed_artifact_root=parsed_artifact_root,
         app_db_path=app_db_path,
         log_dir=log_dir,
         log_file=log_file,
@@ -516,6 +548,9 @@ def load_settings(
         ),
         index_worker_max_attempts=index_worker_max_attempts,
         upload_max_bytes=upload_max_bytes,
+        paper_parser=paper_parser,
+        parser_timeout_seconds=parser_timeout_seconds,
+        long_document_timeout_seconds=long_document_timeout_seconds,
     )
     settings.ensure_dirs()
     return settings

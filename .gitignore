@@ -92,6 +92,7 @@ sandbox/
 # Misc
 .coverage
 .pytest_cache/
+.playwright-cli/
 htmlcov/
 .mypy_cache/
 .dmypy.json

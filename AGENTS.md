@@ -50,6 +50,12 @@ agentic_rag/
 | Vector store | indexing/vectorstore.py | FAISS-backed, local persist |
 | BM25 index | indexing/bm25_index.py | rank-bm25, serialised to bm25.pkl |
 | Fusion retriever | indexing/retriever.py | BM25Retriever + FusionRetriever (hybrid) |
+| Paper parser protocol | indexing/parsers/paper_parser.py | Project-owned parser schema + stable IDs |
+| PDF parser pipeline | indexing/paper_ingestion.py | Timeout, quality gate, PyMuPDF4LLM + legacy fallback |
+| Structure normalizer | indexing/parsers/structure_normalizer.py | Deterministic sections, blocks, tables, formulas |
+| Passage materialization | indexing/passages.py | quote/retrieval split + embedding hard limit |
+| Paper catalog repository | api/db/papers.py | papers, versions, sections, passages, metadata correction |
+| Paper/Search APIs | api/routers/papers.py, api/routers/search.py | Range PDF delivery + page-addressable evidence |
 
 ---
 
@@ -173,6 +179,14 @@ LangGraph `GraphState` fields use **camelCase** (matching LangGraph conventions)
 - Index jobs are persisted before execution and claimed only through the SQLite global/job leases.
 - Schema migrations are forward-only and create a SQLite recovery backup before changing an existing database.
 - User upload paths must remain under `UPLOAD_ROOT` after resolution; never concatenate an unchecked filename into a destination path.
+
+### Paper Catalog
+- `papers.id` is the SHA-256 of the uploaded file bytes; different bytes are distinct papers and are not auto-merged.
+- `paper_versions`, `sections`, and `passages` use deterministic IDs derived from the paper, parser/normalizer versions, hierarchy, page, and quote.
+- Keep `quote_text` source-faithful. Metadata corrections may rebuild `retrieval_text` prefixes but must not change quotes.
+- Enforce `EMBEDDING_MAX_INPUT_CHARS` on the complete metadata prefix + passage before calling the embedding provider.
+- PDF parsing defaults to PyMuPDF4LLM and the deterministic normalizer. `PAPER_PARSER=legacy` remains the rollback path.
+- Parser failure, fallback, and `needs_ocr` are product states; do not hide them or promise OCR.
 
 ### Testing
 - Test files live in `tests/`, named `test_<module>.py`.

@@ -71,13 +71,44 @@ class FusionRetriever(BaseRetriever):
     def retrieve(
         self, query: str, *, query_plan: dict[str, Any] | None = None
     ) -> PackedContext:
+        candidates, debug = self.search_scored(
+            query,
+            query_plan=query_plan,
+        )
+        return self._pack_context(
+            candidates,
+            debug["query_plan"],
+            debug["retrieval"],
+            debug["dedupe"],
+            debug["rerank"],
+        )
+
+    def search_scored(
+        self,
+        query: str,
+        *,
+        query_plan: dict[str, Any] | None = None,
+        limit: int | None = None,
+    ) -> tuple[list[RetrievalCandidate], dict[str, Any]]:
+        """Return ranked candidates with every existing scoring stage intact."""
         plan = normalize_query_plan(query, query_plan)
         retrieval_candidates, retrieval_debug = self._retrieve_candidates(plan)
-        deduped_candidates, dedupe_debug = self._dedupe_candidates(retrieval_candidates)
-        reranked_candidates, rerank_debug = self._rerank_candidates(
-            query, deduped_candidates, plan
+        deduped_candidates, dedupe_debug = self._dedupe_candidates(
+            retrieval_candidates
         )
-        return self._pack_context(reranked_candidates, plan, retrieval_debug, dedupe_debug, rerank_debug)
+        reranked_candidates, rerank_debug = self._rerank_candidates(
+            query,
+            deduped_candidates,
+            plan,
+        )
+        if limit is not None:
+            reranked_candidates = reranked_candidates[:limit]
+        return reranked_candidates, {
+            "query_plan": plan,
+            "retrieval": retrieval_debug,
+            "dedupe": dedupe_debug,
+            "rerank": rerank_debug,
+        }
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun

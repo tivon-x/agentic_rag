@@ -142,7 +142,8 @@ def resolve_indexer_config(settings: AppSettings) -> tuple[dict[str, Any], str]:
 def create_index_version(
     settings: AppSettings,
     *,
-    source_paths: list[Path],
+    source_paths: list[Path] | None = None,
+    documents: list[Any] | None = None,
     index_mode: str,
     version_id: str | None = None,
     config_overrides: dict[str, Any] | None = None,
@@ -160,15 +161,23 @@ def create_index_version(
     staging_dir.mkdir(parents=True)
 
     try:
-        _seed_staging_version(settings, staging_dir)
+        if documents is None:
+            _seed_staging_version(settings, staging_dir)
         config = settings.indexer_config(version_dir=staging_dir)
         config["index_mode"] = index_mode
         config.update(config_overrides or {})
         indexer = Indexer(config)
-        for source_path in source_paths:
-            result = indexer.index(str(source_path))
+        if documents is not None:
+            result = indexer.index_documents(documents)
             if result is None:
-                raise ValueError(f"No indexable content found in {source_path.name}.")
+                raise ValueError("No catalog passages are available for indexing.")
+        else:
+            for source_path in source_paths or []:
+                result = indexer.index(str(source_path))
+                if result is None:
+                    raise ValueError(
+                        f"No indexable content found in {source_path.name}."
+                    )
 
         manifest = {
             "schema_version": 1,
@@ -179,6 +188,9 @@ def create_index_version(
             "index_mode": index_mode,
             "leaf_node_type": str(config.get("leaf_node_type", "")),
             "parent_embed_pooling": str(config.get("parent_embed_pooling", "")),
+            "document_schema": (
+                "paper-passages-v1" if documents is not None else "legacy-documents"
+            ),
             "code_version": _code_version(settings.base_dir),
         }
         (staging_dir / MANIFEST_NAME).write_text(

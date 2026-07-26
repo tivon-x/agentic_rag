@@ -20,6 +20,13 @@ from api.db.database import (
     recover_expired_indexing_jobs,
     release_index_worker_lease,
 )
+from api.db.papers import (
+    list_catalog_documents,
+    mark_paper_failed,
+    mark_paper_parsing,
+    resolve_effective_metadata,
+    save_parsed_catalog,
+)
 from api.services.graph_cache import invalidate_graph_cache
 from core.settings import AppSettings
 from indexing.index_versions import (
@@ -27,6 +34,9 @@ from indexing.index_versions import (
     activate_index_version,
     create_index_version,
 )
+from indexing.paper_ingestion import parse_source, write_parsed_artifact
+from indexing.parsers.paper_parser import paper_id_for_file
+from indexing.passages import build_catalog_records
 
 
 logger = logging.getLogger(__name__)
@@ -131,7 +141,24 @@ class IndexWorker:
                     "legacy mode is read-only."
                 )
             items = await list_index_job_items(self.settings, job_id=job_id)
-            source_paths = self._validated_source_paths(items)
+            kind = str(request.get("kind") or "upload")
+            if kind == "upload":
+                await self._ingest_items(job_id, items)
+            elif kind != "metadata_reindex":
+                raise _NonRetryableIndexingError(
+                    f"Unsupported indexing job kind: {kind}"
+                )
+            documents = await list_catalog_documents(self.settings)
+            if not documents:
+                raise _NonRetryableIndexingError(
+                    "No parsed passages are available; a PDF may require OCR."
+                )
+            await heartbeat_indexing_job(
+                self.settings,
+                job_id=job_id,
+                worker_id=self.worker_id,
+                progress={"stage": "building_index", "documents": len(documents)},
+            )
             index_mode = str(request.get("index_mode") or self.settings.index_mode)
             version_id = uuid4().hex
             await create_index_version_record(
@@ -141,7 +168,7 @@ class IndexWorker:
             _, version_dir = await asyncio.to_thread(
                 create_index_version,
                 self.settings,
-                source_paths=source_paths,
+                documents=documents,
                 index_mode=index_mode,
                 version_id=version_id,
             )
@@ -188,6 +215,78 @@ class IndexWorker:
                     "Indexing job %s heartbeat failed; lease checks guard activation.",
                     job_id,
                 )
+
+    async def _ingest_items(
+        self,
+        job_id: str,
+        items: list[dict[str, object]],
+    ) -> None:
+        source_paths = self._validated_source_paths(items)
+        for position, (item, source_path) in enumerate(
+            zip(items, source_paths, strict=True),
+            start=1,
+        ):
+            paper_id = str(item.get("paper_id") or "")
+            if not paper_id:
+                paper_id = await asyncio.to_thread(
+                    paper_id_for_file,
+                    source_path,
+                )
+            await mark_paper_parsing(self.settings, paper_id=paper_id)
+            await heartbeat_indexing_job(
+                self.settings,
+                job_id=job_id,
+                worker_id=self.worker_id,
+                progress={
+                    "stage": "parsing",
+                    "current": position,
+                    "total": len(items),
+                    "paper_id": paper_id,
+                },
+            )
+            try:
+                parsed = await asyncio.to_thread(
+                    parse_source,
+                    str(source_path),
+                    self.settings,
+                )
+                metadata_values, metadata_evidence, _ = (
+                    await resolve_effective_metadata(
+                        self.settings,
+                        paper_id=paper_id,
+                        parsed=parsed,
+                    )
+                )
+                version_id, sections, passages = build_catalog_records(
+                    parsed,
+                    paper_id=paper_id,
+                    metadata_values=metadata_values,
+                    metadata_evidence=metadata_evidence,
+                    max_input_chars=self.settings.embedding_max_input_chars,
+                )
+                artifact_path = await asyncio.to_thread(
+                    write_parsed_artifact,
+                    parsed,
+                    settings=self.settings,
+                    paper_id=paper_id,
+                    paper_version_id=version_id,
+                )
+                await save_parsed_catalog(
+                    self.settings,
+                    paper_id=paper_id,
+                    version_id=version_id,
+                    parsed=parsed,
+                    artifact_path=str(artifact_path),
+                    sections=sections,
+                    passages=passages,
+                )
+            except Exception as exc:
+                await mark_paper_failed(
+                    self.settings,
+                    paper_id=paper_id,
+                    error=str(exc),
+                )
+                raise
 
     async def _assert_lease_owned(self, job_id: str) -> None:
         owns_worker_lease = await acquire_index_worker_lease(

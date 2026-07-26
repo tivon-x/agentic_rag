@@ -123,6 +123,10 @@ async def upload_and_index_files(
         items = [
             {
                 "filename": upload["filename"],
+                "paper_id": upload["sha256"],
+                "content_hash": upload["sha256"],
+                "size_bytes": upload["size"],
+                "source_type": upload["content_type"],
                 "source_path": str(
                     _validated_final_path(
                         upload_root,
@@ -230,6 +234,7 @@ async def _save_validated_uploads(
                 "filename": filename,
                 "sha256": digest.hexdigest(),
                 "size": size,
+                "content_type": upload.content_type or "application/octet-stream",
             }
         )
     return uploads

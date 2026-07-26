@@ -1,8 +1,10 @@
 export const text = {
   nav: {
-    brand: "Agentic RAG 工作台",
+    brand: "Paper Index",
     chat: "聊天",
-    kb: "知识库",
+    kb: "论文库",
+    library: "论文库",
+    search: "搜索",
   },
   home: {
     heroTitle: "把现有 Python RAG 能力接成一个更适合生产环境的前端界面。",

@@ -4,6 +4,9 @@ import type {
   CorpusProfile,
   FileUploadResponse,
   IndexingJobResponse,
+  PaperDetail,
+  PaperListResponse,
+  SearchResponse,
 } from "@/lib/types";
 
 const API_PREFIX = "/api";
@@ -81,6 +84,76 @@ export async function fetchIndexingJob(
     cache: "no-store",
   });
   return handleJson<IndexingJobResponse>(response);
+}
+
+export async function fetchPapers(input?: {
+  query?: string;
+  parseStatus?: string;
+}): Promise<PaperListResponse> {
+  const params = new URLSearchParams();
+  if (input?.query) {
+    params.set("q", input.query);
+  }
+  if (input?.parseStatus) {
+    params.set("parse_status", input.parseStatus);
+  }
+  const suffix = params.size ? `?${params.toString()}` : "";
+  const response = await fetch(`${API_PREFIX}/papers${suffix}`, {
+    cache: "no-store",
+  });
+  return handleJson<PaperListResponse>(response);
+}
+
+export async function fetchPaper(paperId: string): Promise<PaperDetail> {
+  const response = await fetch(
+    `${API_PREFIX}/papers/${encodeURIComponent(paperId)}`,
+    { cache: "no-store" },
+  );
+  return handleJson<PaperDetail>(response);
+}
+
+export async function updatePaperMetadata(
+  paperId: string,
+  metadataVersion: number,
+  payload: Partial<{
+    title: string | null;
+    authors: string[];
+    year: number | null;
+    venue: string | null;
+    doi: string | null;
+    arxiv_id: string | null;
+  }>,
+): Promise<PaperDetail> {
+  const response = await fetch(
+    `${API_PREFIX}/papers/${encodeURIComponent(paperId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "If-Match": String(metadataVersion),
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+  return handleJson<PaperDetail>(response);
+}
+
+export async function searchLibrary(input: {
+  query: string;
+  paperId?: string;
+  limit?: number;
+}): Promise<SearchResponse> {
+  const params = new URLSearchParams({
+    q: input.query,
+    limit: String(input.limit ?? 20),
+  });
+  if (input.paperId) {
+    params.set("paper_id", input.paperId);
+  }
+  const response = await fetch(`${API_PREFIX}/search?${params.toString()}`, {
+    cache: "no-store",
+  });
+  return handleJson<SearchResponse>(response);
 }
 
 async function handleJson<T>(response: Response): Promise<T> {

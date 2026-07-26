@@ -11,7 +11,7 @@ from pathlib import Path
 import aiosqlite
 
 
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 LEGACY_JOB_FAILURE = (
     "Legacy in-flight job cannot be recovered; re-upload the files."
 )
@@ -235,10 +235,128 @@ async def _migration_3(db: aiosqlite.Connection) -> None:
     )
 
 
+async def _migration_4(db: aiosqlite.Connection) -> None:
+    await db.execute(
+        """
+        CREATE TABLE papers (
+            id TEXT PRIMARY KEY,
+            content_hash TEXT NOT NULL UNIQUE,
+            file_name TEXT NOT NULL,
+            source_path TEXT NOT NULL,
+            source_type TEXT NOT NULL,
+            size_bytes INTEGER NOT NULL,
+            title TEXT,
+            authors_json TEXT NOT NULL DEFAULT '[]',
+            year INTEGER,
+            venue TEXT,
+            doi TEXT,
+            arxiv_id TEXT,
+            metadata_json TEXT NOT NULL DEFAULT '{}',
+            metadata_status TEXT NOT NULL DEFAULT 'needs_review' CHECK (
+                metadata_status IN ('needs_review', 'verified')
+            ),
+            parse_status TEXT NOT NULL DEFAULT 'queued' CHECK (
+                parse_status IN (
+                    'queued', 'parsing', 'parsed', 'degraded', 'needs_ocr', 'failed'
+                )
+            ),
+            parse_error TEXT,
+            fallback_reason TEXT,
+            latest_version_id TEXT,
+            metadata_version INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            archived_at TEXT
+        )
+        """
+    )
+    await db.execute(
+        """
+        CREATE TABLE paper_versions (
+            id TEXT PRIMARY KEY,
+            paper_id TEXT NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
+            parser_name TEXT NOT NULL,
+            parser_version TEXT NOT NULL,
+            normalization_version TEXT NOT NULL,
+            source_path TEXT NOT NULL,
+            parsed_artifact_path TEXT NOT NULL,
+            status TEXT NOT NULL CHECK (
+                status IN ('parsed', 'degraded', 'needs_ocr', 'failed')
+            ),
+            fallback_reason TEXT,
+            quality_json TEXT NOT NULL DEFAULT '{}',
+            page_count INTEGER NOT NULL,
+            duration_ms INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    await db.execute(
+        """
+        CREATE TABLE sections (
+            id TEXT PRIMARY KEY,
+            paper_version_id TEXT NOT NULL
+                REFERENCES paper_versions(id) ON DELETE CASCADE,
+            parent_id TEXT REFERENCES sections(id) ON DELETE SET NULL,
+            title TEXT NOT NULL,
+            level INTEGER NOT NULL,
+            ordinal INTEGER NOT NULL,
+            page_start INTEGER NOT NULL,
+            page_end INTEGER NOT NULL,
+            heading_path_json TEXT NOT NULL DEFAULT '[]',
+            UNIQUE(paper_version_id, ordinal)
+        )
+        """
+    )
+    await db.execute(
+        """
+        CREATE TABLE passages (
+            id TEXT PRIMARY KEY,
+            paper_version_id TEXT NOT NULL
+                REFERENCES paper_versions(id) ON DELETE CASCADE,
+            section_id TEXT NOT NULL REFERENCES sections(id) ON DELETE CASCADE,
+            page_start INTEGER NOT NULL,
+            page_end INTEGER NOT NULL,
+            quote_text TEXT NOT NULL,
+            retrieval_text TEXT NOT NULL,
+            block_type TEXT NOT NULL,
+            ordinal INTEGER NOT NULL,
+            UNIQUE(paper_version_id, ordinal)
+        )
+        """
+    )
+    await db.execute("ALTER TABLE index_job_items ADD COLUMN paper_id TEXT")
+    await db.execute(
+        """
+        CREATE INDEX idx_papers_library
+        ON papers(archived_at, updated_at DESC, id)
+        """
+    )
+    await db.execute(
+        """
+        CREATE INDEX idx_paper_versions_paper
+        ON paper_versions(paper_id, created_at DESC)
+        """
+    )
+    await db.execute(
+        """
+        CREATE INDEX idx_sections_version
+        ON sections(paper_version_id, ordinal)
+        """
+    )
+    await db.execute(
+        """
+        CREATE INDEX idx_passages_version
+        ON passages(paper_version_id, ordinal)
+        """
+    )
+
+
 MIGRATIONS: dict[int, Migration] = {
     1: _migration_1,
     2: _migration_2,
     3: _migration_3,
+    4: _migration_4,
 }
 
 
@@ -260,48 +378,44 @@ async def migrate_database(path: Path) -> list[Path]:
         await db.execute("PRAGMA busy_timeout = 5000")
         await db.execute("PRAGMA foreign_keys = ON")
         await _enable_wal(db)
-        had_unversioned_schema = (
-            initial_version == 0
-            and existed
-            and (
-                await _table_exists(db, "chat_sessions")
-                or await _table_exists(db, "indexing_jobs")
+        await _begin_immediate(db)
+        try:
+            had_unversioned_schema = (
+                initial_version == 0
+                and existed
+                and (
+                    await _table_exists(db, "chat_sessions")
+                    or await _table_exists(db, "indexing_jobs")
+                )
             )
-        )
-        await db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS schema_migrations (
-                version INTEGER PRIMARY KEY,
-                applied_at TEXT NOT NULL
-            )
-            """
-        )
-        await db.commit()
-        if had_unversioned_schema:
-            await db.execute("BEGIN IMMEDIATE")
-            await _migration_1(db)
             await db.execute(
                 """
-                INSERT OR IGNORE INTO schema_migrations(version, applied_at)
-                VALUES (1, ?)
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    version INTEGER PRIMARY KEY,
+                    applied_at TEXT NOT NULL
+                )
                 """,
-                (datetime.now(UTC).isoformat(),),
             )
-            await db.commit()
-            initial_version = 1
+            if had_unversioned_schema:
+                await _migration_1(db)
+                await db.execute(
+                    """
+                    INSERT OR IGNORE INTO schema_migrations(version, applied_at)
+                    VALUES (1, ?)
+                    """,
+                    (datetime.now(UTC).isoformat(),),
+                )
 
-        for version in range(initial_version + 1, CURRENT_SCHEMA_VERSION + 1):
-            await db.execute("BEGIN IMMEDIATE")
-            try:
-                current_version = await _current_version(db)
-                if current_version > CURRENT_SCHEMA_VERSION:
-                    raise RuntimeError(
-                        f"Database schema version {current_version} is newer than "
-                        f"supported version {CURRENT_SCHEMA_VERSION}."
-                    )
-                if current_version >= version:
-                    await db.rollback()
-                    continue
+            current_version = await _current_version(db)
+            if current_version > CURRENT_SCHEMA_VERSION:
+                raise RuntimeError(
+                    f"Database schema version {current_version} is newer than "
+                    f"supported version {CURRENT_SCHEMA_VERSION}."
+                )
+            for version in range(
+                current_version + 1,
+                CURRENT_SCHEMA_VERSION + 1,
+            ):
                 migration = MIGRATIONS[version]
                 await migration(db)
                 await db.execute(
@@ -311,11 +425,11 @@ async def migrate_database(path: Path) -> list[Path]:
                     """,
                     (version, datetime.now(UTC).isoformat()),
                 )
-            except Exception:
-                await db.rollback()
-                raise
-            else:
-                await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
+        else:
+            await db.commit()
     return backups
 
 
@@ -326,6 +440,17 @@ async def _enable_wal(db: aiosqlite.Connection) -> None:
             return
         except sqlite3.OperationalError as exc:
             if "locked" not in str(exc).lower() or attempt == 4:
+                raise
+            await asyncio.sleep(0.05 * (attempt + 1))
+
+
+async def _begin_immediate(db: aiosqlite.Connection) -> None:
+    for attempt in range(10):
+        try:
+            await db.execute("BEGIN IMMEDIATE")
+            return
+        except sqlite3.OperationalError as exc:
+            if "locked" not in str(exc).lower() or attempt == 9:
                 raise
             await asyncio.sleep(0.05 * (attempt + 1))
 

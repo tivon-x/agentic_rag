@@ -11,6 +11,8 @@ from api.routers.chat import router as chat_router
 from api.routers.corpus import router as corpus_router
 from api.routers.health import router as health_router
 from api.routers.indexing import router as indexing_router
+from api.routers.papers import router as papers_router
+from api.routers.search import router as search_router
 from api.services.index_worker import IndexWorker
 from core.settings import AppSettings, load_settings
 from indexing.index_versions import reconcile_active_pointer
@@ -52,6 +54,8 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     application.include_router(corpus_router, prefix="/api")
     application.include_router(chat_router, prefix="/api")
     application.include_router(indexing_router, prefix="/api")
+    application.include_router(papers_router, prefix="/api")
+    application.include_router(search_router, prefix="/api")
     return application
 
 

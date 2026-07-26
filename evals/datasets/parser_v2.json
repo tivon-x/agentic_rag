@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-07-26",
+  "annotation_policy": "Test labels are frozen before the first parser_eval run and must not be changed in response to test results.",
+  "documents": [
+    {
+      "id": "attention",
+      "split": "dev",
+      "path": "evals/01-Attention Is All You Need.pdf",
+      "tags": ["double_column", "formula", "bad_metadata"],
+      "expected_title": "Attention Is All You Need",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 2, "section_boundary": true, "table_boundary": false},
+        {"page": 3, "section_boundary": true, "table_boundary": false}
+      ]
+    },
+    {
+      "id": "gpipe",
+      "split": "dev",
+      "path": "evals/11-GPipe Easy Scaling with Micro-Batch Pipeline Parallelism.pdf",
+      "tags": ["double_column", "table"],
+      "expected_title": "GPipe: Easy Scaling with Micro-Batch Pipeline Parallelism",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 4, "section_boundary": true, "table_boundary": true},
+        {"page": 6, "section_boundary": true, "table_boundary": true}
+      ]
+    },
+    {
+      "id": "coffee",
+      "split": "dev",
+      "path": "evals/20-Quantifying the Rise and Fall of Complexity The Coffee Automaton.pdf",
+      "tags": ["double_column", "low_text"],
+      "expected_title": "Quantifying the Rise and Fall of Complexity in Closed Systems: The Coffee Automaton",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 10, "section_boundary": true, "table_boundary": false},
+        {"page": 19, "section_boundary": false, "table_boundary": false}
+      ]
+    },
+    {
+      "id": "mdl",
+      "split": "dev",
+      "path": "evals/24-A Tutorial Introduction to the Minimum Description Length Principle.pdf",
+      "tags": ["long_document", "low_text", "bad_metadata"],
+      "expected_title": "A Tutorial Introduction to the Minimum Description Length Principle",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 22, "section_boundary": false, "table_boundary": false},
+        {"page": 80, "section_boundary": false, "table_boundary": false}
+      ]
+    },
+    {
+      "id": "rnn_regularization",
+      "split": "test",
+      "path": "evals/06-Recurrent Neural Network Regularization.pdf",
+      "tags": ["double_column", "formula", "table"],
+      "expected_title": "Recurrent Neural Network Regularization",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 3, "section_boundary": false, "table_boundary": false},
+        {"page": 5, "section_boundary": false, "table_boundary": true}
+      ]
+    },
+    {
+      "id": "pointer_networks",
+      "split": "test",
+      "path": "evals/08-Pointer Networks.pdf",
+      "tags": ["double_column", "formula", "table"],
+      "expected_title": "Pointer Networks",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 4, "section_boundary": true, "table_boundary": false},
+        {"page": 7, "section_boundary": true, "table_boundary": true}
+      ]
+    },
+    {
+      "id": "alexnet",
+      "split": "test",
+      "path": "evals/09-ImageNet Classification with Deep CNNs.pdf",
+      "tags": ["double_column", "table"],
+      "expected_title": "ImageNet Classification with Deep Convolutional Neural Networks",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 4, "section_boundary": true, "table_boundary": true},
+        {"page": 7, "section_boundary": true, "table_boundary": true}
+      ]
+    },
+    {
+      "id": "resnet",
+      "split": "test",
+      "path": "evals/12-Deep Residual Learning for Image Recognition.pdf",
+      "tags": ["double_column", "formula", "table"],
+      "expected_title": "Deep Residual Learning for Image Recognition",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 5, "section_boundary": true, "table_boundary": true},
+        {"page": 8, "section_boundary": false, "table_boundary": true}
+      ]
+    },
+    {
+      "id": "message_passing",
+      "split": "test",
+      "path": "evals/14-Neural Message Passing for Quantum Chemistry.pdf",
+      "tags": ["double_column", "formula", "table", "low_text"],
+      "expected_title": "Neural Message Passing for Quantum Chemistry",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 6, "section_boundary": true, "table_boundary": true},
+        {"page": 14, "section_boundary": false, "table_boundary": false}
+      ]
+    },
+    {
+      "id": "nmt_alignment",
+      "split": "test",
+      "path": "evals/15-Neural Machine Translation by Jointly Learning to Align and Translate.pdf",
+      "tags": ["double_column", "formula", "table"],
+      "expected_title": "Neural Machine Translation by Jointly Learning to Align and Translate",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 4, "section_boundary": true, "table_boundary": false},
+        {"page": 8, "section_boundary": false, "table_boundary": true}
+      ]
+    },
+    {
+      "id": "identity_mappings",
+      "split": "test",
+      "path": "evals/16-Identity Mappings in Deep Residual Networks.pdf",
+      "tags": ["double_column", "formula", "table"],
+      "expected_title": "Identity Mappings in Deep Residual Networks",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 6, "section_boundary": true, "table_boundary": true},
+        {"page": 10, "section_boundary": false, "table_boundary": true}
+      ]
+    },
+    {
+      "id": "relation_networks",
+      "split": "test",
+      "path": "evals/17-A Simple Neural Network Module for Relational Reasoning.pdf",
+      "tags": ["double_column", "table", "low_text"],
+      "expected_title": "A simple neural network module for relational reasoning",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 5, "section_boundary": true, "table_boundary": false},
+        {"page": 14, "section_boundary": false, "table_boundary": true}
+      ]
+    },
+    {
+      "id": "variational_lossy",
+      "split": "test",
+      "path": "evals/18-Variational Lossy Autoencoder.pdf",
+      "tags": ["double_column", "formula", "table"],
+      "expected_title": "Variational Lossy Autoencoder",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 8, "section_boundary": false, "table_boundary": true},
+        {"page": 14, "section_boundary": false, "table_boundary": false}
+      ]
+    },
+    {
+      "id": "ntm",
+      "split": "test",
+      "path": "evals/21-Neural Turing Machines.pdf",
+      "tags": ["formula", "long_document", "low_text"],
+      "expected_title": "Neural Turing Machines",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 16, "section_boundary": false, "table_boundary": false},
+        {"page": 26, "section_boundary": false, "table_boundary": false}
+      ]
+    },
+    {
+      "id": "scaling_laws",
+      "split": "test",
+      "path": "evals/23-Scaling Laws for Neural Language Models.pdf",
+      "tags": ["double_column", "formula", "table", "long_document"],
+      "expected_title": "Scaling Laws for Neural Language Models",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 10, "section_boundary": false, "table_boundary": false},
+        {"page": 20, "section_boundary": true, "table_boundary": true}
+      ]
+    },
+    {
+      "id": "machine_super_intelligence",
+      "split": "test",
+      "path": "evals/25-Machine Super Intelligence.pdf",
+      "tags": ["long_document", "low_text", "bad_metadata"],
+      "expected_title": "Machine Super Intelligence",
+      "focus_pages": [
+        {"page": 1, "section_boundary": true, "table_boundary": false},
+        {"page": 6, "section_boundary": false, "table_boundary": false},
+        {"page": 200, "section_boundary": true, "table_boundary": false}
+      ]
+    }
+  ]
+}

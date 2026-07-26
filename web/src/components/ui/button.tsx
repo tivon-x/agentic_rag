@@ -14,7 +14,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex min-h-10 items-center justify-center rounded-md px-4 py-2.5 text-sm font-semibold transition-[transform,background-color,color,border-color] duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100",
         variant === "primary" &&
           "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)]",
         variant === "secondary" &&

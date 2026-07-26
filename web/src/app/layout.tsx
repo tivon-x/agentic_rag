@@ -6,8 +6,11 @@ import { text } from "@/lib/i18n";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Agentic RAG 工作台",
-  description: "面向生产前端的知识库构建与对话界面",
+  title: {
+    default: "Paper Index",
+    template: "%s | Paper Index",
+  },
+  description: "可搜索、可校正、可回到 PDF 原页的个人论文库。",
 };
 
 export default function RootLayout({
@@ -16,20 +19,33 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className="h-full antialiased">
+    <html
+      lang="zh-CN"
+      className="h-full antialiased"
+      data-scroll-behavior="smooth"
+    >
       <body className="min-h-full">
+        <a href="#main-content" className="skip-link">
+          跳到正文
+        </a>
         <div className="app-shell">
-          <header className="border-b border-white/50 bg-white/70 backdrop-blur">
-            <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-              <Link href="/" className="text-lg font-semibold tracking-tight text-slate-950">
+          <header className="border-b border-[var(--line)] bg-[var(--panel)]">
+            <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
+              <Link
+                href="/"
+                className="font-serif text-lg font-semibold tracking-tight text-slate-950"
+              >
                 {text.nav.brand}
               </Link>
-              <nav className="flex items-center gap-2">
+              <nav aria-label="主导航" className="flex items-center gap-1 sm:gap-4">
+                <Link href="/library" className="nav-link">
+                  {text.nav.library}
+                </Link>
+                <Link href="/search" className="nav-link">
+                  {text.nav.search}
+                </Link>
                 <Link href="/chat" className="nav-link">
                   {text.nav.chat}
-                </Link>
-                <Link href="/kb" className="nav-link">
-                  {text.nav.kb}
                 </Link>
               </nav>
             </div>
