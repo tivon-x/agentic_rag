@@ -6,7 +6,13 @@ from typing import Any
 from langchain_core.documents import Document
 
 from indexing.models.node import Node
-from indexing.retrieval_pipeline import PackedContext, RetrievalCandidate
+from indexing.retrieval_pipeline import (
+    PIPELINE_REGISTRY,
+    PackedContext,
+    RetrievalCandidate,
+    get_pipeline_config,
+    prepare_index_documents,
+)
 from indexing.retriever import FusionRetriever
 
 
@@ -149,6 +155,7 @@ def _make_retriever(
     fetch_k: int = 6,
     token_budget: int = 60,
     reranker_backend: str = "none",
+    pipeline_name: str = "b1",
 ) -> FusionRetriever:
     return FusionRetriever(
         vectorstore=_VectorStoreStub(vector_results or []),
@@ -159,6 +166,7 @@ def _make_retriever(
         node_store=node_store,
         corpus_profile=corpus_profile,
         reranker_backend=reranker_backend,
+        pipeline=get_pipeline_config(pipeline_name),
     )
 
 
@@ -334,7 +342,11 @@ def test_pack_context_expands_paragraph_to_parent_section_for_summary_queries():
             token_count=8,
         ),
     ]
-    retriever = _make_retriever(node_store=_NodeStoreStub(nodes), token_budget=50)
+    retriever = _make_retriever(
+        node_store=_NodeStoreStub(nodes),
+        token_budget=50,
+        pipeline_name="b3",
+    )
     candidates = [_doc("p-1", "Paragraph one.", parent_id="sec-1", token_count=8)]
 
     packed = retriever._pack_context(
@@ -345,9 +357,10 @@ def test_pack_context_expands_paragraph_to_parent_section_for_summary_queries():
         {"top_candidates": []},
     )
 
-    assert len(packed.passages) == 1
-    assert packed.passages[0].metadata["node_type"] == "section"
-    assert packed.passages[0].metadata["is_parent_context"] is True
+    assert len(packed.passages) == 2
+    assert packed.passages[0].metadata["node_id"] == "p-1"
+    assert packed.passages[1].metadata["node_type"] == "section"
+    assert packed.passages[1].metadata["is_parent_context"] is True
 
 
 def test_fusion_retriever_retrieve_returns_packed_context_with_debug():
@@ -385,3 +398,49 @@ def test_fusion_retriever_retrieve_returns_packed_context_with_debug():
     assert packed.debug["query_plan"]["subqueries"] == ["fusion retrieval pipeline"]
     assert packed.debug["dedupe"]["raw_count"] >= packed.debug["dedupe"]["deduped_count"]
     assert "rerank" in packed.debug
+
+
+def test_registry_freezes_core_and_ablation_contracts():
+    assert PIPELINE_REGISTRY["b0"].use_rerank is False
+    assert PIPELINE_REGISTRY["b1"].fusion_method == "minmax"
+    assert PIPELINE_REGISTRY["b2"].rrf_k == 60
+    assert PIPELINE_REGISTRY["b2"].neighbor_window == 0
+    assert PIPELINE_REGISTRY["b3"].neighbor_window == 1
+    assert PIPELINE_REGISTRY["b2_no_metadata"].use_metadata_prefix is False
+    assert PIPELINE_REGISTRY["b2_no_sparse"].use_sparse is False
+    assert PIPELINE_REGISTRY["b2_no_dense"].use_dense is False
+    assert PIPELINE_REGISTRY["b2_minmax"].fusion_method == "minmax"
+    assert PIPELINE_REGISTRY["b2_no_rerank"].use_rerank is False
+
+
+def test_metadata_prefix_is_index_only_and_quote_remains_source_faithful():
+    document = Document(
+        page_content=(
+            "[TITLE] Attention Is All You Need\n"
+            "[SECTION] 3.2 Attention\n"
+            "[BLOCK] paragraph\n"
+            "The source quote."
+        ),
+        metadata={
+            "retrieval_text": (
+                "[TITLE] Attention Is All You Need\n"
+                "[SECTION] 3.2 Attention\n"
+                "[BLOCK] paragraph\n"
+                "The source quote."
+            ),
+            "quote_text": "The source quote.",
+        },
+    )
+
+    b1_document = prepare_index_documents(
+        [document],
+        get_pipeline_config("b1"),
+    )[0]
+    b2_document = prepare_index_documents(
+        [document],
+        get_pipeline_config("b2"),
+    )[0]
+
+    assert b1_document.page_content == "The source quote."
+    assert "[TITLE] Attention Is All You Need" in b2_document.page_content
+    assert b2_document.metadata["quote_text"] == "The source quote."

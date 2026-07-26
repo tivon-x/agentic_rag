@@ -961,3 +961,13 @@ def _metrics_table(metrics: dict[str, Any]) -> list[str]:
 
 def _has_llm_config(settings: AppSettings) -> bool:
     return bool(settings.llm_model and settings.llm_api_key and settings.llm_api_base)
+
+
+def main() -> None:
+    from evals.v2_runner import main as v2_main
+
+    v2_main()
+
+
+if __name__ == "__main__":
+    main()

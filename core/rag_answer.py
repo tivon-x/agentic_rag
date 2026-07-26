@@ -48,7 +48,9 @@ def format_retrieval_only_answer(
         for doc in items:
             if snippet_count >= max_snippets:
                 break
-            snippet = (doc.page_content or "").strip().replace("\n", " ")
+            snippet = str(
+                doc.metadata.get("quote_text") or doc.page_content or ""
+            ).strip().replace("\n", " ")
             if len(snippet) > max_chars_per_snippet:
                 snippet = snippet[: max_chars_per_snippet - 1] + "…"
             page = doc.metadata.get("page")

@@ -16,6 +16,10 @@ from indexing.chunker import Chunker
 from indexing.embeddings import get_embeddings
 from indexing.mappers import CHUNKER_MAPPING, LOADER_MAPPING
 from indexing.parsers.base import SUPPORTED_HIERARCHICAL_SUFFIXES, build_parser
+from indexing.retrieval_pipeline import (
+    get_pipeline_config,
+    prepare_index_documents,
+)
 from indexing.stores.lexical_store import LexicalStore
 from indexing.stores.node_store import create_node_store
 from indexing.stores.vector_store import VectorStore as VectorStoreProtocol
@@ -40,6 +44,10 @@ class Indexer:
         self.parent_embed_pooling = str(
             self.config.get("parent_embed_pooling", "mean")
         ).strip()
+        retriever_config = self.config.get("retriever", {})
+        self.pipeline = get_pipeline_config(
+            str(retriever_config.get("pipeline", "v1_flat_rerank"))
+        )
 
         nodes_path = self.config.get("nodes_path")
         doc_trees_path = self.config.get("doc_trees_path")
@@ -185,7 +193,13 @@ class Indexer:
         if not documents:
             self._logger.warning("No documents supplied for indexing.")
             return None
-        self.vector_store.add_documents(documents)
+        prepared_documents = prepare_index_documents(documents, self.pipeline)
+        if not prepared_documents:
+            self._logger.warning(
+                "No retrieval documents remained after preparation."
+            )
+            return None
+        self.vector_store.add_documents(prepared_documents)
 
         vectorstore_config = self.config.get("vectorstore", {})
         persist_directory = vectorstore_config.get("persist_directory")
@@ -197,6 +211,7 @@ class Indexer:
         lexical_store = create_lexical_store(
             lexical_backend,
             documents=all_docs,
+            tokenizer=self.pipeline.tokenizer,
         )
 
         bm25_path = self.config.get("bm25_path")

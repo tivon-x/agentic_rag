@@ -24,6 +24,12 @@ from evals.runner import (
     _load_eval_cases,
     _ordered_unique,
 )
+from evals.v2_corpus import load_parser_artifact
+from evals.v2_runner import (
+    _aggregate_rows,
+    load_answer_smoke_cases,
+    load_retrieval_cases,
+)
 
 
 def test_load_eval_cases_reads_jsonl(tmp_path):
@@ -227,3 +233,52 @@ def test_build_offline_extractive_answer_prefers_relevant_sentences():
     assert "attention" in answer.casefold()
     assert "recurrence" in answer.casefold()
     assert "unrelated sentence" not in answer.casefold()
+
+
+def test_v2_frozen_datasets_match_required_sizes_and_artifact():
+    repo_root = Path(__file__).resolve().parent.parent
+    artifact_path = (
+        repo_root / "artifacts/evals/v2_core/parser_artifact.json"
+    )
+    if not artifact_path.exists():
+        pytest.skip("Frozen parser artifact is generated during M3 evaluation.")
+    artifact, _ = load_parser_artifact(artifact_path)
+
+    retrieval_cases = load_retrieval_cases(
+        repo_root / "evals/datasets/retrieval_v2_core.jsonl",
+        artifact=artifact,
+    )
+    answer_cases = load_answer_smoke_cases(
+        repo_root / "evals/datasets/answer_smoke_v2.jsonl"
+    )
+
+    assert len(retrieval_cases) == 48
+    assert len(answer_cases) == 8
+
+
+def test_v2_aggregate_keeps_metrics_and_latency_separate():
+    rows = [
+        {
+            "recall_at_5": 1.0,
+            "recall_at_10": 1.0,
+            "mrr_at_10": 0.5,
+            "ndcg_at_10": 0.6,
+            "paper_recall_at_10": 1.0,
+            "section_recall_at_10": 0.5,
+        },
+        {
+            "recall_at_5": 0.0,
+            "recall_at_10": 0.5,
+            "mrr_at_10": 0.0,
+            "ndcg_at_10": 0.2,
+            "paper_recall_at_10": 0.5,
+            "section_recall_at_10": 0.0,
+        },
+    ]
+
+    metrics = _aggregate_rows(rows, latencies=[10.0, 30.0])
+
+    assert metrics["recall_at_10"] == 0.75
+    assert metrics["recall_at_10_hit_count"] == 1
+    assert metrics["p50_latency_ms"] == 20.0
+    assert "composite_score" not in metrics

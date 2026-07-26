@@ -1,0 +1,24 @@
+schema_version: 1
+run_name: v2_b1
+output_dir: artifacts/evals/v2_core
+corpus_dir: evals
+parser_artifact: artifacts/evals/v2_core/parser_artifact.json
+parser_artifact_sha256: 98e8adf680c578c21d2fffe5b97f3f85d24b768b827fe81aa8ddfc280af242d9
+parser_gold: evals/datasets/parser_v2.json
+retrieval_dataset: evals/datasets/retrieval_v2_core.jsonl
+answer_smoke_dataset: evals/datasets/answer_smoke_v2.jsonl
+pipelines:
+  - b0
+  - b1
+embedding:
+  provider: openai
+  model: qwen3.7-text-embedding
+  dimension: 1024
+  batch_size: 20
+  input_mode: raw
+  check_embedding_ctx_length: false
+  max_input_chars: 6000
+reranker:
+  backend: flashrank
+  model: ms-marco-TinyBERT-L-2-v2
+force_reindex: true

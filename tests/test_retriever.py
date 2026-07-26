@@ -4,7 +4,11 @@ import json
 
 import pytest
 from langchain_core.documents import Document
-from indexing.retrieval_pipeline import PackedContext, RetrievalCandidate
+from indexing.retrieval_pipeline import (
+    PackedContext,
+    RetrievalCandidate,
+    get_pipeline_config,
+)
 from indexing.bm25_index import create_bm25_bundle
 from indexing.retriever import BM25Retriever, FusionRetriever
 from indexing.embeddings import FakeEmbeddings
@@ -307,7 +311,7 @@ def test_fusion_retriever_returns_pipeline_debug(vector_store, bm25_bundle):
     assert packed.passages
     assert packed.debug["raw_candidates"] >= len(packed.passages)
     assert packed.debug["dedupe"]["deduped_count"] <= packed.debug["dedupe"]["raw_count"]
-    assert packed.packing_strategy == "score_then_contiguity"
+    assert packed.packing_strategy == "score_then_section_neighbors"
 
 
 def test_fusion_retriever_packs_adjacent_paragraphs_with_node_store(
@@ -352,6 +356,7 @@ def test_fusion_retriever_packs_adjacent_paragraphs_with_node_store(
         alpha=0.5,
         fetch_k=5,
         node_store=hierarchical_node_store,
+        pipeline=get_pipeline_config("b3"),
     )
 
     packed = retriever.retrieve("dedupe rerank pipeline")
@@ -393,6 +398,7 @@ def test_fusion_retriever_promotes_section_context_for_summary_queries(
         alpha=0.5,
         fetch_k=5,
         node_store=hierarchical_node_store,
+        pipeline=get_pipeline_config("b3"),
     )
 
     packed = retriever.retrieve(
@@ -405,7 +411,11 @@ def test_fusion_retriever_promotes_section_context_for_summary_queries(
     )
 
     assert packed.passages
-    assert packed.passages[0].metadata.get("node_type") == "section"
+    assert packed.passages[0].metadata.get("node_type") == "paragraph"
+    assert any(
+        document.metadata.get("node_type") == "section"
+        for document in packed.passages[1:]
+    )
 
 
 def test_fusion_retriever_uses_flashrank_reranker(monkeypatch, vector_store, bm25_bundle):

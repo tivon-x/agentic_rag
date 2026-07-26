@@ -17,6 +17,7 @@ from uuid import uuid4
 from core.persistence import load_bm25_bundle
 from core.settings import AppSettings
 from indexing.indexer import Indexer
+from indexing.retrieval_pipeline import get_pipeline_config
 from indexing.vectorstore import validate_faiss_persistence
 
 
@@ -38,6 +39,7 @@ def embedding_contract(settings: AppSettings) -> dict[str, Any]:
         "provider": offline_provider,
         "model": offline_model,
         "dimension": settings.embedding_dimensions,
+        "batch_size": settings.embedding_batch_size,
         "input_mode": settings.embedding_input_mode,
         "check_embedding_ctx_length": settings.embedding_check_context_length,
         "max_input_chars": settings.embedding_max_input_chars,
@@ -118,6 +120,37 @@ def validate_embedding_compatibility(
         )
 
 
+def retrieval_contract(settings: AppSettings) -> dict[str, Any]:
+    """Return the persisted retrieval representation contract."""
+    return get_pipeline_config(settings.retrieval_pipeline).index_contract()
+
+
+def validate_retrieval_compatibility(
+    settings: AppSettings,
+    manifest: dict[str, Any],
+) -> None:
+    expected = retrieval_contract(settings)
+    actual = manifest.get("retrieval")
+    if not isinstance(actual, dict):
+        raise IndexCompatibilityError(
+            "Index manifest has no retrieval contract; rebuild the index."
+        )
+    incompatible = [
+        key
+        for key, expected_value in expected.items()
+        if actual.get(key) != expected_value
+    ]
+    if incompatible:
+        details = ", ".join(
+            f"{key}: index={actual.get(key)!r}, current={expected[key]!r}"
+            for key in incompatible
+        )
+        raise IndexCompatibilityError(
+            f"Retrieval configuration is incompatible ({details}); "
+            "rebuild the index."
+        )
+
+
 def resolve_indexer_config(settings: AppSettings) -> tuple[dict[str, Any], str]:
     """Resolve the query index, with an explicit legacy read adapter."""
     if settings.index_write_mode == "legacy":
@@ -133,6 +166,7 @@ def resolve_indexer_config(settings: AppSettings) -> tuple[dict[str, Any], str]:
         return settings.indexer_config(), "uninitialized"
     manifest = load_manifest(version_dir)
     validate_embedding_compatibility(settings, manifest)
+    validate_retrieval_compatibility(settings, manifest)
     validate_index_version(version_dir)
     return settings.indexer_config(version_dir=version_dir), str(
         manifest.get("version_id") or version_dir.name
@@ -166,6 +200,13 @@ def create_index_version(
         config = settings.indexer_config(version_dir=staging_dir)
         config["index_mode"] = index_mode
         config.update(config_overrides or {})
+        pipeline_name = str(
+            config.get("retriever", {}).get(
+                "pipeline",
+                settings.retrieval_pipeline,
+            )
+        )
+        pipeline = get_pipeline_config(pipeline_name)
         indexer = Indexer(config)
         if documents is not None:
             result = indexer.index_documents(documents)
@@ -185,6 +226,9 @@ def create_index_version(
             "status": "ready",
             "created_at": datetime.now(UTC).isoformat(),
             "embedding": embedding_contract(settings),
+            "retrieval": pipeline.index_contract(),
+            "retrieval_pipeline": pipeline.name,
+            "retrieval_config_hash": pipeline.config_hash(),
             "index_mode": index_mode,
             "leaf_node_type": str(config.get("leaf_node_type", "")),
             "parent_embed_pooling": str(config.get("parent_embed_pooling", "")),
@@ -218,6 +262,7 @@ def activate_index_version(
     version_dir = _index_root(settings) / version_id
     manifest = load_manifest(version_dir)
     validate_embedding_compatibility(settings, manifest)
+    validate_retrieval_compatibility(settings, manifest)
     validate_index_version(version_dir)
 
     pointer = active_pointer_path(settings)
@@ -251,6 +296,7 @@ def reconcile_active_pointer(settings: AppSettings) -> Path | None:
         version_dir = _index_root(settings) / version_id
         manifest = load_manifest(version_dir)
         validate_embedding_compatibility(settings, manifest)
+        validate_retrieval_compatibility(settings, manifest)
         validate_index_version(version_dir, expected_version_id=version_id)
         if not _mirror_active_version_to_database(
             settings,
@@ -319,7 +365,9 @@ def validate_index_version(
 def _seed_staging_version(settings: AppSettings, staging_dir: Path) -> None:
     active_dir = get_active_version_dir(settings)
     if active_dir is not None:
-        validate_embedding_compatibility(settings, load_manifest(active_dir))
+        active_manifest = load_manifest(active_dir)
+        validate_embedding_compatibility(settings, active_manifest)
+        validate_retrieval_compatibility(settings, active_manifest)
         for child in active_dir.iterdir():
             if child.name == MANIFEST_NAME:
                 continue

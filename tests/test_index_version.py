@@ -27,6 +27,7 @@ from indexing.index_versions import (
     create_index_version,
     embedding_contract,
     reconcile_active_pointer,
+    retrieval_contract,
     resolve_indexer_config,
 )
 from indexing.indexer import Indexer
@@ -86,6 +87,7 @@ def test_version_manifest_is_secret_free_and_activation_is_atomic(
                 "version_id": invalid_id,
                 "status": "ready",
                 "embedding": embedding_contract(settings),
+                "retrieval": retrieval_contract(settings),
             }
         ),
         encoding="utf-8",
@@ -230,6 +232,7 @@ def _write_dummy_version(settings, version_id: str) -> None:
                 "version_id": version_id,
                 "status": "ready",
                 "embedding": embedding_contract(settings),
+                "retrieval": retrieval_contract(settings),
             }
         ),
         encoding="utf-8",

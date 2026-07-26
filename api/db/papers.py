@@ -532,6 +532,7 @@ async def list_catalog_documents(settings: AppSettings) -> list[Document]:
                 "page_start": int(row["page_start"]),
                 "page_end": int(row["page_end"]),
                 "quote_text": str(row["quote_text"]),
+                "retrieval_text": str(row["retrieval_text"]),
                 "block_type": str(row["block_type"]),
                 "order": int(row["ordinal"]),
                 "node_type": "paragraph",

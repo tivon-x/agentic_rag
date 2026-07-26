@@ -96,6 +96,7 @@ def test_load_settings_defaults(tmp_path, monkeypatch):
     assert settings.embedding_model == "text-embedding-3-small"
     assert settings.embedding_provider == "openai-compatible"
     assert settings.embedding_dimensions == 1536
+    assert settings.embedding_batch_size == 20
     assert settings.embedding_input_mode == "raw"
     assert settings.embedding_check_context_length is False
     assert settings.embedding_max_input_chars == 6000

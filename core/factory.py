@@ -11,6 +11,7 @@ from core.settings import AppSettings
 from indexing.bm25_index import create_lexical_store
 from indexing.index_versions import resolve_indexer_config
 from indexing.indexer import Indexer
+from indexing.retrieval_pipeline import get_pipeline_config
 from indexing.retriever import FusionRetriever
 from indexing.stores.lexical_store import LexicalStore
 from indexing.stores.node_store import NodeStore, create_node_store
@@ -25,10 +26,15 @@ def build_retriever(settings: AppSettings) -> FusionRetriever | None:
 
     bm25_path = Path(cfg.get("bm25_path", str(settings.bm25_path)))
     lexical_backend = str(cfg.get("lexical_backend", settings.lexical_backend))
+    retr_cfg = cfg.get("retriever", {})
+    pipeline = get_pipeline_config(
+        str(retr_cfg.get("pipeline", settings.retrieval_pipeline))
+    )
     if bm25_path.exists():
         lexical_store: LexicalStore = create_lexical_store(
             lexical_backend,
             bundle=load_bm25_bundle(bm25_path),
+            tokenizer=pipeline.tokenizer,
         )
     else:
         docs = indexer.vector_store.get_all_documents()
@@ -37,9 +43,9 @@ def build_retriever(settings: AppSettings) -> FusionRetriever | None:
         lexical_store = create_lexical_store(
             lexical_backend,
             documents=docs,
+            tokenizer=pipeline.tokenizer,
         )
 
-    retr_cfg = cfg.get("retriever", {})
     k = int(retr_cfg.get("k", settings.retriever_k))
     alpha = float(retr_cfg.get("alpha", settings.fusion_alpha))
     node_store: NodeStore | None = None
@@ -67,6 +73,7 @@ def build_retriever(settings: AppSettings) -> FusionRetriever | None:
         flashrank_top_n=int(retr_cfg.get("flashrank_top_n", settings.flashrank_top_n)),
         node_store=node_store,
         corpus_profile=corpus_profile,
+        pipeline=pipeline,
     )
 
 def build_graph(settings: AppSettings):

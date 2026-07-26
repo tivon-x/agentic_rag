@@ -104,6 +104,7 @@ class AppSettings:
     embedding_api_base: str = ""
     embedding_provider: str = "openai-compatible"
     embedding_dimensions: int = 1536
+    embedding_batch_size: int = 20
     embedding_timeout: float | None = None
     embedding_input_mode: str = "raw"
     embedding_check_context_length: bool = False
@@ -124,6 +125,7 @@ class AppSettings:
     flashrank_model: str = "ms-marco-TinyBERT-L-2-v2"
     flashrank_cache_dir: str = ""
     flashrank_top_n: int = 10
+    retrieval_pipeline: str = "v1_flat_rerank"
 
     max_tool_calls: int = 8
     max_iterations: int = 10
@@ -152,6 +154,8 @@ class AppSettings:
             )
         if self.embedding_dimensions <= 0:
             raise ValueError("EMBEDDING_DIMENSION must be positive.")
+        if self.embedding_batch_size <= 0:
+            raise ValueError("EMBEDDING_BATCH_SIZE must be positive.")
         if self.embedding_max_input_chars <= 0:
             raise ValueError("EMBEDDING_MAX_INPUT_CHARS must be positive.")
         if self.index_write_mode not in {"versioned", "legacy"}:
@@ -173,6 +177,9 @@ class AppSettings:
             raise ValueError("UPLOAD_MAX_BYTES must be positive.")
         if self.paper_parser not in {"pymupdf4llm", "legacy"}:
             raise ValueError("PAPER_PARSER must be pymupdf4llm or legacy.")
+        from indexing.retrieval_pipeline import get_pipeline_config
+
+        get_pipeline_config(self.retrieval_pipeline)
         if self.parser_timeout_seconds <= 0:
             raise ValueError("PARSER_TIMEOUT_SECONDS must be positive.")
         if self.long_document_timeout_seconds < self.parser_timeout_seconds:
@@ -222,6 +229,7 @@ class AppSettings:
             "model": self.embedding_model,
             "provider": self.embedding_provider,
             "dimensions": self.embedding_dimensions,
+            "batch_size": self.embedding_batch_size,
             "input_mode": self.embedding_input_mode,
             "check_embedding_ctx_length": self.embedding_check_context_length,
             "max_input_chars": self.embedding_max_input_chars,
@@ -251,6 +259,7 @@ class AppSettings:
                 "flashrank_model": self.flashrank_model,
                 "flashrank_cache_dir": self.flashrank_cache_dir,
                 "flashrank_top_n": self.flashrank_top_n,
+                "pipeline": self.retrieval_pipeline,
             },
         }
 
@@ -403,6 +412,12 @@ def load_settings(
         else 1536
     )
     embedding_timeout = get_env_float("EMBEDDING_TIMEOUT")
+    embedding_batch_size_value = get_env_int("EMBEDDING_BATCH_SIZE")
+    embedding_batch_size = (
+        embedding_batch_size_value
+        if embedding_batch_size_value is not None
+        else 20
+    )
     embedding_input_mode = (
         get_env("EMBEDDING_INPUT_MODE", default="raw") or "raw"
     ).strip().lower()
@@ -444,6 +459,10 @@ def load_settings(
     )
     flashrank_cache_dir = get_env("FLASHRANK_CACHE_DIR", default="") or ""
     flashrank_top_n = get_env_int("FLASHRANK_TOP_N") or retriever_k
+    retrieval_pipeline = (
+        get_env("RETRIEVAL_PIPELINE", default="v1_flat_rerank")
+        or "v1_flat_rerank"
+    ).strip().lower()
 
     max_tool_calls = get_env_int("MAX_TOOL_CALLS") or 8
     max_iterations = get_env_int("MAX_ITERATIONS") or 10
@@ -515,6 +534,7 @@ def load_settings(
         embedding_api_base=embedding_api_base,
         embedding_provider=embedding_provider,
         embedding_dimensions=embedding_dimensions,
+        embedding_batch_size=embedding_batch_size,
         embedding_timeout=embedding_timeout,
         embedding_input_mode=embedding_input_mode,
         embedding_check_context_length=embedding_check_context_length,
@@ -533,6 +553,7 @@ def load_settings(
         flashrank_model=flashrank_model,
         flashrank_cache_dir=flashrank_cache_dir,
         flashrank_top_n=flashrank_top_n,
+        retrieval_pipeline=retrieval_pipeline,
         max_tool_calls=max_tool_calls,
         max_iterations=max_iterations,
         max_context_tokens=max_context_tokens,

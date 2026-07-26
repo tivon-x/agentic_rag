@@ -113,6 +113,7 @@ def get_embeddings(config: dict[str, Any]) -> Embeddings:
             api_base=str(embedding_config.get("api_base") or ""),
             check_embedding_ctx_length=check_context_length,
             dimensions=dimensions,
+            chunk_size=int(embedding_config.get("batch_size") or 20),
             timeout=embedding_config.get("timeout"),
         )
 

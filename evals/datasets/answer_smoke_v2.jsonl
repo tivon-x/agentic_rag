@@ -1,0 +1,8 @@
+{"case_id":"smoke-01","question":"Transformer 为什么不需要 recurrence？"}
+{"case_id":"smoke-02","question":"LSTM 的 cell state 有什么作用？"}
+{"case_id":"smoke-03","question":"GPipe 如何用 micro-batch？"}
+{"case_id":"smoke-04","question":"ResNet 的 bottleneck block 是什么？"}
+{"case_id":"smoke-05","question":"RMC 是什么缩写，它如何处理 memory slots？"}
+{"case_id":"smoke-06","question":"AlexNet 的 top-5 error 是多少？"}
+{"case_id":"smoke-07","question":"Scaling Laws 为什么建议训练更大的模型？"}
+{"case_id":"smoke-08","question":"比较 Pointer Network 与 Neural Turing Machine 的寻址方式。"}

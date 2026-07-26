@@ -19,6 +19,7 @@ dependencies = [
     "pymupdf>=1.27.1",
     "pymupdf-layout>=1.27.1",
     "pymupdf4llm>=0.3.4",
+    "pyyaml>=6.0.3",
     "pypdf>=5.6.0",
     "rank-bm25>=0.2.2",
     "sse-starlette>=2.0.0",
