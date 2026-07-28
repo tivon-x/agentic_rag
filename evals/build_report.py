@@ -36,6 +36,7 @@ def build_report(runs_dir: Path) -> dict[str, Any]:
             ],
             "embedding": report["embedding"],
             "reranker": report["reranker"],
+            "retrieval_evaluation": report["retrieval_evaluation"],
         }
         if common_contract is None:
             common_contract = contract
@@ -131,7 +132,7 @@ def build_report(runs_dir: Path) -> dict[str, Any]:
         for key in ABLATION_KEYS
     }
     output = {
-        "schema_version": 1,
+        "schema_version": 2,
         "frozen_contract": common_contract,
         "core_metrics": {
             key: pipelines[key]["retrieval"]["metrics"]
@@ -244,6 +245,7 @@ def _metric_delta(
             "recall_at_10",
             "mrr_at_10",
             "ndcg_at_10",
+            "context_passage_recall",
             "paper_recall_at_10",
             "section_recall_at_10",
             "p50_latency_ms",
@@ -263,8 +265,8 @@ def _render_markdown(report: dict[str, Any]) -> str:
         "## Core metrics",
         "",
         "| Pipeline | Recall@5 | Recall@10 | MRR@10 | nDCG@10 | "
-        "Paper Recall@10 | Section Recall@10 | p50 ms | p95 ms |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "Context Recall | Paper Recall@10 | Section Recall@10 | p50 ms | p95 ms |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for key in CORE_KEYS:
         metrics = report["core_metrics"][key]
@@ -272,6 +274,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
             f"| {key} | {metrics['recall_at_5']} | "
             f"{metrics['recall_at_10']} | {metrics['mrr_at_10']} | "
             f"{metrics['ndcg_at_10']} | "
+            f"{metrics['context_passage_recall']} | "
             f"{metrics['paper_recall_at_10']} | "
             f"{metrics['section_recall_at_10']} | "
             f"{metrics['p50_latency_ms']} | "

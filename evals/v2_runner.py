@@ -95,11 +95,14 @@ def run_from_config(config_path: Path) -> dict[str, Any]:
     answer_dataset_sha = sha256_file(
         Path(config["answer_smoke_dataset"])
     )
-    code_state = _code_state(repo_root)
-
     run_name = str(config["run_name"])
-    run_dir = Path(config["output_dir"]) / run_name
+    run_dir = _prepare_run_dir(
+        repo_root,
+        output_dir=Path(config["output_dir"]),
+        run_name=run_name,
+    )
     run_dir.mkdir(parents=True, exist_ok=True)
+    code_state = _capture_code_state(repo_root, run_dir=run_dir)
     pipeline_reports: dict[str, Any] = {}
     fresh_index_sources: dict[str, tuple[str, Path]] = {}
     for pipeline_key in config["pipelines"]:
@@ -167,7 +170,7 @@ def run_from_config(config_path: Path) -> dict[str, Any]:
         }
 
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "run_name": run_name,
         "generated_at": datetime.now(UTC).isoformat(),
         "config_path": str(config_path),
@@ -181,6 +184,10 @@ def run_from_config(config_path: Path) -> dict[str, Any]:
         "answer_smoke_dataset_sha256": answer_dataset_sha,
         "embedding": _embedding_contract(settings),
         "reranker": dict(config["reranker"]),
+        "retrieval_evaluation": {
+            "ranked_candidate_limit": 10,
+            "context_coverage": "packed_context",
+        },
         "code": code_state,
         "pipelines": pipeline_reports,
     }
@@ -289,10 +296,13 @@ def evaluate_retrieval(
     latencies: list[float] = []
     for case in cases:
         started = perf_counter()
-        packed = retriever.retrieve(case.question)
+        candidates, search_debug = retriever.search_scored(
+            case.question,
+            limit=10,
+        )
         latency_ms = (perf_counter() - started) * 1000
         latencies.append(latency_ms)
-        documents = packed.passages
+        documents = [candidate.document for candidate in candidates]
         passage_ids = [
             str(
                 document.metadata.get("passage_id")
@@ -308,6 +318,15 @@ def evaluate_retrieval(
         section_ids = [
             str(document.metadata.get("section_id") or "")
             for document in documents
+        ]
+        packed = retriever.retrieve(case.question)
+        context_passage_ids = [
+            str(
+                document.metadata.get("passage_id")
+                or document.metadata.get("node_id")
+                or ""
+            )
+            for document in packed.passages
         ]
         gold_passages = set(case.gold_passage_ids)
         relevances = [
@@ -338,6 +357,7 @@ def evaluate_retrieval(
                 "predicted_passage_ids": passage_ids,
                 "predicted_paper_ids": paper_ids,
                 "predicted_section_ids": section_ids,
+                "context_passage_ids": context_passage_ids,
                 "first_gold_rank": first_gold_rank,
                 "recall_at_5": round(
                     recall_at_k(
@@ -381,10 +401,14 @@ def evaluate_retrieval(
                     ),
                     6,
                 ),
+                "context_passage_recall": round(
+                    _set_recall(set(context_passage_ids), gold_passages),
+                    6,
+                ),
                 "latency_ms": round(latency_ms, 4),
                 "total_tokens": packed.total_tokens,
-                "stage_results": packed.debug["stages"],
-                "stage_timings_ms": packed.debug["timings_ms"],
+                "stage_results": search_debug["stages"],
+                "stage_timings_ms": search_debug["timings_ms"],
             }
         )
     return {
@@ -474,6 +498,28 @@ def _load_config(path: Path, *, repo_root: Path) -> dict[str, Any]:
             else (repo_root / candidate).resolve()
         )
     return payload
+
+
+def _prepare_run_dir(
+    repo_root: Path,
+    *,
+    output_dir: Path,
+    run_name: str,
+) -> Path:
+    artifacts_root = (repo_root / "artifacts").resolve()
+    if Path(run_name).is_absolute() or Path(run_name).name != run_name:
+        raise ValueError("M3 run_name must be a single relative directory name.")
+    resolved_output = (
+        output_dir.resolve()
+        if output_dir.is_absolute()
+        else (repo_root / output_dir).resolve()
+    )
+    if not resolved_output.is_relative_to(artifacts_root):
+        raise ValueError("M3 output_dir must stay under the artifacts directory.")
+    run_dir = (resolved_output / run_name).resolve()
+    if not run_dir.is_relative_to(artifacts_root):
+        raise ValueError("M3 run directory escapes the artifacts directory.")
+    return run_dir
 
 
 def _validate_frozen_runtime(
@@ -567,7 +613,7 @@ def _build_eval_index(
             raise ValueError(f"Pipeline {pipeline_key} produced no index.")
 
     manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "v2-core-eval-index",
         "pipeline_key": pipeline_key,
         "pipeline": asdict(pipeline),
@@ -582,6 +628,9 @@ def _build_eval_index(
         "fresh_index_reused_from": reused_from,
         "code_commit": code_state["commit"],
         "code_dirty": code_state["dirty"],
+        "code_working_tree_patch_sha256": code_state[
+            "working_tree_patch_sha256"
+        ],
         "faiss_sha256": sha256_file(index_dir / "faiss" / "index.faiss"),
         "faiss_metadata_sha256": sha256_file(
             index_dir / "faiss" / "index.pkl"
@@ -668,6 +717,7 @@ def _aggregate_rows(
         "ndcg_at_10",
         "paper_recall_at_10",
         "section_recall_at_10",
+        "context_passage_recall",
     )
     metrics = {
         name: round(mean(row[name] for row in rows), 6)
@@ -721,7 +771,11 @@ def _embedding_contract(settings: AppSettings) -> dict[str, Any]:
     }
 
 
-def _code_state(repo_root: Path) -> dict[str, Any]:
+def _capture_code_state(
+    repo_root: Path,
+    *,
+    run_dir: Path,
+) -> dict[str, Any]:
     commit = subprocess.run(
         ["git", "rev-parse", "HEAD"],
         cwd=repo_root,
@@ -736,9 +790,34 @@ def _code_state(repo_root: Path) -> dict[str, Any]:
         capture_output=True,
         text=True,
     ).stdout
+    untracked_files = [
+        line[3:]
+        for line in status.splitlines()
+        if line.startswith("?? ")
+    ]
+    if untracked_files:
+        raise ValueError(
+            "M3 evaluation refuses untracked files because they cannot be "
+            "captured in the source patch: "
+            f"{', '.join(untracked_files)}"
+        )
+    patch = subprocess.run(
+        ["git", "diff", "--binary", "HEAD"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    ).stdout
+    patch_sha256 = hashlib.sha256(patch).hexdigest()
+    patch_path: str | None = None
+    if patch:
+        patch_file = run_dir / "working_tree.patch"
+        patch_file.write_bytes(patch)
+        patch_path = str(patch_file)
     return {
         "commit": commit,
         "dirty": bool(status.strip()),
+        "working_tree_patch_sha256": patch_sha256,
+        "working_tree_patch_path": patch_path,
     }
 
 

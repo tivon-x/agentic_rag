@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from langchain_core.documents import Document
@@ -27,6 +28,9 @@ from evals.runner import (
 from evals.v2_corpus import load_parser_artifact
 from evals.v2_runner import (
     _aggregate_rows,
+    _prepare_run_dir,
+    RetrievalCase,
+    evaluate_retrieval,
     load_answer_smoke_cases,
     load_retrieval_cases,
 )
@@ -265,6 +269,7 @@ def test_v2_aggregate_keeps_metrics_and_latency_separate():
             "ndcg_at_10": 0.6,
             "paper_recall_at_10": 1.0,
             "section_recall_at_10": 0.5,
+            "context_passage_recall": 1.0,
         },
         {
             "recall_at_5": 0.0,
@@ -273,6 +278,7 @@ def test_v2_aggregate_keeps_metrics_and_latency_separate():
             "ndcg_at_10": 0.2,
             "paper_recall_at_10": 0.5,
             "section_recall_at_10": 0.0,
+            "context_passage_recall": 0.5,
         },
     ]
 
@@ -282,3 +288,84 @@ def test_v2_aggregate_keeps_metrics_and_latency_separate():
     assert metrics["recall_at_10_hit_count"] == 1
     assert metrics["p50_latency_ms"] == 20.0
     assert "composite_score" not in metrics
+
+
+def test_v2_retrieval_metrics_use_uniform_reranked_top_10():
+    gold_document = Document(
+        page_content="gold",
+        metadata={"passage_id": "gold", "paper_id": "p", "section_id": "s"},
+    )
+    non_gold_documents = [
+        Document(
+            page_content=f"passage-{index}",
+            metadata={
+                "passage_id": f"passage-{index}",
+                "paper_id": "p",
+                "section_id": "s",
+            },
+        )
+        for index in range(9)
+    ]
+    candidates = [
+        *(SimpleNamespace(document=document) for document in non_gold_documents),
+        SimpleNamespace(document=gold_document),
+    ]
+
+    class StubRetriever:
+        def search_scored(self, question, *, limit):
+            assert question == "question"
+            assert limit == 10
+            return candidates, {"stages": [], "timings_ms": {}}
+
+        def retrieve(self, question):
+            assert question == "question"
+            return SimpleNamespace(
+                passages=non_gold_documents[:8],
+                total_tokens=100,
+            )
+
+    case = RetrievalCase(
+        case_id="case",
+        question="question",
+        category="exact_term_definition",
+        gold_passage_ids=("gold",),
+        gold_paper_ids=("p",),
+        gold_section_ids=("s",),
+        tags=(),
+        notes="",
+    )
+
+    report = evaluate_retrieval([case], retriever=StubRetriever())
+    row = report["cases"][0]
+
+    assert row["predicted_passage_ids"] == [
+        *(f"passage-{index}" for index in range(9)),
+        "gold",
+    ]
+    assert row["recall_at_10"] == 1.0
+    assert row["first_gold_rank"] == 10
+    assert row["context_passage_recall"] == 0.0
+
+
+def test_v2_run_dir_stays_under_artifacts(tmp_path):
+    artifacts_root = tmp_path / "artifacts"
+    artifacts_root.mkdir()
+
+    assert _prepare_run_dir(
+        tmp_path,
+        output_dir=Path("artifacts/evals"),
+        run_name="v2_b1",
+    ) == artifacts_root / "evals" / "v2_b1"
+
+    with pytest.raises(ValueError, match="output_dir"):
+        _prepare_run_dir(
+            tmp_path,
+            output_dir=Path("outside"),
+            run_name="v2_b1",
+        )
+    with pytest.raises(ValueError, match="run_name"):
+        _prepare_run_dir(
+            tmp_path,
+            output_dir=Path("artifacts/evals"),
+            run_name="../outside",
+        )

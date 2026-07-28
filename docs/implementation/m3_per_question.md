@@ -3,14 +3,14 @@
 数据集：`evals/datasets/retrieval_v2_core.jsonl`
 SHA-256：`e1da7d23d352cd17a1601f56280a5c9820ff81002a36dc5ad786cb3a8f90c936`
 
-`—` 表示 gold passage 未进入最终 context。B1→B2 只比较首个 gold rank；
+`—` 表示 gold passage 未进入统一的 rerank top-10。B1→B2 只比较首个 gold rank；
 两者都未命中记为 tie。完整阶段 trace 保存在
 `artifacts/evals/v2_core/*/report.json`。
 
 | Case | Category | B0 rank | B1 rank | B2 rank | B3 rank | B1→B2 |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
 | term-01-transformer | exact_term_definition | 6 | — | — | — | tie |
-| term-02-multi-head | exact_term_definition | 6 | 4 | — | — | loss |
+| term-02-multi-head | exact_term_definition | 6 | 4 | 10 | 10 | loss |
 | term-03-scaled-dot-product | exact_term_definition | 7 | 6 | 7 | 7 | loss |
 | term-04-positional-encoding | exact_term_definition | 1 | — | — | — | tie |
 | term-05-lstm-dependency | exact_term_definition | 1 | 1 | 1 | 1 | tie |
@@ -28,17 +28,17 @@ SHA-256：`e1da7d23d352cd17a1601f56280a5c9820ff81002a36dc5ad786cb3a8f90c936`
 | method-05-relation-network | method_section_location | 1 | 4 | 4 | 4 | tie |
 | method-06-rmc | method_section_location | — | 6 | — | — | loss |
 | method-07-nmt-alignment | method_section_location | — | — | — | — | tie |
-| method-08-deepspeech-bn | method_section_location | — | — | 1 | 1 | win |
+| method-08-deepspeech-bn | method_section_location | — | 9 | 1 | 1 | win |
 | method-09-mdl-selection | method_section_location | — | 5 | — | — | loss |
 | method-10-alexnet-relu | method_section_location | 1 | 3 | 2 | 2 | win |
 | method-11-read-process-write | method_section_location | — | 1 | 1 | 1 | tie |
-| method-12-vlae-information | method_section_location | — | — | — | — | tie |
+| method-12-vlae-information | method_section_location | — | — | 9 | 9 | win |
 | number-01-transformer-bleu | experiment_number_table | 3 | 2 | 4 | 4 | loss |
-| number-02-alexnet-error | experiment_number_table | — | — | — | — | tie |
+| number-02-alexnet-error | experiment_number_table | — | — | 10 | 10 | win |
 | number-03-resnet-error | experiment_number_table | 4 | — | — | — | tie |
 | number-04-gpipe-amoeba | experiment_number_table | 2 | 2 | 3 | 3 | loss |
 | number-05-rnn-penn | experiment_number_table | 5 | 5 | 4 | 4 | win |
-| number-06-nmt-bleu | experiment_number_table | — | — | 1 | 1 | win |
+| number-06-nmt-bleu | experiment_number_table | 9 | — | 1 | 1 | win |
 | number-07-relation-clevr | experiment_number_table | — | — | — | — | tie |
 | number-08-deepspeech-wer | experiment_number_table | 1 | 1 | 1 | 1 | tie |
 | number-09-dilated-iou | experiment_number_table | 2 | 1 | 1 | 1 | tie |
