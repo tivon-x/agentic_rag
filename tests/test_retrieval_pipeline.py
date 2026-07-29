@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from langchain_core.documents import Document
+import pytest
 
 from indexing.models.node import Node
 from indexing.retrieval_pipeline import (
@@ -156,6 +157,7 @@ def _make_retriever(
     token_budget: int = 60,
     reranker_backend: str = "none",
     pipeline_name: str = "b1",
+    strict_reranker: bool = False,
 ) -> FusionRetriever:
     return FusionRetriever(
         vectorstore=_VectorStoreStub(vector_results or []),
@@ -166,6 +168,7 @@ def _make_retriever(
         node_store=node_store,
         corpus_profile=corpus_profile,
         reranker_backend=reranker_backend,
+        strict_reranker=strict_reranker,
         pipeline=get_pipeline_config(pipeline_name),
     )
 
@@ -292,6 +295,61 @@ def test_rerank_candidates_gracefully_falls_back_when_flashrank_unavailable(monk
     assert reranked == candidates
     assert debug["flashrank"]["enabled"] is False
     assert "flashrank unavailable" in debug["flashrank"]["error"]
+
+
+def test_rerank_candidates_fails_when_strict_flashrank_unavailable(
+    monkeypatch,
+):
+    retriever = _make_retriever(
+        reranker_backend="flashrank",
+        strict_reranker=True,
+    )
+    monkeypatch.setattr(
+        retriever,
+        "_get_flashrank_reranker",
+        lambda: (_ for _ in ()).throw(RuntimeError("flashrank unavailable")),
+    )
+
+    with pytest.raises(RuntimeError, match="Required reranker is unavailable"):
+        retriever._rerank_candidates(
+            "query",
+            [_doc("node-a", "candidate")],
+            {"preferred_node_types": ["paragraph"]},
+        )
+
+
+def test_flashrank_cache_dir_is_passed_to_ranker(monkeypatch):
+    captured: dict[str, Any] = {}
+
+    class _Ranker:
+        def __init__(self, **kwargs):
+            captured["ranker"] = kwargs
+
+    class _Compressor:
+        def __init__(self, **kwargs):
+            captured["compressor"] = kwargs
+
+    monkeypatch.setattr("flashrank.Ranker", _Ranker)
+    monkeypatch.setattr(
+        "langchain_community.document_compressors.FlashrankRerank",
+        _Compressor,
+    )
+    retriever = FusionRetriever(
+        vectorstore=_VectorStoreStub([]),
+        lexical_store=_LexicalStoreStub([]),
+        reranker_backend="flashrank",
+        flashrank_cache_dir="artifact-cache",
+        pipeline=get_pipeline_config("b1"),
+    )
+
+    compressor = retriever._get_flashrank_reranker()
+
+    assert isinstance(compressor, _Compressor)
+    assert captured["ranker"] == {
+        "model_name": "ms-marco-TinyBERT-L-2-v2",
+        "cache_dir": "artifact-cache",
+    }
+    assert captured["compressor"]["client"].__class__ is _Ranker
 
 
 def test_pack_context_respects_token_budget_and_prefers_higher_scores():

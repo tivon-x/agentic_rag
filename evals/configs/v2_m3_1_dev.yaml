@@ -1,0 +1,34 @@
+schema_version: 2
+mode: dev
+run_name: dev
+output_dir: artifacts/evals/v2_m3_1
+corpus_dir: evals
+parser_artifact: artifacts/evals/v2_core/parser_artifact.json
+parser_artifact_sha256: 98e8adf680c578c21d2fffe5b97f3f85d24b768b827fe81aa8ddfc280af242d9
+parser_gold: evals/datasets/parser_v2.json
+retrieval_dataset: evals/datasets/retrieval_v2_core.jsonl
+retrieval_dataset_sha256: e1da7d23d352cd17a1601f56280a5c9820ff81002a36dc5ad786cb3a8f90c936
+holdout_dataset: evals/datasets/retrieval_v2_core_holdout.jsonl
+holdout_dataset_sha256: 47e2a70de438468150e22ca07c5f57aaf8630d601b3b645ffcf7a2d3f0dfea78
+answer_smoke_dataset: evals/datasets/answer_smoke_v2.jsonl
+embedding:
+  provider: openai
+  model: qwen3.7-text-embedding
+  dimension: 1024
+  batch_size: 20
+  input_mode: raw
+  check_embedding_ctx_length: false
+  max_input_chars: 6000
+reranker:
+  backend: flashrank
+  cache_dir: artifacts/evals/v2_m3_1/model_cache
+latency:
+  warmup_count: 1
+  repeat_count: 5
+  random_seed: 31
+force_reindex: true
+resume: true
+active_index_baseline:
+  active_json: null
+  sqlite_app_state_exists: false
+  sqlite_active_index_version: null

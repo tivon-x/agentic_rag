@@ -49,6 +49,7 @@ class FaissVectorStore:
     """FAISS-backed vector store adapter."""
 
     def __init__(self, embeddings: Embeddings, persist_directory: str | None = None):
+        self._embeddings = embeddings
         loaded = False
         if persist_directory:
             index_path = os.path.join(persist_directory, "index.faiss")
@@ -141,6 +142,24 @@ class FaissVectorStore:
         fetch_k: int = 20,
     ) -> list[tuple[Document, float]]:
         return self.search_with_score(query, k=k, filter=filter, fetch_k=fetch_k)
+
+    def embed_query(self, query: str) -> list[float]:
+        return self._embeddings.embed_query(query)
+
+    def search_by_vector_with_score(
+        self,
+        embedding: list[float],
+        *,
+        k: int = 10,
+        filter: dict[str, object] | None = None,
+        fetch_k: int = 20,
+    ) -> list[tuple[Document, float]]:
+        return self._vectorstore.similarity_search_with_score_by_vector(
+            embedding,
+            k=k,
+            filter=filter,
+            fetch_k=fetch_k,
+        )
 
     def get_all_documents(self) -> list[Document]:
         docstore = getattr(self._vectorstore, "docstore", None)

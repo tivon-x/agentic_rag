@@ -17,6 +17,7 @@ from indexing.embeddings import get_embeddings
 from indexing.mappers import CHUNKER_MAPPING, LOADER_MAPPING
 from indexing.parsers.base import SUPPORTED_HIERARCHICAL_SUFFIXES, build_parser
 from indexing.retrieval_pipeline import (
+    RetrievalPipelineConfig,
     get_pipeline_config,
     prepare_index_documents,
 )
@@ -27,8 +28,14 @@ from indexing.vectorstore import create_vector_store
 
 
 class Indexer:
-    def __init__(self, config: dict):
+    def __init__(
+        self,
+        config: dict,
+        *,
+        pipeline: RetrievalPipelineConfig | None = None,
+    ) -> None:
         self.config = config
+        self._pipeline_override = pipeline
         self._logger = logging.getLogger(__name__)
         self._init_components()
 
@@ -45,8 +52,17 @@ class Indexer:
             self.config.get("parent_embed_pooling", "mean")
         ).strip()
         retriever_config = self.config.get("retriever", {})
-        self.pipeline = get_pipeline_config(
-            str(retriever_config.get("pipeline", "v1_flat_rerank"))
+        self.pipeline = (
+            self._pipeline_override
+            if self._pipeline_override is not None
+            else get_pipeline_config(
+                str(
+                    retriever_config.get(
+                        "pipeline",
+                        "v1_flat_rerank",
+                    )
+                )
+            )
         )
 
         nodes_path = self.config.get("nodes_path")
@@ -193,24 +209,37 @@ class Indexer:
         if not documents:
             self._logger.warning("No documents supplied for indexing.")
             return None
-        prepared_documents = prepare_index_documents(documents, self.pipeline)
-        if not prepared_documents:
+        dense_documents = prepare_index_documents(
+            documents,
+            self.pipeline,
+            channel="dense",
+        )
+        if not dense_documents:
             self._logger.warning(
                 "No retrieval documents remained after preparation."
             )
             return None
-        self.vector_store.add_documents(prepared_documents)
+        self.vector_store.add_documents(dense_documents)
 
         vectorstore_config = self.config.get("vectorstore", {})
         persist_directory = vectorstore_config.get("persist_directory")
         if persist_directory:
             self.vector_store.save(persist_directory)
 
-        all_docs = self.vector_store.get_all_documents()
+        sparse_documents = prepare_index_documents(
+            self.vector_store.get_all_documents(),
+            self.pipeline,
+            channel="sparse",
+        )
+        if not sparse_documents:
+            self._logger.warning(
+                "No lexical retrieval documents remained after preparation."
+            )
+            return None
         lexical_backend = str(self.config.get("lexical_backend", "bm25"))
         lexical_store = create_lexical_store(
             lexical_backend,
-            documents=all_docs,
+            documents=sparse_documents,
             tokenizer=self.pipeline.tokenizer,
         )
 

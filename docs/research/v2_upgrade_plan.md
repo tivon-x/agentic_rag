@@ -792,11 +792,40 @@ uv run --extra dev ruff check indexing core evals tests
 
 `RETRIEVAL_PIPELINE=v1_flat_rerank|v2_fixed|v2_expanded` 独立切换。每个 index version 记录 tokenizer 和 retrieval schema，不混用不兼容版本。
 
+### M3.1：固定检索性能优化实验
+
+M3 的 B2/B3 是历史冻结实验，原结论保持失败，不回写、不覆盖，也不把后续
+消融改名为已通过的 B2。M3.1 的唯一正式候选命名为
+`B2.1 / v2_fixed_optimized`。
+
+B2.1 由冻结开发实验选择实际有效的组件，不为了技术叙事强制包含完整
+metadata prefix、rerank 或 neighbor expansion。`retrieval_text` 与
+`quote_text` 的分离仍是硬约束；RRF 常数继续固定为 `k=60`，但 dense 与
+sparse 通道权重可以配置。metadata 字段、通道使用方式、rerank 输入表示、
+reranker model、fusion/rerank rank blend、dense/sparse RRF 权重和启发式
+boost 都必须进入可追溯配置、contract、manifest 和阶段 trace。
+
+M3.1 使用 `evals/datasets/retrieval_v2_core.jsonl` 的旧 48 题作为开发和
+历史回归集，在同一 25 篇冻结 corpus 上新增独立的 48 题 holdout，四类各
+12 条。holdout 必须在任何候选实验前冻结 SHA-256；开发阶段最多评估 24 个
+新候选，只能选择一个 finalist，且 finalist 冻结前不得运行 holdout 质量
+评测。B2.1 必须在旧开发集和新 holdout 上分别通过原 M3 发布门槛，失败后
+不得继续针对同一 holdout 调参。
+
+B3 的后置 neighbor expansion 不改变 rerank top-10，因此不能再用未变化的
+top-10 排名证明 expansion 收益。M3.1 默认不启用 B3；后续是否启用 expansion
+应使用跨章节 Context Recall、context token 增幅、packing drop 数和正式
+answer test 决策。
+
+M3.1 全部门槛通过后才允许把默认 fixed pipeline 切换为
+`v2_fixed_optimized` 并标记 M4 具备进入条件。M4 仍必须等待用户再次明确
+批准 Enhanced；M3.1 完成后停止，不自动实施 M4。
+
 ### M4：持久 run 与有界 adaptive
 
 **进入条件**
 
-M3 发布门槛全部通过，用户批准 Enhanced。
+M3.1 在开发集与独立 holdout 上全部通过，且用户再次批准 Enhanced。
 
 **主要文件**
 

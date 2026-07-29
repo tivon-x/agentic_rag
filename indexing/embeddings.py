@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+import time
 from typing import Any
 
 from langchain_core.embeddings import Embeddings
@@ -82,6 +83,48 @@ class LengthLimitedEmbeddings(Embeddings):
         return self.delegate.embed_query(text)
 
 
+@dataclass(frozen=True)
+class RetryingEmbeddings(Embeddings):
+    """Retry only provider-declared transient embedding backend failures."""
+
+    delegate: Embeddings
+    max_attempts: int = 3
+    base_delay_seconds: float = 0.5
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self._run(lambda: self.delegate.embed_documents(texts))
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._run(lambda: self.delegate.embed_query(text))
+
+    def _run(self, operation):
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                return operation()
+            except Exception as exc:
+                if (
+                    attempt >= self.max_attempts
+                    or not _is_transient_provider_error(exc)
+                ):
+                    raise
+                time.sleep(self.base_delay_seconds * attempt)
+        raise RuntimeError("Unreachable embedding retry state.")
+
+
+def _is_transient_provider_error(exc: Exception) -> bool:
+    body = getattr(exc, "body", None)
+    error = body.get("error", body) if isinstance(body, dict) else {}
+    code = str(error.get("code") or "").casefold()
+    message = str(error.get("message") or exc).casefold()
+    return (
+        getattr(exc, "status_code", None) == 400
+        and (
+            code == "internalerror"
+            or "batching backend response failed" in message
+        )
+    )
+
+
 def get_embeddings(config: dict[str, Any]) -> Embeddings:
     """Build an embedding model exclusively from the supplied settings config."""
     embedding_config = config.get("embedding", {})
@@ -116,6 +159,7 @@ def get_embeddings(config: dict[str, Any]) -> Embeddings:
             chunk_size=int(embedding_config.get("batch_size") or 20),
             timeout=embedding_config.get("timeout"),
         )
+        delegate = RetryingEmbeddings(delegate=delegate)
 
     return LengthLimitedEmbeddings(
         delegate=delegate,

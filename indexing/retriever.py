@@ -20,6 +20,7 @@ from indexing.retrieval_pipeline import (
     merge_documents,
     normalize_query_plan,
     normalize_text,
+    prepare_rerank_document,
     profile_terms,
     query_terms,
     quote_document,
@@ -93,6 +94,7 @@ class FusionRetriever(BaseRetriever):
             self.flashrank_top_n,
             self.pipeline.rerank_top_n,
         )
+        self.flashrank_model = self.pipeline.reranker_model
 
     def retrieve(
         self,
@@ -144,7 +146,9 @@ class FusionRetriever(BaseRetriever):
             "recall": retrieval_debug.get("stage_rows", []),
             "fusion": self._candidate_rows(deduped_candidates),
             "rerank": self._candidate_rows(reranked_candidates),
+            "config": self.pipeline.retrieval_contract(),
         }
+        retrieval_timings = retrieval_debug.get("timings_ms", {})
         return reranked_candidates, {
             "query_plan": plan,
             "retrieval": retrieval_debug,
@@ -155,6 +159,27 @@ class FusionRetriever(BaseRetriever):
                 "query_normalization": _milliseconds(
                     started,
                     normalized_at,
+                ),
+                "query_embedding": round(
+                    float(retrieval_timings.get("query_embedding", 0.0)),
+                    4,
+                ),
+                "dense_recall": round(
+                    float(retrieval_timings.get("dense_recall", 0.0)),
+                    4,
+                ),
+                "sparse_recall": round(
+                    float(retrieval_timings.get("sparse_recall", 0.0)),
+                    4,
+                ),
+                "recall": round(
+                    float(retrieval_timings.get("dense_recall", 0.0))
+                    + float(retrieval_timings.get("sparse_recall", 0.0)),
+                    4,
+                ),
+                "fusion": round(
+                    float(retrieval_timings.get("fusion", 0.0)),
+                    4,
                 ),
                 "recall_and_fusion": _milliseconds(
                     normalized_at,
@@ -181,6 +206,12 @@ class FusionRetriever(BaseRetriever):
         all_candidates: list[RetrievalCandidate] = []
         raw_counts: dict[str, int] = {}
         stage_rows: list[dict[str, Any]] = []
+        timing_totals = {
+            "query_embedding": 0.0,
+            "dense_recall": 0.0,
+            "sparse_recall": 0.0,
+            "fusion": 0.0,
+        }
 
         for subquery in query_plan["subqueries"]:
             fused, fused_debug = self._retrieve_from_fusion(subquery)
@@ -193,6 +224,10 @@ class FusionRetriever(BaseRetriever):
                     "fused": self._candidate_rows(fused),
                 }
             )
+            for key in timing_totals:
+                timing_totals[key] += float(
+                    fused_debug.get("timings_ms", {}).get(key, 0.0)
+                )
             structured = self._retrieve_structured_nodes(
                 subquery,
                 query_plan["preferred_node_types"],
@@ -206,6 +241,11 @@ class FusionRetriever(BaseRetriever):
             "raw_candidates": len(all_candidates),
             "structured_candidates": raw_counts,
             "stage_rows": stage_rows,
+            "timings_ms": {
+                key: round(value, 4)
+                for key, value in timing_totals.items()
+            },
+            "retrieval_contract": self.pipeline.retrieval_contract(),
         }
 
     def _retrieve_from_fusion(
@@ -213,14 +253,30 @@ class FusionRetriever(BaseRetriever):
         query: str,
     ) -> tuple[list[RetrievalCandidate], dict[str, Any]]:
         epsilon = 1e-8
-        vector_rows = (
-            self.vectorstore.search_with_score(
-                query,
-                k=self.pipeline.dense_top_k,
-            )
-            if self.pipeline.use_dense
-            else []
-        )
+        started = perf_counter()
+        if self.pipeline.use_dense:
+            if hasattr(self.vectorstore, "embed_query") and hasattr(
+                self.vectorstore,
+                "search_by_vector_with_score",
+            ):
+                query_embedding = self.vectorstore.embed_query(query)
+                embedded_at = perf_counter()
+                vector_rows = self.vectorstore.search_by_vector_with_score(
+                    query_embedding,
+                    k=self.pipeline.dense_top_k,
+                )
+            else:
+                embedded_at = started
+                vector_rows = self.vectorstore.search_with_score(
+                    query,
+                    k=self.pipeline.dense_top_k,
+                )
+            dense_finished = perf_counter()
+        else:
+            vector_rows = []
+            embedded_at = started
+            dense_finished = started
+        sparse_started = perf_counter()
         sparse_rows = (
             self.lexical_store.topk_with_scores(
                 query,
@@ -229,6 +285,7 @@ class FusionRetriever(BaseRetriever):
             if self.pipeline.use_sparse
             else []
         )
+        sparse_finished = perf_counter()
 
         doc_by_key: dict[str, Document] = {}
         dense_raw: dict[str, float] = {}
@@ -272,7 +329,10 @@ class FusionRetriever(BaseRetriever):
                 )
                 source_scores["vector_rrf"] = dense_rrf
                 source_scores["bm25_rrf"] = sparse_rrf
-                score = dense_rrf + sparse_rrf
+                score = (
+                    self.pipeline.dense_rrf_weight * dense_rrf
+                    + self.pipeline.sparse_rrf_weight * sparse_rrf
+                )
             else:
                 score = (
                     self.alpha * dense_normalized.get(key, 0.0)
@@ -287,7 +347,13 @@ class FusionRetriever(BaseRetriever):
                     subquery=query,
                 )
             )
-        candidates.sort(key=lambda item: item.score, reverse=True)
+        candidates.sort(
+            key=lambda item: (
+                -item.score,
+                document_key(item.document),
+            )
+        )
+        fused_at = perf_counter()
         return candidates, {
             "fusion_method": self.pipeline.fusion_method,
             "rrf_k": (
@@ -295,6 +361,8 @@ class FusionRetriever(BaseRetriever):
                 if self.pipeline.fusion_method == "rrf"
                 else None
             ),
+            "dense_rrf_weight": self.pipeline.dense_rrf_weight,
+            "sparse_rrf_weight": self.pipeline.sparse_rrf_weight,
             "dense": [
                 self._document_row(document, rank=rank, score=float(distance))
                 for rank, (document, distance) in enumerate(
@@ -309,6 +377,18 @@ class FusionRetriever(BaseRetriever):
                     start=1,
                 )
             ],
+            "timings_ms": {
+                "query_embedding": _milliseconds(started, embedded_at),
+                "dense_recall": _milliseconds(
+                    embedded_at,
+                    dense_finished,
+                ),
+                "sparse_recall": _milliseconds(
+                    sparse_started,
+                    sparse_finished,
+                ),
+                "fusion": _milliseconds(sparse_finished, fused_at),
+            },
         }
 
     def _retrieve_structured_nodes(
@@ -391,8 +471,10 @@ class FusionRetriever(BaseRetriever):
 
         deduped = sorted(
             deduped_by_key.values(),
-            key=lambda item: item.score,
-            reverse=True,
+            key=lambda item: (
+                -item.score,
+                document_key(item.document),
+            ),
         )
         return deduped, {
             "raw_count": len(candidates),
@@ -406,17 +488,53 @@ class FusionRetriever(BaseRetriever):
         candidates: list[RetrievalCandidate],
         query_plan: dict[str, Any],
     ) -> tuple[list[RetrievalCandidate], dict[str, Any]]:
-        if not self.pipeline.use_rerank:
-            return sorted(
+        if self.pipeline.boost_policy == "current":
+            self._apply_current_boosts(
+                query,
                 candidates,
-                key=lambda item: item.score,
-                reverse=True,
-            ), {
+                query_plan,
+            )
+
+        boosted = sorted(
+            candidates,
+            key=lambda item: (
+                -item.final_score,
+                document_key(item.document),
+            ),
+        )
+        if not self.pipeline.use_rerank:
+            return boosted, {
                 "enabled": False,
                 "reason": "pipeline_disabled",
-                "top_candidates": self._candidate_rows(candidates),
+                "boost_policy": self.pipeline.boost_policy,
+                "top_candidates": self._candidate_rows(boosted),
             }
+        if self.reranker_backend != "flashrank":
+            return boosted, {
+                "top_candidates": self._candidate_rows(boosted),
+                "flashrank": {
+                    "enabled": False,
+                    "reason": f"backend_{self.reranker_backend}",
+                },
+            }
+        reranked, flashrank_debug = self._apply_flashrank_rerank(
+            query,
+            boosted,
+        )
+        return reranked, {
+            "top_candidates": self._candidate_rows(reranked),
+            "flashrank": flashrank_debug,
+            "boost_policy": self.pipeline.boost_policy,
+            "rerank_input": self.pipeline.rerank_input,
+            "rerank_merge_mode": self.pipeline.rerank_merge_mode,
+        }
 
+    def _apply_current_boosts(
+        self,
+        query: str,
+        candidates: list[RetrievalCandidate],
+        query_plan: dict[str, Any],
+    ) -> None:
         q_terms = query_terms(query)
         coverage_terms = corpus_terms(self.corpus_profile)
         domain_keyword_terms = profile_terms(
@@ -437,16 +555,17 @@ class FusionRetriever(BaseRetriever):
 
         for candidate in candidates:
             metadata = candidate.document.metadata
-            searchable = " ".join(
-                [
-                    str(metadata.get("title", "")),
-                    str(metadata.get("paper_title", "")),
-                    str(metadata.get("section_title", "")),
-                    str(metadata.get("source", "")),
-                    candidate.document.page_content,
-                ]
+            searchable_terms = query_terms(
+                " ".join(
+                    [
+                        str(metadata.get("title", "")),
+                        str(metadata.get("paper_title", "")),
+                        str(metadata.get("section_title", "")),
+                        str(metadata.get("source", "")),
+                        candidate.document.page_content,
+                    ]
+                )
             )
-            searchable_terms = query_terms(searchable)
             title_terms = query_terms(
                 " ".join(
                     [
@@ -503,28 +622,6 @@ class FusionRetriever(BaseRetriever):
                         -min(0.12, overlap),
                         4,
                     )
-
-        boosted = sorted(
-            candidates,
-            key=lambda item: item.final_score,
-            reverse=True,
-        )
-        if self.reranker_backend != "flashrank":
-            return boosted, {
-                "top_candidates": self._candidate_rows(boosted),
-                "flashrank": {
-                    "enabled": False,
-                    "reason": f"backend_{self.reranker_backend}",
-                },
-            }
-        reranked, flashrank_debug = self._apply_flashrank_rerank(
-            query,
-            boosted,
-        )
-        return reranked, {
-            "top_candidates": self._candidate_rows(reranked),
-            "flashrank": flashrank_debug,
-        }
 
     def _pack_context(
         self,
@@ -630,7 +727,13 @@ class FusionRetriever(BaseRetriever):
             return candidates, {"enabled": False, "error": str(exc)}
 
         selected = candidates[: self.pipeline.rerank_top_n]
-        documents = [candidate.document for candidate in selected]
+        documents = [
+            prepare_rerank_document(
+                candidate.document,
+                rerank_input=self.pipeline.rerank_input,
+            )
+            for candidate in selected
+        ]
         if not documents:
             return candidates, {
                 "enabled": True,
@@ -651,19 +754,13 @@ class FusionRetriever(BaseRetriever):
                 ) from exc
             return candidates, {"enabled": False, "error": str(exc)}
 
-        reranked_by_key = {
-            document_key(document): index
-            for index, document in enumerate(reranked_documents)
-        }
-        reranked_selected = sorted(
+        reranked_selected, reranked_by_key = merge_rerank_results(
             selected,
-            key=lambda candidate: (
-                reranked_by_key.get(
-                    document_key(candidate.document),
-                    len(reranked_documents),
-                ),
-                -candidate.final_score,
-            ),
+            reranked_documents,
+            mode=self.pipeline.rerank_merge_mode,
+            rrf_k=self.pipeline.rrf_k,
+            fusion_rank_weight=self.pipeline.fusion_rank_weight,
+            rerank_rank_weight=self.pipeline.rerank_rank_weight,
         )
         for candidate in reranked_selected:
             rank = reranked_by_key.get(document_key(candidate.document))
@@ -676,6 +773,14 @@ class FusionRetriever(BaseRetriever):
             "enabled": True,
             "model": self.flashrank_model,
             "top_n": len(reranked_documents),
+            "input": self.pipeline.rerank_input,
+            "merge_mode": self.pipeline.rerank_merge_mode,
+            "fusion_rank_weight": self.pipeline.fusion_rank_weight,
+            "rerank_rank_weight": self.pipeline.rerank_rank_weight,
+            "ranked_passage_ids": [
+                document_key(candidate.document)
+                for candidate in reranked_selected
+            ],
         }
 
     def _get_flashrank_reranker(self) -> Any:
@@ -688,7 +793,12 @@ class FusionRetriever(BaseRetriever):
             "top_n": self.pipeline.rerank_top_n,
         }
         if self.flashrank_cache_dir.strip():
-            kwargs["cache_dir"] = self.flashrank_cache_dir
+            from flashrank import Ranker
+
+            kwargs["client"] = Ranker(
+                model_name=self.flashrank_model,
+                cache_dir=self.flashrank_cache_dir,
+            )
         self._flashrank_reranker = FlashrankRerank(**kwargs)
         return self._flashrank_reranker
 
@@ -918,6 +1028,71 @@ def _minmax(values: dict[str, float]) -> dict[str, float]:
     return {
         key: (value - minimum) / (maximum - minimum)
         for key, value in values.items()
+    }
+
+
+def merge_rerank_results(
+    fusion_candidates: list[RetrievalCandidate],
+    reranked_documents: list[Document],
+    *,
+    mode: str,
+    rrf_k: int,
+    fusion_rank_weight: float,
+    rerank_rank_weight: float,
+) -> tuple[list[RetrievalCandidate], dict[str, int]]:
+    """Merge fusion and reranker ranks with stable missing-rank handling."""
+    deduped_candidates: dict[str, RetrievalCandidate] = {}
+    fusion_rank: dict[str, int] = {}
+    for rank, candidate in enumerate(fusion_candidates, start=1):
+        key = document_key(candidate.document)
+        if key in deduped_candidates:
+            continue
+        deduped_candidates[key] = candidate
+        fusion_rank[key] = rank
+
+    rerank_rank: dict[str, int] = {}
+    for rank, document in enumerate(reranked_documents, start=1):
+        key = document_key(document)
+        if key in deduped_candidates and key not in rerank_rank:
+            rerank_rank[key] = rank
+
+    if mode == "replace":
+        merged = sorted(
+            deduped_candidates.values(),
+            key=lambda candidate: (
+                rerank_rank.get(
+                    document_key(candidate.document),
+                    len(rerank_rank) + len(fusion_rank) + 1,
+                ),
+                fusion_rank[document_key(candidate.document)],
+                document_key(candidate.document),
+            ),
+        )
+    elif mode == "weighted_rrf":
+        scores = {
+            key: (
+                fusion_rank_weight / (rrf_k + fusion_rank[key])
+                + (
+                    rerank_rank_weight / (rrf_k + rerank_rank[key])
+                    if key in rerank_rank
+                    else 0.0
+                )
+            )
+            for key in deduped_candidates
+        }
+        merged = sorted(
+            deduped_candidates.values(),
+            key=lambda candidate: (
+                -scores[document_key(candidate.document)],
+                fusion_rank[document_key(candidate.document)],
+                document_key(candidate.document),
+            ),
+        )
+    else:
+        raise ValueError(f"Unsupported rerank merge mode: {mode}.")
+    return merged, {
+        key: rank - 1
+        for key, rank in rerank_rank.items()
     }
 
 

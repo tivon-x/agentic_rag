@@ -23,6 +23,10 @@ _PREFIX_LINE_RE = re.compile(
 
 FusionMethod = Literal["minmax", "rrf"]
 TokenizerName = Literal["whitespace_v1", "mixed_v1"]
+IndexChannel = Literal["dense", "sparse"]
+RerankInput = Literal["quote", "title_section_quote", "retrieval"]
+RerankMergeMode = Literal["replace", "weighted_rrf"]
+BoostPolicy = Literal["current", "off"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +55,16 @@ class RetrievalPipelineConfig:
         "section",
         "block",
     )
+    dense_use_metadata_prefix: bool | None = None
+    sparse_use_metadata_prefix: bool | None = None
+    rerank_input: RerankInput = "retrieval"
+    reranker_model: str = "ms-marco-TinyBERT-L-2-v2"
+    rerank_merge_mode: RerankMergeMode = "replace"
+    fusion_rank_weight: float = 0.5
+    rerank_rank_weight: float = 0.5
+    dense_rrf_weight: float = 1.0
+    sparse_rrf_weight: float = 1.0
+    boost_policy: BoostPolicy = "current"
 
     def __post_init__(self) -> None:
         if not self.use_sparse and not self.use_dense:
@@ -75,26 +89,103 @@ class RetrievalPipelineConfig:
             raise ValueError("final_top_k cannot exceed rerank_top_n.")
         if self.max_context_passages < self.final_top_k:
             raise ValueError("max_context_passages cannot be less than final_top_k.")
+        allowed_metadata_fields = {
+            "title",
+            "authors",
+            "year",
+            "section",
+            "block",
+        }
+        if (
+            len(set(self.metadata_prefix_fields))
+            != len(self.metadata_prefix_fields)
+            or not set(self.metadata_prefix_fields).issubset(
+                allowed_metadata_fields
+            )
+        ):
+            raise ValueError("metadata_prefix_fields contains invalid fields.")
+        if not self.reranker_model.strip():
+            raise ValueError("reranker_model cannot be empty.")
+        for name, value in (
+            ("fusion_rank_weight", self.fusion_rank_weight),
+            ("rerank_rank_weight", self.rerank_rank_weight),
+            ("dense_rrf_weight", self.dense_rrf_weight),
+            ("sparse_rrf_weight", self.sparse_rrf_weight),
+        ):
+            if value < 0:
+                raise ValueError(f"{name} cannot be negative.")
+        if (
+            self.rerank_merge_mode == "weighted_rrf"
+            and self.fusion_rank_weight + self.rerank_rank_weight <= 0
+        ):
+            raise ValueError(
+                "weighted_rrf requires a positive fusion or rerank weight."
+            )
+        if (
+            self.fusion_method == "rrf"
+            and self.use_dense
+            and self.dense_rrf_weight <= 0
+        ):
+            raise ValueError("Enabled dense RRF channel needs positive weight.")
+        if (
+            self.fusion_method == "rrf"
+            and self.use_sparse
+            and self.sparse_rrf_weight <= 0
+        ):
+            raise ValueError("Enabled sparse RRF channel needs positive weight.")
 
     @property
     def retrieval_schema(self) -> str:
+        schemas = {
+            self.channel_retrieval_schema("dense"),
+            self.channel_retrieval_schema("sparse"),
+        }
+        return (
+            schemas.pop()
+            if len(schemas) == 1
+            else "channel-specific-v1"
+        )
+
+    def channel_uses_metadata_prefix(self, channel: IndexChannel) -> bool:
+        value = (
+            self.dense_use_metadata_prefix
+            if channel == "dense"
+            else self.sparse_use_metadata_prefix
+        )
+        return self.use_metadata_prefix if value is None else value
+
+    def channel_retrieval_schema(self, channel: IndexChannel) -> str:
         return (
             "metadata-prefixed-v1"
-            if self.use_metadata_prefix
+            if self.channel_uses_metadata_prefix(channel)
             else "quote-only-v1"
         )
 
     def index_contract(self) -> dict[str, Any]:
         """Return fields that determine persisted lexical and vector content."""
         return {
-            "retrieval_schema": self.retrieval_schema,
-            "tokenizer": self.tokenizer,
-            "metadata_prefix_fields": (
-                list(self.metadata_prefix_fields)
-                if self.use_metadata_prefix
-                else []
-            ),
+            "dense": {
+                "retrieval_schema": self.channel_retrieval_schema("dense"),
+                "metadata_prefix_fields": (
+                    list(self.metadata_prefix_fields)
+                    if self.channel_uses_metadata_prefix("dense")
+                    else []
+                ),
+            },
+            "sparse": {
+                "retrieval_schema": self.channel_retrieval_schema("sparse"),
+                "tokenizer": self.tokenizer,
+                "metadata_prefix_fields": (
+                    list(self.metadata_prefix_fields)
+                    if self.channel_uses_metadata_prefix("sparse")
+                    else []
+                ),
+            },
         }
+
+    def retrieval_contract(self) -> dict[str, Any]:
+        """Return the complete deterministic query-time contract."""
+        return asdict(self)
 
     def config_hash(self) -> str:
         payload = json.dumps(
@@ -193,6 +284,8 @@ def get_pipeline_config(name: str) -> RetrievalPipelineConfig:
 def prepare_index_documents(
     documents: list[Document],
     pipeline: RetrievalPipelineConfig,
+    *,
+    channel: IndexChannel = "dense",
 ) -> list[Document]:
     """Materialize the exact persisted retrieval representation."""
     prepared: list[Document] = []
@@ -214,11 +307,40 @@ def prepare_index_documents(
                 quote_text=quote_text,
                 fields=pipeline.metadata_prefix_fields,
             )
-            if pipeline.use_metadata_prefix
+            if pipeline.channel_uses_metadata_prefix(channel)
             else quote_text
         )
         prepared.append(Document(page_content=page_content, metadata=metadata))
     return prepared
+
+
+def prepare_rerank_document(
+    document: Document,
+    *,
+    rerank_input: RerankInput,
+) -> Document:
+    """Build a reranker-only view without changing source-faithful context."""
+    metadata = dict(document.metadata)
+    quote_text = str(
+        metadata.get("quote_text")
+        or strip_metadata_prefix(document.page_content)
+    ).strip()
+    retrieval_text = str(
+        metadata.get("retrieval_text") or document.page_content
+    ).strip()
+    if rerank_input == "quote":
+        page_content = quote_text
+    elif rerank_input == "title_section_quote":
+        page_content = select_metadata_prefix_fields(
+            retrieval_text,
+            quote_text=quote_text,
+            fields=("title", "section"),
+        )
+    else:
+        page_content = retrieval_text
+    metadata["quote_text"] = quote_text
+    metadata["retrieval_text"] = retrieval_text
+    return Document(page_content=page_content, metadata=metadata)
 
 
 def select_metadata_prefix_fields(
