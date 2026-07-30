@@ -14,7 +14,7 @@ V2 不再按一次性重写推进。完整路线分为三层：
 | Enhanced | 持久 run worker、有界补检、claim 校验、调试 trace | Core 检索达到 M3 门槛，用户再次确认 | 否 |
 | Product | 多论文比较、研究结果保存、备份、部署收口 | Enhanced 的质量与延迟门槛成立，用户再次确认 | 否 |
 
-首次实施边界只有 M1、M2、M3。它们完成后，产品已经能稳定导入论文、搜索个人论文库、查看原文页码、运行固定 RAG，并用可复现评测证明检索变化。M4 至 M6 的技术方向已经确定，但不会与 Core 捆绑实施。
+首次实施边界只有 M1、M2、M3。它们完成后，产品已经能稳定导入论文、搜索个人论文库、查看原文页码、运行固定 RAG，并用可复现评测证明检索变化。M4.1 至 M6 的技术方向已经确定，但不会与 Core 捆绑实施。
 
 V2 的四个核心亮点是：
 
@@ -78,9 +78,9 @@ Docling、GraphRAG、多 Agent、RAPTOR、GROBID 服务、专用向量数据库�
 
 **Enhanced**
 
-- 持久 run queue、LangGraph checkpoint、进程重启恢复。
-- fixed、adaptive、refuse 三类路由。
-- 最多两轮补检、claim-evidence 校验和最终拒答。
+- M4.1 先验证 direct、fixed、adaptive、refuse 四类策略和一次定向补检。
+- M4.2 再接入持久 run queue、LangGraph checkpoint 和进程重启恢复。
+- claim-evidence 校验、预算终止和最终拒答。
 - 持久 trace 和技术调试面板。
 
 **Product**
@@ -127,9 +127,10 @@ FastAPI 进程内最多启动一个 index worker 和一个 run worker。SQLite �
 
 1. Core 直接运行 fixed pipeline，得到候选、重排结果和 evidence。
 2. 证据不足时，Core 返回有限答案或拒答，不做隐式补检。
-3. Enhanced 获批后，run worker 执行 adaptive graph。
-4. 所有 claim 校验完成后才产生 `answer.final`。
-5. 前端用 `paper_id + page_number` 打开原 PDF，并在侧栏显示 quote。
+3. M4.1 获批后，在现有 chat 边界验证 adaptive graph 的质量，不新增持久 run。
+4. M4.2 获批后，run worker 接管 adaptive graph 的持久执行和恢复。
+5. 所有 claim 校验完成后才产生 `answer.final`。
+6. 前端用 `paper_id + page_number` 打开原 PDF，并在侧栏显示 quote。
 
 ## 4. 数据模型和稳定标识
 
@@ -161,7 +162,7 @@ Enhanced 再新增：
 | `evidence_items` | `run_id`, `evidence_id`, `passage_id`, `quote_text`, `score_json`, `accepted` | 证据账本 |
 | `artifacts` | `id`, `session_id`, `type`, `title`, `content_json`, `created_at` | Product 保存结果 |
 
-`chat_sessions.messages` 的 JSON 数组在 Core 保持兼容。M4 新建 `chat_messages(id, session_id, run_id, role, content_json, ordinal)` 并一次性迁移，之后停止写旧 JSON 字段。
+`chat_sessions.messages` 的 JSON 数组在 Core 保持兼容。M4.2 新建 `chat_messages(id, session_id, run_id, role, content_json, ordinal)` 并一次性迁移，之后停止写旧 JSON 字段。
 
 ### 4.2 标识规则
 
@@ -323,30 +324,32 @@ RAPTOR、multi-vector 和 GraphRAG 均不进入 V2。只有当固定测试集中
 
 ### 7.1 策略和停止条件
 
-M4 才启用三类策略：
+M4.1 才启用四类策略：
 
 | 策略 | 适用输入 | 行为 |
 |---|---|---|
 | `direct` | 寒暄、确认、对已有答案的格式调整，不产生新的论文事实 | 不检索，不允许新增事实 claim |
-| `fixed` | 明确事实、定义、单篇定位 | 只运行一次固定 pipeline |
-| `adaptive` | 多论文比较、跨章节综合、第一次证据覆盖不足 | 最多两轮检索 |
+| `fixed` | 第一轮 B1 已覆盖全部回答需求 | 只运行一次冻结 B1 |
+| `adaptive` | 多论文比较、跨章节综合，或第一轮 B1 证据覆盖不足 | 只为缺失需求补检一次 |
 | `refuse` | 不在论文库、要求外部实时事实、证据无法支持 | 解释范围并拒答 |
 
 adaptive 预算：
 
-- query plan 最多 4 个子问题。
-- 第一轮最多 4 次检索，可并发执行只读检索。
-- 第二轮最多 2 次补检。
-- 总 tool calls 不超过 6。
+- query plan 最多 3 个可检查需求。
+- 第一轮最多 3 次检索，可并发执行只读检索。
+- 第二轮最多 1 次定向补检。
+- 总 tool calls 不超过 4。
 - 总 rerank passage 不超过 120。
 - 总 evidence 不超过 12。
 - 总上下文不超过 12,000 tokens。
 - 任一轮 evidence IDs 与上一轮完全相同则停止。
-- 覆盖分不再改善、预算用尽、用户取消或模型错误均停止。
+- coverage 不再改善、query 与已有 query 和 scope 完全重复、预算用尽、用户取消或模型错误均停止。
+
+所有事实型问题都先经过冻结 B1 检索，再判断证据是否充分。问题表面复杂度只能用于拆分需求，不能单独触发第二轮。证据充分性输出逐项记录 requirement、evidence IDs、coverage 和 missing reason。确定性校验只负责 evidence 存在性、index version、quote、页码和 ID 完整性；quote 是否语义支持 claim 由结构化模型判断，并在评测中报告误判，不能写成确定性证明。
 
 ### 7.2 Compact GraphState
 
-`agent/states.py` 不再继承 `MessagesState` 保存完整会话和证据对象。V2 GraphState 只保留控制信息和小型结果：
+M4.1 新建独立的 AdaptiveGraphState，现有 fixed GraphState 暂时保留为回滚路径。M4.2 接入持久 run 时，AdaptiveGraphState 只保留控制信息和小型结果：
 
 | 字段 | 类型 | 上限 |
 |---|---|---|
@@ -356,7 +359,7 @@ adaptive 预算：
 | `historySummary` | `str` | 2,000 字符 |
 | `scopeIds` | `list[str]` | 100 |
 | `strategy` | `str` | 1 |
-| `planItems` | `list[dict]` | 4 个，只含 id、query、status |
+| `planItems` | `list[dict]` | 3 个，只含 id、query、status |
 | `round` | `int` | 0 至 2 |
 | `candidateIds` | `list[str]` | 30 |
 | `evidenceIds` | `list[str]` | 12 |
@@ -365,7 +368,7 @@ adaptive 预算：
 | `terminationReason` | `str` | 1 |
 | `finalAnswer` | `dict` | 最终 answer、claims、citations |
 
-完整候选分数、证据 quote 和 trace 分别存入 `retrieval_candidates`、`evidence_items`、`run_events`。节点按 ID 从 repository 加载。所有节点写入使用 `(run_id, round, item_id)` 唯一键 upsert，恢复执行不会生成重复记录。
+M4.1 在现有同步调用边界内验证策略，不新增 run 表或 checkpoint。M4.2 才把完整候选分数、证据 quote 和事件分别存入 `retrieval_candidates`、`evidence_items`、`run_events`。节点按 ID 从 repository 加载。所有节点写入使用 `(run_id, round, item_id)` 唯一键 upsert，事件使用稳定 idempotency key，恢复执行不会生成重复记录。
 
 checkpoint 显式构造：
 
@@ -374,7 +377,7 @@ serde = JsonPlusSerializer(pickle_fallback=False)
 checkpointer = AsyncSqliteSaver(connection, serde=serde)
 ```
 
-生产环境同时设置 `LANGGRAPH_STRICT_MSGPACK=true`。GraphState 只允许 JSON 基础类型，不把 Pydantic model、Document、LLM client、完整消息或数据库连接放进状态。`InMemorySaver` 只用于单元测试。
+本项目在 M4.2 设置 `LANGGRAPH_STRICT_MSGPACK=true`。GraphState 只允许 JSON 基础类型，不把 Pydantic model、Document、LLM client、完整消息或数据库连接放进状态。`InMemorySaver` 用于单元测试和 M4.1 的非持久策略验证。SQLite saver 只用于单机、单用户、单 worker 的可恢复演示，未来多实例部署迁移到 Postgres checkpointer。
 
 ### 7.3 Session memory 与 run recovery
 
@@ -441,9 +444,11 @@ run.failed | run.cancelled
 | `GET` | `/api/chat/{session_id}` | 会话历史 |
 | `GET` | `/api/index-versions` | active 和历史版本 |
 
-Core 删除现有“转发所有模型 token”的行为。`/api/chat/stream` 在 M1 兼容保留，但只发 `progress` 和一个 `answer.final`，M4 再迁移到 run API。没有后端持久化的 Settings 页面不进入 V2。
+Core 删除现有“转发所有模型 token”的行为。`/api/chat/stream` 在 M1 兼容保留，但只发 `progress` 和一个 `answer.final`，M4.2 再迁移到 run API。没有后端持久化的 Settings 页面不进入 V2。
 
 ### 8.2 Enhanced API
+
+M4.1 不新增 API，继续通过现有 chat 边界显式验证 adaptive。M4.2 新增持久 run API：
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -451,7 +456,7 @@ Core 删除现有“转发所有模型 token”的行为。`/api/chat/stream` �
 | `GET` | `/api/runs/{run_id}` | 当前状态与最终结果 |
 | `GET` | `/api/runs/{run_id}/events` | SSE，支持 `Last-Event-ID` |
 | `POST` | `/api/runs/{run_id}/cancel` | 请求取消 |
-| `GET` | `/api/runs/{run_id}/debug` | plan、候选、重排、证据、预算和耗时 |
+| `GET` | `/api/runs/{run_id}/debug` | M5 增加；plan、候选、重排、证据、预算和耗时 |
 
 ### 8.3 前端交付层次
 
@@ -464,9 +469,8 @@ Core 只做 4 个用户表面，不建设 8 个空页面：
 
 PDF 阅读器 Core 使用浏览器原生 PDF 或嵌入页，定位格式为 `file_url#page=N`。证据侧栏显示 quote、章节和页码。Core 不承诺 bbox 高亮；这比错误高亮更可信。
 
-Enhanced 在 `/chat` 加普通模式和技术调试模式：
+M4.2 在 `/chat` 接入普通 run 模式，只显示进度、取消、最终答案和 evidence cards。M5 再增加技术调试模式：
 
-- 普通模式只显示进度、最终答案和 evidence cards。
 - 调试模式显示 strategy、query plan、BM25/dense rank、RRF、rerank、证据接纳、补检原因、停止原因、耗时和 token。
 
 Product 增加：
@@ -494,7 +498,8 @@ INDEX_WORKER_LEASE_SECONDS=60
 RUN_WORKER_LEASE_SECONDS=30
 EMBEDDING_INPUT_MODE=raw
 EMBEDDING_MAX_INPUT_CHARS=6000
-RETRIEVAL_PIPELINE=v2_fixed
+RETRIEVAL_PIPELINE=v1_flat_rerank
+ANSWER_STRATEGY=fixed
 BM25_TOKENIZER=mixed
 RRF_K=60
 RERANK_TOP_N=30
@@ -503,7 +508,7 @@ CONTEXT_TOKEN_BUDGET=8000
 LANGGRAPH_STRICT_MSGPACK=true
 ```
 
-Core 不需要新增 API Key。dense embedding 和生成仍使用现有 OpenAI-compatible 配置；无 Key 时 Search 的 BM25 和已存在的离线检索模式仍可运行。`EMBEDDING_INPUT_MODE=raw` 映射为 `check_embedding_ctx_length=false`；`EMBEDDING_MAX_INPUT_CHARS=6000` 是 provider 调用前的确定性应用侧上限。后续若切换 input mode 或长度上限，必须生成新 index version。API Key 不得写入 manifest。
+Core 不需要新增 API Key。dense embedding 和生成仍使用现有 OpenAI-compatible 配置；无 Key 时 Search 的 BM25 和已存在的离线检索模式仍可运行。`EMBEDDING_INPUT_MODE=raw` 映射为 `check_embedding_ctx_length=false`；`EMBEDDING_MAX_INPUT_CHARS=6000` 是 provider 调用前的确定性应用侧上限。后续若切换 input mode 或长度上限，必须生成新 index version。API Key 不得写入 manifest。M4.1 的真实评测会把问题和候选证据发送给现有模型服务，新执行 session 必须在调用前取得外部服务授权。
 
 ### 9.2 依赖
 
@@ -535,7 +540,7 @@ Product：
 | answer | 8 问 | 24 问 | claim 支持、引用、完整性 | 8 至 10 小时 |
 | route/refusal | 16 问 | 48 问 | fixed/adaptive/refuse 分类 | 2 至 3 小时 |
 
-Core 只要求 parser gold、retrieval 和 8 条 answer smoke。Enhanced 才补齐 answer 与 route/refusal。四个数据集不做统一 70/15/15 切分。
+Core 只要求 parser gold、retrieval 和 8 条 answer smoke。M4.1 在策略实现前冻结 24 条 answer test 和 48 条 route/refusal test，并记录文件 SHA-256。四个数据集不做统一 70/15/15 切分。M3.2 holdout 已经看过结果，只能用于归纳困难类型，不能作为 M4.1 test。
 
 Retrieval test 固定 4 个子集，每类 12 条：
 
@@ -556,7 +561,7 @@ Route test 固定 4 类，每类 12 条：direct、fixed、adaptive、refuse。�
 | B1 | 当前 `flat_rerank` | 当前最强基线 |
 | B2 | metadata prefix + mixed BM25 + dense + RRF + rerank | Core 推荐固定链路 |
 | B3 | B2 + section neighbor expansion | 扩展净收益 |
-| B4 | B3 + adaptive | Enhanced 净收益 |
+| B4 | 冻结 B1 + adaptive | Enhanced 净收益 |
 
 所有组使用同一 parser 产物、同一 embedding provider/model/dimension/input mode、同一 reranker、同一 top-k 和同一测试集。B0 至 B3 必须从同一冻结配置重建索引，不得复用历史 fake embedding 索引或其他模型生成的 FAISS 索引。查询配置与 index manifest 不兼容时立即失败。对 B2 做以下单因素消融：
 
@@ -569,10 +574,11 @@ Route test 固定 4 类，每类 12 条：direct、fixed、adaptive、refuse。�
 
 Adaptive 消融：
 
-- 固定 B3。
-- B3 + routing，不补检。
-- B3 + 一轮补检。
-- B3 + 两轮补检和 claim validation。
+- 固定 B1。
+- B1 + routing，不补检。
+- B1 + 证据充分性判断，不补检。
+- B1 + 一次定向补检。
+- B1 + 一次定向补检和 claim validation。
 
 ### 10.3 指标和报告方法
 
@@ -609,15 +615,21 @@ M3 在 48 条 retrieval test 上必须同时满足：
 - B2 p95 检索延迟不超过 B1 的 1.5 倍。
 - B3 只有在跨章节子集至少改善 3 条、其他子集总退化不超过 1 条时才默认启用。
 
-M4 必须满足：
+M4.1 必须满足：
 
 - route test 每类 recall 不低于 0.75，macro F1 不低于 0.80。
 - adaptive 在 24 条 answer test 中至少改善 5 条 requirement coverage，退化不超过 2 条。
-- citation correctness 不低于 fixed B3。
-- adaptive p95 总延迟不超过 fixed 的 2.5 倍，平均检索轮数不超过 1.5。
-- 重启恢复测试不重复 assistant message、evidence 或 tool side effect。
+- citation correctness、citation completeness 和主要事实支持率不低于 fixed B1，unsupported major claim count 不高于 fixed B1。
+- adaptive p95 总延迟不超过 fixed B1 的 2.5 倍，平均检索轮数不超过 1.5，总 tool calls 始终不超过 4。
+- successful termination rate 为 100%，exact duplicate query + scope 次数为 0。
 
-未达到门槛时，默认策略保持 B1 或 B2 fixed，失败增强通过独立开关关闭。
+M4.2 必须满足：
+
+- 重启恢复测试不重复 assistant message、evidence 或 tool side effect。
+- 同一 session 的第二个并发 run 返回 409，SSE 能按 `Last-Event-ID` 从持久事件继续。
+- fixed 回滚链路不依赖 run worker 或 checkpoint 数据库。
+
+M4.1 未达到门槛时，默认策略保持 B1 fixed，不进入 M4.2。M4.1 通过后仍保持 `ANSWER_STRATEGY=fixed` 默认值，adaptive 作为显式可选路径；是否切换默认值由后续完整产品验收决定。
 
 ## 11. 实施里程碑
 
@@ -719,8 +731,8 @@ uv run --extra dev ruff check api core indexing main.py tests
 uv run --extra dev python -m pytest tests/test_pdf_parser.py tests/test_parser_quality.py tests/test_metadata.py tests/test_paper_api.py tests/test_search_api.py -q
 uv run python -m evals.parser_eval --dataset evals/datasets/parser_v2.json
 uv run --extra dev ruff check indexing api tests
-pnpm --dir web lint
-pnpm --dir web build
+npm --prefix web run lint
+npm --prefix web run build
 ```
 
 **人工检查**
@@ -818,8 +830,8 @@ top-10 排名证明 expansion 收益。M3.1 默认不启用 B3；后续是否启
 answer test 决策。
 
 M3.1 全部门槛通过后才允许把默认 fixed pipeline 切换为
-`v2_fixed_optimized` 并标记 M4 具备进入条件。M4 仍必须等待用户再次明确
-批准 Enhanced；M3.1 完成后停止，不自动实施 M4。
+`v2_fixed_optimized` 并标记后续策略收口具备进入条件。后续里程碑仍必须等待用户再次
+明确批准；M3.1 完成后停止，不自动实施 M3.2 或 M4.1。
 
 ### M3.2：固定策略收口
 
@@ -836,72 +848,124 @@ S1 在两个数据集都满足非劣质量、逐题至少 10 win / 最多 8 loss
 都必须生成唯一、可复现的 M4 fixed baseline contract；M3.2 不把任何结果称为
 “M3.1 通过”。
 
-M4 的进入条件改为：M3.2 策略收口流程完成、fixed baseline 已冻结并可复现、
+M4.1 的进入条件改为：M3.2 策略收口流程完成、fixed baseline 已冻结并可复现、
 holdout 只运行一次且完整保留，且用户明确批准 Enhanced。因此
 `m3_1_core_passed`、`m3_strategy_closed` 和 `m4_entry_ready` 是三个独立字段：
 在收口成功完成时分别为 `false`、`true`、`true`。
 
-### M4：持久 run 与有界 adaptive
+### M4.1：有界 adaptive 质量闭环
 
 **进入条件**
 
-M3.2 策略收口完成、唯一 fixed baseline contract 可复现、holdout 只运行一次并
-完整保留，且用户再次批准 Enhanced。M4 进入不表示 M3.1 通过。
+M3.2 策略收口完成，`docs/implementation/m3_2_strategy_acceptance.md` 中
+`m3_strategy_closed=true`、`m4_entry_ready=true`，唯一 fixed baseline contract
+可复现，holdout 只运行一次并完整保留，且用户再次批准 Enhanced。M4.1 进入不表示
+M3.1 通过。
 
 **主要文件**
 
 - `agent/graph.py`
 - `agent/states.py`
 - `agent/edges.py`
-- `agent/nodes/` 下新增或重构 plan、retrieve、score、validate、finalize 节点
+- `agent/nodes.py` 或按现有结构重构 plan、retrieve、assess、validate、finalize 节点
 - `agent/prompts.py`
 - `agent/schemas.py`
 - `agent/tools.py`
+- `core/settings.py`
+- `evals/datasets/` 下新增冻结 route 和 answer 数据集
+- `evals/configs/v2_m4_1_route.yaml`
+- `evals/configs/v2_m4_1_answer.yaml`
+- graph、budget、claim validation、route eval 测试
+
+M4.1 先冻结 48 条 route test 和 24 条 answer test，再实现策略。每次事实检索都
+调用 M3.2 contract 指定的 `v1_flat_rerank`，不得修改检索参数。现有 fixed graph
+保持可用，新 AdaptiveGraphState 只通过 `ANSWER_STRATEGY=adaptive` 显式启用。
+
+**验收命令**
+
+```bash
+uv run --extra dev python -m pytest tests/test_agent_graph.py tests/test_agent_budget.py tests/test_claim_validation.py tests/test_route_eval.py -q
+uv run python -m evals.runner --config evals/configs/v2_m4_1_route.yaml
+uv run python -m evals.runner --config evals/configs/v2_m4_1_answer.yaml
+uv run --extra dev ruff check agent core evals tests
+uv run --extra dev python -m pytest -q
+npm --prefix web run lint
+npm --prefix web run build
+```
+
+**回滚**
+
+`ANSWER_STRATEGY=fixed` 完全绕过 adaptive。M4.1 不新增 migration、worker 或
+checkpoint，失败时删除可选 Adaptive 接线即可回到 M3.2 状态。质量门槛失败时
+`m4_1_quality_passed=false`、`m4_2_entry_ready=false`，不得进入 M4.2。
+
+### M4.2：持久 run 与恢复
+
+**进入条件**
+
+M4.1 验收存在，`m4_1_quality_passed=true`、`m4_2_entry_ready=true`，且用户
+单独批准 M4.2。
+
+**主要文件**
+
+- `agent/graph.py`
+- `agent/states.py`
 - 新增 `api/services/run_worker.py`
 - 新增 `api/services/run_repository.py`
 - 新增 `api/routers/runs.py`
 - 新增 `api/models/runs.py`
 - `api/main.py`
 - `api/db/migrations.py`
+- `core/settings.py`
 - `web/src/app/chat/page.tsx`
-- graph、budget、serializer、recovery、SSE 测试
+- run repository、serializer、recovery、SSE、cancel 和并发测试
 
-影响约 18 至 22 个文件。它是 Enhanced 的单独架构变更，不与 Core 同批实施。
+M4.2 影响约 18 至 22 个文件并新增 run worker。它只把 M4.1 已通过的策略接入
+持久运行，不修改路由、补检预算、评分器或冻结数据集。SQLite saver 的适用边界是
+单机、单用户、单 run worker；多实例生产部署迁移到 Postgres checkpointer。
 
 **验收命令**
 
 ```bash
-uv run --extra dev python -m pytest tests/test_agent_graph.py tests/test_agent_budget.py tests/test_claim_validation.py tests/test_run_recovery.py tests/test_run_streaming.py -q
-uv run python -m evals.runner --config evals/configs/v2_adaptive.yaml
-uv run --extra dev ruff check agent api tests
+uv run --extra dev python -m pytest tests/test_run_repository.py tests/test_run_recovery.py tests/test_run_streaming.py tests/test_agent_budget.py -q
+uv run --extra dev ruff check agent api core tests
+uv run --extra dev python -m pytest -q
+npm --prefix web run lint
+npm --prefix web run build
 ```
 
 **必须通过的故障注入**
 
 - 在第一轮检索后终止进程并重启。
-- 在 answer 写入前终止进程并重启。
+- 在 final answer 事务写入前终止进程并重启。
 - 让 lease 过期并启动第二 worker 竞争。
 - SSE 断线后用 `Last-Event-ID` 连接。
 - 同一 session 并发创建两个 run。
+- 在排队、检索和生成节点边界请求取消。
 
-结果必须是：最多一个 worker 持有 lease；run 从 checkpoint 恢复或以保存输入重启；assistant message、evidence 和事件不重复；并发第二 run 返回 409。
+结果必须是：最多一个 worker 持有 lease；run 从 checkpoint 恢复，或在没有
+checkpoint 时使用保存输入幂等重启；assistant message、claims、evidence 和事件
+不重复；并发第二 run 返回 409。
 
 **回滚**
 
-`ANSWER_STRATEGY=fixed` 完全绕过 adaptive 节点。Core fixed chat 保留一个版本周期。checkpoint 数据库可删除而不影响已完成 artifact。
+`ANSWER_STRATEGY=fixed` 完全绕过 adaptive run。Core fixed chat 保留一个版本周期。
+数据库 migration 保持 forward-only，新表可以保留不用。checkpoint 数据库可删除，
+不影响已完成答案和 evidence。
 
-### M5：调试 trace 和评测补齐
+### M5：调试 trace 和评测扩展
 
 **进入条件**
 
-M4 恢复测试通过。
+M4.1 质量门槛和 M4.2 恢复测试通过。
 
 **改造**
 
-- 补齐 24 条 answer test 和 48 条 route/refusal test。
+- 原样重跑 M4.1 的 24 条 answer test 和 48 条 route/refusal test，确认 trace 与持久化没有改变结果。
 - `run_events`、candidate 和 evidence 形成可导出的 trace。
 - chat 技术模式显示计划、排名、补检、停止原因、延迟和 token。
 - trace 默认保存 7 天；用户保存的 artifact 不受影响。
+- 新增样本只能进入独立扩展集，不能修改 M4.1 冻结 test 或发布门槛。
 
 **验收命令**
 
@@ -909,8 +973,8 @@ M4 恢复测试通过。
 uv run --extra dev python -m pytest tests/test_trace_repository.py tests/test_debug_api.py tests/test_route_eval.py -q
 uv run python -m evals.runner --config evals/configs/v2_route.yaml
 uv run python -m evals.runner --config evals/configs/v2_answer.yaml
-pnpm --dir web lint
-pnpm --dir web build
+npm --prefix web run lint
+npm --prefix web run build
 ```
 
 **回滚**
@@ -921,7 +985,7 @@ pnpm --dir web build
 
 **进入条件**
 
-M4 质量、延迟和成本门槛通过，用户批准 Product。
+M4.1 质量、延迟和成本门槛及 M4.2 恢复门槛通过，用户批准 Product。
 
 **改造**
 
@@ -935,8 +999,8 @@ M4 质量、延迟和成本门槛通过，用户批准 Product。
 
 ```bash
 uv run --extra dev python -m pytest tests/test_artifacts_api.py tests/test_compare.py tests/test_backup_restore.py -q
-pnpm --dir web lint
-pnpm --dir web build
+npm --prefix web run lint
+npm --prefix web run build
 docker compose up --build
 ```
 
@@ -1047,7 +1111,7 @@ Enhanced 演示：
 
 ## 15. 实施授权边界
 
-本文件获批后，Codex 只执行 M1，再按 M1 验收结果进入 M2、M3。不得提前安装 Docling，不得新增外部服务，不得开始 M4 至 M6。每个里程碑开始前记录分支和工作区，保护用户已有未提交文件；每个里程碑结束后单独提交验收结果和坏例，等待用户决定是否继续。
+M1 至 M3.2 已完成并形成独立验收记录。后续按 M4.1、M4.2、M5、M6 顺序逐个授权。M4.1 未通过质量门槛时不得进入 M4.2；M4.2 未通过恢复门槛时不得进入 M5。不得提前安装 Docling，不得新增外部服务。每个里程碑开始前记录分支和工作区，保护用户已有未提交文件；每个里程碑结束后单独提交验收结果和坏例，等待用户决定是否继续。
 
 ## 16. 评审问题关闭矩阵
 
@@ -1061,3 +1125,5 @@ Enhanced 演示：
 | 范围接近重写 | Core、Enhanced、Product 分层，首次只批准 M1 至 M3 | 1、3、11、15 |
 | 文件路径、幂等和 Settings 不完整 | 改用真实 `evals/`、`agent/nodes/`、`indexing/builders/` 和分层 API；补幂等表；移除 Settings 页面 | 4.3、8、11 |
 | Contextual Retrieval 命名不准确 | 正式更名为 metadata-prefixed retrieval，并明确与 Anthropic 方法不同 | 6.1、13 |
+| M4 同时验证质量和持久化，失败原因难定位 | 拆为 M4.1 质量闭环和 M4.2 持久运行，M4.1 未通过时停止 | 7、10、11、15 |
+| SQLite saver 被表述为通用生产方案 | 限定为单机、单用户、单 worker 演示，多实例迁移到 Postgres checkpointer | 7.2、9.2、11 |
