@@ -19,6 +19,13 @@ ABLATION_KEYS = (
 
 
 def build_report(runs_dir: Path) -> dict[str, Any]:
+    m3_2_report_path = runs_dir / "report.json"
+    if m3_2_report_path.exists():
+        m3_2_report = json.loads(m3_2_report_path.read_text(encoding="utf-8"))
+        if m3_2_report.get("mode") == "m3_2_strategy":
+            from evals.m3_2_strategy import build_report as build_m3_2_report
+
+            return build_m3_2_report(runs_dir)
     m3_1_dev_path = runs_dir / "dev" / "report.json"
     if m3_1_dev_path.exists():
         dev_report = json.loads(m3_1_dev_path.read_text(encoding="utf-8"))

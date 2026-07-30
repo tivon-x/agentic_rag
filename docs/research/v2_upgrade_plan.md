@@ -821,11 +821,32 @@ M3.1 全部门槛通过后才允许把默认 fixed pipeline 切换为
 `v2_fixed_optimized` 并标记 M4 具备进入条件。M4 仍必须等待用户再次明确
 批准 Enhanced；M3.1 完成后停止，不自动实施 M4。
 
+### M3.2：固定策略收口
+
+M3.1 的原 promotion gate 和失败结论保持不变：`m3_1_core_passed=false`，
+它不因 M3.2 的完成而被改写。M3.2 不是 M3.1 的第二次尝试，也不新增参数
+搜索；它只将 `r1_01_quote_mixed_minmax` 冻结为唯一策略候选
+`S1 / v2_fixed_hybrid`，与 B1 在新 holdout 后、旧 dev 前的固定顺序各运行
+一次。
+
+S1 在两个数据集都满足非劣质量、逐题至少 10 win / 最多 8 loss、每个子集
+最多降 1 条、p95 不高于 B1、Context Passage Recall 不低于 B1、answer smoke
+和 quote/context 不泄漏 metadata prefix 时，默认 fixed pipeline 才切换为
+`v2_fixed_hybrid`。任一冻结条件失败则默认继续为 `v1_flat_rerank`。两种结果
+都必须生成唯一、可复现的 M4 fixed baseline contract；M3.2 不把任何结果称为
+“M3.1 通过”。
+
+M4 的进入条件改为：M3.2 策略收口流程完成、fixed baseline 已冻结并可复现、
+holdout 只运行一次且完整保留，且用户明确批准 Enhanced。因此
+`m3_1_core_passed`、`m3_strategy_closed` 和 `m4_entry_ready` 是三个独立字段：
+在收口成功完成时分别为 `false`、`true`、`true`。
+
 ### M4：持久 run 与有界 adaptive
 
 **进入条件**
 
-M3.1 在开发集与独立 holdout 上全部通过，且用户再次批准 Enhanced。
+M3.2 策略收口完成、唯一 fixed baseline contract 可复现、holdout 只运行一次并
+完整保留，且用户再次批准 Enhanced。M4 进入不表示 M3.1 通过。
 
 **主要文件**
 

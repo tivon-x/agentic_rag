@@ -65,6 +65,10 @@ def run_from_config(config_path: Path) -> dict[str, Any]:
         from evals.m3_1_runner import run_from_config as run_m3_1
 
         return run_m3_1(config_path)
+    if isinstance(raw_config, dict) and raw_config.get("schema_version") == 3:
+        from evals.m3_2_strategy import run_from_config as run_m3_2
+
+        return run_m3_2(config_path)
     config = _load_config(config_path, repo_root=repo_root)
     settings = load_settings(base_dir=repo_root)
     _validate_frozen_runtime(settings, config)

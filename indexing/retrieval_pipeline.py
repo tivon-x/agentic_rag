@@ -208,6 +208,29 @@ _B2 = RetrievalPipelineConfig(
     neighbor_window=0,
 )
 
+_V2_FIXED_HYBRID = RetrievalPipelineConfig(
+    name="v2_fixed_hybrid",
+    use_metadata_prefix=False,
+    tokenizer="mixed_v1",
+    use_sparse=True,
+    use_dense=True,
+    fusion_method="minmax",
+    use_rerank=False,
+    neighbor_window=0,
+    sparse_top_k=40,
+    dense_top_k=40,
+    rrf_k=60,
+    rerank_top_n=30,
+    final_top_k=8,
+    max_context_passages=12,
+    context_token_budget=8000,
+    dense_use_metadata_prefix=False,
+    sparse_use_metadata_prefix=False,
+    dense_rrf_weight=1.0,
+    sparse_rrf_weight=1.0,
+    boost_policy="current",
+)
+
 PIPELINE_REGISTRY = MappingProxyType(
     {
         "b0": RetrievalPipelineConfig(
@@ -257,6 +280,7 @@ PIPELINE_REGISTRY = MappingProxyType(
             name="v2_fixed_no_rerank",
             use_rerank=False,
         ),
+        "s1": _V2_FIXED_HYBRID,
     }
 )
 
@@ -265,6 +289,7 @@ _PIPELINE_ALIASES = MappingProxyType(
         "v1_flat_rerank": "b1",
         "v2_fixed": "b2",
         "v2_expanded": "b3",
+        "v2_fixed_hybrid": "s1",
     }
 )
 
