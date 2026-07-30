@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 
 class RetrievalDecision(BaseModel):
@@ -97,3 +97,69 @@ class OutOfScopeResponse(BaseModel):
     next_action: str = Field(
         description="Recommended user action if they want this question answered."
     )
+
+
+class AdaptiveRouteDecision(BaseModel):
+    decision: Literal["direct", "fact", "refuse"] = "fact"
+    reason: str = ""
+
+
+class AdaptiveRequirement(BaseModel):
+    id: str = ""
+    requirement: str = Field(
+        default="",
+        validation_alias=AliasChoices("requirement", "description"),
+    )
+    query: str = ""
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def normalize_id(cls, value: object) -> str:
+        return str(value) if value is not None else ""
+
+
+class AdaptivePlan(BaseModel):
+    requirements: list[AdaptiveRequirement] = Field(
+        default_factory=list,
+        max_length=3,
+        validation_alias=AliasChoices("requirements", "evidence_requirements"),
+    )
+
+
+class EvidenceCoverage(BaseModel):
+    requirement_id: str = Field(
+        default="",
+        validation_alias=AliasChoices("requirement_id", "id"),
+    )
+    covered: bool = False
+    evidence_ids: list[str] = Field(default_factory=list)
+    coverage: float = Field(ge=0.0, le=1.0)
+    missing_reason: str = ""
+    recommended_follow_up_query: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "recommended_follow_up_query",
+            "follow_up_query",
+        ),
+    )
+
+    @field_validator("missing_reason", "recommended_follow_up_query", mode="before")
+    @classmethod
+    def normalize_optional_text(cls, value: object) -> str:
+        return "" if value is None else str(value)
+
+
+class EvidenceSufficiency(BaseModel):
+    items: list[EvidenceCoverage] = Field(default_factory=list)
+
+
+class AdaptiveClaim(BaseModel):
+    claim: str
+    evidence_ids: list[str] = Field(default_factory=list)
+    major: bool = True
+
+
+class AdaptiveAnswer(BaseModel):
+    answer: str
+    claims: list[AdaptiveClaim] = Field(default_factory=list)
+    limitations: str = ""

@@ -50,3 +50,23 @@ class ResearchSearchState(AgentState):
     evidenceGroups: Annotated[list[dict], accumulate_or_reset]
     tool_call_count: Annotated[int, operator.add]
     iteration_count: Annotated[int, operator.add]
+
+
+class AdaptiveGraphState(MessagesState):
+    """Compact JSON-only state for the bounded M4.1 adaptive path."""
+
+    runId: str
+    sessionId: str
+    query: str
+    historySummary: str
+    scopeIds: list[str]
+    strategy: str
+    planItems: list[dict]
+    round: int
+    candidateIds: list[str]
+    evidenceIds: list[str]
+    coverage: dict[str, float]
+    budgets: dict[str, int]
+    cancelRequested: bool
+    terminationReason: str
+    finalAnswer: dict

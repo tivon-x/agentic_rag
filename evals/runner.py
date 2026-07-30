@@ -964,8 +964,22 @@ def _has_llm_config(settings: AppSettings) -> bool:
 
 
 def main() -> None:
+    import sys
+
+    import yaml
+
+    from evals.m4_1_runner import run_from_config
     from evals.v2_runner import main as v2_main
 
+    if "--config" in sys.argv:
+        index = sys.argv.index("--config")
+        if index + 1 < len(sys.argv):
+            candidate = Path(sys.argv[index + 1])
+            if candidate.exists():
+                payload = yaml.safe_load(candidate.read_text(encoding="utf-8"))
+                if isinstance(payload, dict) and str(payload.get("kind", "")).startswith("m4_1_"):
+                    run_from_config(candidate)
+                    return
     v2_main()
 
 

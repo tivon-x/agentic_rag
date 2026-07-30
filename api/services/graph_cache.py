@@ -19,6 +19,7 @@ def _compute_cache_fingerprint(settings: AppSettings) -> str:
         f"{settings.embedding_check_context_length}|"
         f"{settings.embedding_max_input_chars}|"
         f"{settings.embedding_api_base}|{get_active_version_id(settings)}"
+        f"|{settings.answer_strategy}"
     )
 
 

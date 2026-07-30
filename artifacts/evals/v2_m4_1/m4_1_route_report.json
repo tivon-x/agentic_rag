@@ -1,0 +1,474 @@
+{
+  "kind": "m4_1_route",
+  "dataset_case_count": 48,
+  "cases": [
+    {
+      "id": "route-direct-01",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0213
+    },
+    {
+      "id": "route-direct-02",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0163
+    },
+    {
+      "id": "route-direct-03",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0055
+    },
+    {
+      "id": "route-direct-04",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0056
+    },
+    {
+      "id": "route-direct-05",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0139
+    },
+    {
+      "id": "route-direct-06",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0052
+    },
+    {
+      "id": "route-direct-07",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0043
+    },
+    {
+      "id": "route-direct-08",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0039
+    },
+    {
+      "id": "route-direct-09",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0047
+    },
+    {
+      "id": "route-direct-10",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.005
+    },
+    {
+      "id": "route-direct-11",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0045
+    },
+    {
+      "id": "route-direct-12",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0052
+    },
+    {
+      "id": "route-fixed-01",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 2,
+      "termination_reason": "completed_first_round",
+      "latency_ms": 93399.3905
+    },
+    {
+      "id": "route-fixed-02",
+      "expected": "fixed",
+      "predicted": "refuse",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 142923.789
+    },
+    {
+      "id": "route-fixed-03",
+      "expected": "fixed",
+      "predicted": "refuse",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 113152.1712
+    },
+    {
+      "id": "route-fixed-04",
+      "expected": "fixed",
+      "predicted": "refuse",
+      "rounds": 2,
+      "tool_calls": 3,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 132754.5996
+    },
+    {
+      "id": "route-fixed-05",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 3,
+      "termination_reason": "completed_first_round",
+      "latency_ms": 85351.4952
+    },
+    {
+      "id": "route-fixed-06",
+      "expected": "fixed",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 146697.9719
+    },
+    {
+      "id": "route-fixed-07",
+      "expected": "fixed",
+      "predicted": "refuse",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 124630.3625
+    },
+    {
+      "id": "route-fixed-08",
+      "expected": "fixed",
+      "predicted": "refuse",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 149573.2555
+    },
+    {
+      "id": "route-fixed-09",
+      "expected": "fixed",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 12422.0499
+    },
+    {
+      "id": "route-fixed-10",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 2,
+      "termination_reason": "completed_first_round",
+      "latency_ms": 77048.1478
+    },
+    {
+      "id": "route-fixed-11",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 3,
+      "termination_reason": "completed_first_round",
+      "latency_ms": 97496.2488
+    },
+    {
+      "id": "route-fixed-12",
+      "expected": "fixed",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 129079.6712
+    },
+    {
+      "id": "route-adaptive-01",
+      "expected": "adaptive",
+      "predicted": "refuse",
+      "rounds": 2,
+      "tool_calls": 3,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 126246.5337
+    },
+    {
+      "id": "route-adaptive-02",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 177285.499
+    },
+    {
+      "id": "route-adaptive-03",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 173060.8411
+    },
+    {
+      "id": "route-adaptive-04",
+      "expected": "adaptive",
+      "predicted": "refuse",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 142732.5814
+    },
+    {
+      "id": "route-adaptive-05",
+      "expected": "adaptive",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 2,
+      "termination_reason": "completed_first_round",
+      "latency_ms": 102488.9093
+    },
+    {
+      "id": "route-adaptive-06",
+      "expected": "adaptive",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 2,
+      "termination_reason": "completed_first_round",
+      "latency_ms": 167073.4538
+    },
+    {
+      "id": "route-adaptive-07",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 144395.7827
+    },
+    {
+      "id": "route-adaptive-08",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 147806.0437
+    },
+    {
+      "id": "route-adaptive-09",
+      "expected": "adaptive",
+      "predicted": "refuse",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 128486.0838
+    },
+    {
+      "id": "route-adaptive-10",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 4,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 110691.6725
+    },
+    {
+      "id": "route-adaptive-11",
+      "expected": "adaptive",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 3,
+      "termination_reason": "completed_first_round",
+      "latency_ms": 90922.7855
+    },
+    {
+      "id": "route-adaptive-12",
+      "expected": "adaptive",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 8048.3429
+    },
+    {
+      "id": "route-refuse-01",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0092
+    },
+    {
+      "id": "route-refuse-02",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.003
+    },
+    {
+      "id": "route-refuse-03",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 5604.3331
+    },
+    {
+      "id": "route-refuse-04",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0162
+    },
+    {
+      "id": "route-refuse-05",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0063
+    },
+    {
+      "id": "route-refuse-06",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 5370.779
+    },
+    {
+      "id": "route-refuse-07",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0295
+    },
+    {
+      "id": "route-refuse-08",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0084
+    },
+    {
+      "id": "route-refuse-09",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 2,
+      "tool_calls": 3,
+      "termination_reason": "evidence_ids_unchanged",
+      "latency_ms": 68865.3136
+    },
+    {
+      "id": "route-refuse-10",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 6191.007
+    },
+    {
+      "id": "route-refuse-11",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0164
+    },
+    {
+      "id": "route-refuse-12",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0072
+    }
+  ],
+  "metrics": {
+    "confusion_matrix": {
+      "direct": {
+        "direct": 12,
+        "fixed": 0,
+        "adaptive": 0,
+        "refuse": 0
+      },
+      "fixed": {
+        "direct": 0,
+        "fixed": 4,
+        "adaptive": 2,
+        "refuse": 6
+      },
+      "adaptive": {
+        "direct": 0,
+        "fixed": 3,
+        "adaptive": 5,
+        "refuse": 4
+      },
+      "refuse": {
+        "direct": 0,
+        "fixed": 0,
+        "adaptive": 0,
+        "refuse": 12
+      }
+    },
+    "class_recall": {
+      "direct": 1.0,
+      "fixed": 0.3333,
+      "adaptive": 0.4167,
+      "refuse": 1.0
+    },
+    "macro_f1": 0.6633,
+    "successful_termination_rate": 1.0
+  }
+}

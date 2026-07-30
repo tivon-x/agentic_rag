@@ -94,6 +94,10 @@ def build_graph(settings: AppSettings):
     corpus_profile_context = build_corpus_profile_context(corpus_profile)
 
     tool_factory = ToolFactory(retriever)
+    if settings.answer_strategy == "adaptive":
+        from agent.adaptive_graph import create_adaptive_graph
+
+        return create_adaptive_graph(settings, retriever)
     tools = tool_factory.create_tools()
     return create_agent_graph(
         tools,

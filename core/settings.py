@@ -126,6 +126,7 @@ class AppSettings:
     flashrank_cache_dir: str = ""
     flashrank_top_n: int = 10
     retrieval_pipeline: str = "v1_flat_rerank"
+    answer_strategy: str = "fixed"
 
     max_tool_calls: int = 8
     max_iterations: int = 10
@@ -177,6 +178,8 @@ class AppSettings:
             raise ValueError("UPLOAD_MAX_BYTES must be positive.")
         if self.paper_parser not in {"pymupdf4llm", "legacy"}:
             raise ValueError("PAPER_PARSER must be pymupdf4llm or legacy.")
+        if self.answer_strategy not in {"fixed", "adaptive"}:
+            raise ValueError("ANSWER_STRATEGY must be fixed or adaptive.")
         from indexing.retrieval_pipeline import get_pipeline_config
 
         get_pipeline_config(self.retrieval_pipeline)
@@ -463,6 +466,7 @@ def load_settings(
         get_env("RETRIEVAL_PIPELINE", default="v1_flat_rerank")
         or "v1_flat_rerank"
     ).strip().lower()
+    answer_strategy = (get_env("ANSWER_STRATEGY", default="fixed") or "fixed").strip().lower()
 
     max_tool_calls = get_env_int("MAX_TOOL_CALLS") or 8
     max_iterations = get_env_int("MAX_ITERATIONS") or 10
@@ -554,6 +558,7 @@ def load_settings(
         flashrank_cache_dir=flashrank_cache_dir,
         flashrank_top_n=flashrank_top_n,
         retrieval_pipeline=retrieval_pipeline,
+        answer_strategy=answer_strategy,
         max_tool_calls=max_tool_calls,
         max_iterations=max_iterations,
         max_context_tokens=max_context_tokens,

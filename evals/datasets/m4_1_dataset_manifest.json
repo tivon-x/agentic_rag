@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "milestone": "M4.1",
+  "created_at": "2026-07-30T00:00:00+08:00",
+  "frozen": true,
+  "freeze_statement": "Question text, labels, gold evidence, thresholds, grader behavior, and weights in these v1 datasets are immutable for Goal 4A. Annotation errors are reported as bad cases and require a new user-authorized dataset version.",
+  "route_dataset": {
+    "path": "evals/datasets/m4_1_route_v1.json",
+    "sha256": "5107ec4bbb2f2d5bd0db0079db979b57c2e4ffc3dc369bc56eeaaf151f8c0a4a",
+    "case_count": 48,
+    "categories": {"direct": 12, "fixed": 12, "adaptive": 12, "refuse": 12}
+  },
+  "answer_dataset": {
+    "path": "evals/datasets/m4_1_answer_v1.json",
+    "sha256": "00219523b7178713b242a966b7b72df1cf88f5794eef6674984b5657a7db0fd2",
+    "case_count": 24,
+    "authoring_source": {"m3_difficulty_taxonomy": 12, "independent": 12}
+  },
+  "baseline_contract": {
+    "path": "artifacts/evals/v2_m3_2/m4_fixed_baseline.json",
+    "selected_pipeline_name": "v1_flat_rerank",
+    "pipeline_config_hash": "ee7c1306250ba487ee2ca54de776fc70cb584c3bb02d4aca38cf7028e4956c17",
+    "index_manifest_sha256": "84f0b676cb8765e9f4bdb3a419ab7894b13825575d43c7037183ef88ba750b31",
+    "active_index_version": null,
+    "parser_artifact_sha256": "98e8adf680c578c21d2fffe5b97f3f85d24b768b827fe81aa8ddfc280af242d9",
+    "embedding": {"provider":"openai","model":"qwen3.7-text-embedding","dimension":1024,"input_mode":"raw","max_input_chars":6000}
+  },
+  "grading": {
+    "route": "exact label comparison; report per-class recall, macro F1, and confusion matrix",
+    "answer": "compare fixed B1 and adaptive on the same question, history, scope, index contract, model, and evidence-based requirement/claim metrics; semantic support is model judged and separately reports false positives/negatives",
+    "thresholds": {"route_class_recall_min":0.75,"route_macro_f1_min":0.80,"coverage_improvements_min":5,"coverage_regressions_max":2,"latency_multiplier_max":2.5,"max_average_rounds":1.5,"max_tool_calls":4}
+  }
+}

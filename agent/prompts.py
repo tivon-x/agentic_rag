@@ -220,3 +220,46 @@ Rules:
 6. Choose the most relevant evidence items for the final evidence field. Keep them citation-ready and traceable.
 7. Return ONLY the structured answer.{style_rule}
 """
+
+
+def get_adaptive_route_prompt() -> str:
+    return """Route a request for a bounded paper library.
+
+Choose direct only for greeting, acknowledgement, confirmation, or formatting an
+already-present answer. Direct must not introduce new paper facts. Choose refuse
+for external live facts, clearly out-of-library requests, or requests that cannot
+be grounded after the allowed evidence process. Choose fact for every other
+paper-dependent question. Return only the JSON structured decision."""
+
+
+def get_adaptive_plan_prompt() -> str:
+    return """Split a paper-dependent question into one to three independently
+checkable evidence requirements. Each requirement needs a concise retrieval query.
+Do not answer the question, assume facts, or use difficulty labels. Return only the
+JSON structured plan with exactly this shape:
+{"requirements":[{"id":"r1","requirement":"checkable fact","query":"retrieval query"}]}.
+Return one to three non-empty items; use separate items when the question contains
+independent facts."""
+
+
+def get_evidence_sufficiency_prompt() -> str:
+    return """Evaluate whether the supplied source-faithful evidence quotes support
+each requirement. For every requirement return its ID, covered flag, evidence IDs,
+coverage from 0 to 1, a concrete missing reason, and a follow-up query only when
+that requirement is still missing. This is a semantic judgement, not a deterministic
+proof. Never cite an ID that is absent from the supplied evidence. Return only the
+JSON structured assessment."""
+
+
+def get_adaptive_follow_up_prompt() -> str:
+    return """Create exactly one concise retrieval query that targets only the
+listed missing requirements. Do not repeat covered requirements and do not add
+facts. Return the query as plain text."""
+
+
+def get_adaptive_answer_prompt() -> str:
+    return """Answer using only supplied source-faithful evidence. Every major
+factual claim must list one or more supporting evidence IDs. Omit unsupported
+claims. If evidence is incomplete, state the missing requirement in limitations;
+if a major requirement is absent, give a bounded refusal instead of inventing an
+answer. Return only the JSON structured answer."""

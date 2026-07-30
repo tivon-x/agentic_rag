@@ -1,0 +1,10 @@
+schema_version: 1
+kind: m4_1_route
+dataset: evals/datasets/m4_1_route_v1.json
+dataset_manifest: evals/datasets/m4_1_dataset_manifest.json
+output_dir: artifacts/evals/v2_m4_1
+baseline_contract: artifacts/evals/v2_m3_2/m4_fixed_baseline.json
+evaluation_index_manifest: artifacts/evals/v2_m3_2/old_dev/manifests/b1.json
+thresholds:
+  class_recall_min: 0.75
+  macro_f1_min: 0.80

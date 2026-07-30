@@ -3,6 +3,7 @@ from typing import Literal
 from langgraph.types import Send
 
 from .states import GraphState
+from .states import AdaptiveGraphState
 
 
 
@@ -31,3 +32,14 @@ def route_after_rewrite(state: GraphState) -> list[Send]:
         )
         for idx, query in enumerate(state.get("rewrittenQuestions", []))
     ]
+
+
+def route_after_adaptive_decision(
+    state: AdaptiveGraphState,
+) -> Literal["adaptive_direct", "adaptive_refuse", "adaptive_fact"]:
+    strategy = state.get("strategy", "fact")
+    if strategy == "direct":
+        return "adaptive_direct"
+    if strategy == "refuse":
+        return "adaptive_refuse"
+    return "adaptive_fact"

@@ -12,6 +12,7 @@ from core.settings import (
 
 SETTINGS_ENV_VARS = {
     "APP_DB_PATH",
+    "ANSWER_STRATEGY",
     "BM25_PATH",
     "CHUNK_OVERLAP",
     "CHUNK_SIZE",
@@ -118,6 +119,15 @@ def test_load_settings_defaults(tmp_path, monkeypatch):
     assert settings.keep_messages == 20
     assert settings.offline_mode is False
     assert settings.index_write_mode == "versioned"
+    assert settings.answer_strategy == "fixed"
+
+
+def test_answer_strategy_rejects_unknown_value(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("ANSWER_STRATEGY=unexpected\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="ANSWER_STRATEGY"):
+        load_settings(base_dir=tmp_path, env_file=env_file)
 
 
 def test_load_settings_from_env(tmp_env_file, monkeypatch):
