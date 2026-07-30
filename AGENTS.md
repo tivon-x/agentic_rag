@@ -1,212 +1,304 @@
 # PROJECT KNOWLEDGE BASE
 
-**Updated:** 2026-07-26
-**Branch:** codex/v2-core
+**Updated:** 2026-07-30
+**Branch:** `codex/v2-core`
 
 ## OVERVIEW
 
-Python 3.12+ Agentic RAG system: LangGraph-based agent graph, hybrid BM25+FAISS retrieval, and Gradio UI.
+Python 3.12+ Agentic RAG system for a local-first paper library. The backend uses
+FastAPI, SQLite, LangGraph, FAISS, BM25 and an OpenAI-compatible model provider.
+The product frontend is Next.js; the older Gradio UI remains available through
+`main.py ui`.
+
+The repository has completed M1 through M3.2. The current fixed retrieval baseline
+is `v1_flat_rerank`. M4 adaptive behavior, persistent runs and checkpoints are
+planned but not implemented.
+
+## CURRENT MILESTONE STATE
+
+- M1: runtime, migrations, persistent indexing jobs and immutable index versions
+  completed.
+- M2: paper catalog, parser pipeline, page-addressable evidence, Library, Paper and
+  Search completed.
+- M3/M3.1: fixed retrieval evaluation completed; the original promotion gate did
+  not pass.
+- M3.2: strategy closure completed. S1 failed the holdout Context Passage Recall
+  gate, so B1 remains the fixed baseline.
+- Next authorized milestone: M4.1, adaptive quality loop. M4.2 persistent runs can
+  start only if M4.1 passes its frozen quality gate.
+
+Frozen M4 baseline:
+
+- pipeline: `v1_flat_rerank`
+- config hash:
+  `ee7c1306250ba487ee2ca54de776fc70cb584c3bb02d4aca38cf7028e4956c17`
+- contract:
+  `artifacts/evals/v2_m3_2/m4_fixed_baseline.json`
+- acceptance:
+  `docs/implementation/m3_2_strategy_acceptance.md`
+
+The M3.2 acceptance run reported 253 pytest tests, Ruff, parser gate and frontend
+lint/build passing. Treat that as a milestone snapshot, not a substitute for
+running current verification.
 
 ## STRUCTURE
 
-```
+```text
 agentic_rag/
-├── agent/          # graph wiring, nodes, edges, prompts, tools, schemas, states
-├── api/            # FastAPI routes, SQLite migrations, persistent index worker
-├── core/           # AppSettings, factory, persistence, corpus_profile, rag_answer
-├── indexing/       # data_processor, chunker, embeddings, vectorstore, bm25_index, retriever, indexer
-├── llms/           # ChatOpenAI adapter + task-type LLM router
-├── ui/             # Gradio UI (gradio.py)
-├── web/            # Next.js frontend
+├── agent/          # LangGraph wiring, node package, edges, prompts, tools, schemas
+├── api/            # FastAPI routes, SQLite repositories, migrations, index worker
+├── core/           # settings, factory, persistence, corpus profile, RAG answer
+├── indexing/       # parser, passages, embeddings, immutable indexes, retrieval
+├── evals/          # parser and retrieval datasets, runners, gates and reports
+├── llms/           # ChatOpenAI adapter and task-type model router
+├── ui/             # legacy Gradio UI
+├── web/            # Next.js 16 frontend
 ├── tests/          # pytest suite
-├── main.py         # CLI entrypoint (index / ask / ui sub-commands)
-└── pyproject.toml  # deps + tool config
+├── artifacts/      # committed evaluation contracts and reports where applicable
+├── main.py         # CLI entrypoint
+└── pyproject.toml  # Python dependencies and test config
 ```
+
+Subdirectory instructions:
+
+- `indexing/AGENTS.md` applies inside `indexing/`.
+- `web/AGENTS.md` applies inside `web/`.
+- Before changing Next.js code, read the relevant installed documentation under
+  `web/node_modules/next/dist/docs/`.
 
 ## WHERE TO LOOK
 
 | Task | File | Notes |
-|------|------|-------|
-| Graph wiring | agent/graph.py | node/edge assembly, compile with InMemorySaver |
-| Node logic | agent/nodes.py | summarize_history → decide_retrieval → rewrite/direct/oos/aggregate |
-| Routing edges | agent/edges.py | conditional edge functions |
-| LangChain agent | agent/research_search_agent.py | create_agent + FallbackMiddleware |
-| Prompts (ALL) | agent/prompts.py | every system prompt lives here; never inline elsewhere |
-| Tool definitions | agent/tools.py | ToolFactory.create_tools() → search_relevant_chunks |
-| Pydantic schemas | agent/schemas.py | RetrievalDecision, QueryAnalysis |
-| Graph states | agent/states.py | GraphState, ResearchSearchState |
-| LLM router | llms/llm.py | get_llm_by_type(task_type) — cached per model+task |
-| Settings | core/settings.py | AppSettings dataclass + load_settings() |
-| Factory | core/factory.py | wire up settings → LLM router + indexer |
-| Database migrations | api/db/migrations.py | forward-only versions + pre-migration backup |
-| Persistent index jobs | api/db/database.py | job state, idempotency, leases, recovery |
-| Index worker | api/services/index_worker.py | single leased worker + heartbeat/retry |
-| Upload API | api/routers/indexing.py | safe staging, validation, idempotency |
-| Index versions | indexing/index_versions.py | immutable builds, manifest, activation/rollback |
-| Corpus profile | core/corpus_profile.py | read/write corpus_profile.json |
-| Indexing pipeline | indexing/indexer.py | end-to-end ingest flow |
-| Chunkers | indexing/chunker.py | Recursive / Token / SemanticNLTK |
-| Embeddings | indexing/embeddings.py | OpenAI-compatible; FakeEmbeddings for tests |
-| Vector store | indexing/vectorstore.py | FAISS-backed, local persist |
-| BM25 index | indexing/bm25_index.py | rank-bm25, serialised to bm25.pkl |
-| Fusion retriever | indexing/retriever.py | BM25Retriever + FusionRetriever (hybrid) |
-| Paper parser protocol | indexing/parsers/paper_parser.py | Project-owned parser schema + stable IDs |
-| PDF parser pipeline | indexing/paper_ingestion.py | Timeout, quality gate, PyMuPDF4LLM + legacy fallback |
-| Structure normalizer | indexing/parsers/structure_normalizer.py | Deterministic sections, blocks, tables, formulas |
-| Passage materialization | indexing/passages.py | quote/retrieval split + embedding hard limit |
-| Paper catalog repository | api/db/papers.py | papers, versions, sections, passages, metadata correction |
-| Paper/Search APIs | api/routers/papers.py, api/routers/search.py | Range PDF delivery + page-addressable evidence |
-
----
+|---|---|---|
+| Graph wiring | `agent/graph.py` | node and edge assembly; currently uses `InMemorySaver` |
+| Agent nodes | `agent/nodes/` | one module per node, exported from `agent/nodes/__init__.py` |
+| Routing edges | `agent/edges.py` | conditional routing belongs here |
+| LangChain research agent | `agent/research_search_agent.py` | `create_agent` and fallback middleware |
+| Prompts | `agent/prompts.py` | all system prompts live here |
+| Tool definitions | `agent/tools.py` | `ToolFactory.create_tools()` and retrieval tool |
+| Structured outputs | `agent/schemas.py` | Pydantic routing and query schemas |
+| Graph state | `agent/states.py` | current fixed graph state; M4 state is not implemented |
+| LLM router | `llms/llm.py` | cached `get_llm_by_type(task_type)` |
+| Settings | `core/settings.py` | frozen `AppSettings` and environment loading |
+| Dependency wiring | `core/factory.py` | settings to model, indexer and retriever |
+| Database migrations | `api/db/migrations.py` | forward-only migrations with backup |
+| Database and jobs | `api/db/database.py` | app state, jobs, idempotency and leases |
+| Paper repository | `api/db/papers.py` | papers, versions, sections, passages and metadata |
+| Index worker | `api/services/index_worker.py` | single leased worker with recovery |
+| Upload API | `api/routers/indexing.py` | safe staging, validation and idempotency |
+| Paper API | `api/routers/papers.py` | catalog, metadata correction and PDF delivery |
+| Search API | `api/routers/search.py` | page-addressable evidence search |
+| Chat API | `api/routers/chat.py` | current fixed chat and final-answer streaming |
+| Index versions | `indexing/index_versions.py` | immutable build, activation and rollback |
+| Ingestion pipeline | `indexing/indexer.py` | end-to-end indexing orchestration |
+| Parser protocol | `indexing/parsers/paper_parser.py` | project-owned parser schema and stable IDs |
+| PDF ingestion | `indexing/paper_ingestion.py` | PyMuPDF4LLM, quality gate and legacy fallback |
+| Structure normalizer | `indexing/parsers/structure_normalizer.py` | deterministic sections, blocks, tables and formulas |
+| Passage materialization | `indexing/passages.py` | quote/retrieval split and embedding limit |
+| Fixed pipeline registry | `indexing/retrieval_pipeline.py` | B0/B1/B2/B3/S1 contracts and aliases |
+| Sparse retrieval | `indexing/bm25_index.py` | BM25 build and persistence |
+| Fusion retrieval | `indexing/retriever.py` | dense, sparse, fusion and rerank execution |
+| Vector store | `indexing/vectorstore.py` | FAISS-backed store |
+| M3 evaluation | `evals/v2_runner.py` | fixed retrieval evaluation |
+| M3.1 experiments | `evals/m3_1_runner.py`, `evals/m3_1_experiments.py` | frozen candidate search |
+| M3.2 closure | `evals/m3_2_strategy.py` | strategy gate and baseline selection |
+| M4.1 handoff | `docs/implementation/m4_1_adaptive_handoff.md` | next execution contract |
+| M4.2 handoff | `docs/implementation/m4_2_durable_run_handoff.md` | persistence work after M4.1 passes |
 
 ## COMMANDS
 
 ```bash
-# Install (use uv)
-uv sync            # production deps
-uv sync --extra dev  # + dev deps (pytest, ruff)
+# Install
+uv sync
+uv sync --extra dev
 
-# Run
-python main.py ui                         # launch Gradio
-python main.py api                        # launch FastAPI
-python main.py index <path>               # build and activate an index
-python main.py activate-index <version>   # roll back to a ready version
-python main.py ask "your question"        # CLI query
+# Backend and legacy UI
+python main.py api
+python main.py ui
+python main.py index <path>
+python main.py activate-index <version>
+python main.py ask "your question"
 
-# Lint
-uv run ruff check .
-uv run ruff check . --fix
+# Next.js frontend
+npm --prefix web run dev
+npm --prefix web run lint
+npm --prefix web run build
 
-# Tests — full suite
+# Backend verification
 uv run --extra dev python -m pytest -q
+uv run --extra dev ruff check .
 
-# Tests — single file
+# Focused tests
 uv run pytest tests/test_retriever.py -v
-
-# Tests — single test by name
 uv run pytest tests/test_retriever.py::test_bm25_retriever_basic_query -v
-
-# Tests — keyword match
 uv run pytest -k "bm25" -v
+
+# Current parser and retrieval evaluation entrypoints
+uv run python -m evals.parser_eval --dataset evals/datasets/parser_v2.json
+uv run python -m evals.runner --config <config-path>
 ```
 
-No type-checker is configured in pyproject.toml; pyright/mypy can be run ad-hoc.
-
----
+No type checker is configured in `pyproject.toml`. Run pyright or mypy only as an
+explicit ad hoc check.
 
 ## CODE STYLE
 
-### Formatting / Lint
-- **Ruff** is the only linter/formatter (`ruff>=0.9.0`). No black, no isort.
-- Ruff handles import ordering — do not reorder imports manually.
-- No explicit `[tool.ruff]` section in pyproject.toml; defaults apply.
+### Python
 
-### Python Version
-- Minimum **3.12**. Use modern syntax freely: `list[str]`, `dict[str, Any]`, `X | Y`, `match`.
-- Use `from __future__ import annotations` at the top of files where forward references or deferred evaluation are needed (see `core/settings.py`, `llms/llm.py`).
+- Minimum Python version is 3.12.
+- Use built-in generics: `list[str]`, `dict[str, Any]`, `tuple[int, ...]`.
+- Prefer `X | None` over `Optional[X]`.
+- Use `from __future__ import annotations` when deferred annotations help.
+- Use absolute imports from the project root. Do not add relative imports.
+- Annotate public function parameters and return values.
+- Ruff is the only configured linter. Do not add Black or isort behavior.
 
-### Imports
-Follow this order (Ruff enforces it):
+Import order:
+
 ```python
-# 1. stdlib
 from __future__ import annotations
+
 import os
 from pathlib import Path
 
-# 2. third-party
 from langchain_core.documents import Document
 from pydantic import BaseModel
 
-# 3. local (absolute, project-root-relative)
 from agent.prompts import get_research_search_prompt
 from core.settings import AppSettings
 ```
-No relative imports (`.module`) — use absolute imports from project root.
-
-### Type Annotations
-- Use built-in generics: `list[str]`, `dict[str, Any]`, `tuple[int, ...]` — NOT `List`, `Dict`, `Tuple` from `typing`.
-- Prefer `X | None` over `Optional[X]`.
-- Use `TypeAlias` for complex aliases: `ChatModel: TypeAlias = ChatOpenAI`.
-- Annotate all public function parameters and return types.
-- `Annotated[T, reducer]` is used in LangGraph states for custom reducers.
 
 ### Naming
+
 | Construct | Convention | Example |
-|-----------|------------|---------|
-| Functions / variables | `snake_case` | `get_llm_by_type`, `corpus_profile` |
-| Classes | `PascalCase` | `FusionRetriever`, `AppSettings` |
-| Constants / module-level config | `UPPER_SNAKE_CASE` | `MAX_TOOL_CALLS`, `_LLM_CACHE` |
-| Private helpers | leading underscore | `_build_chat_model`, `_get_env` |
-| Graph state keys | `camelCase` | `routingDecision`, `corpusProfile` |
+|---|---|---|
+| Functions and variables | `snake_case` | `get_llm_by_type` |
+| Classes | `PascalCase` | `RetrievalPipelineConfig` |
+| Constants | `UPPER_SNAKE_CASE` | `MAX_TOOL_CALLS` |
+| Private helpers | leading underscore | `_build_chat_model` |
+| LangGraph state keys | `camelCase` | `routingDecision` |
 
-LangGraph `GraphState` fields use **camelCase** (matching LangGraph conventions). All other identifiers use `snake_case`.
+### Errors and logging
 
-### Docstrings
-- Module-level docstrings: plain prose description (see `indexing/chunker.py`).
-- Class docstrings: one-line summary (see `BM25Retriever`, `FusionRetriever`).
-- Function docstrings: Google-style Args/Returns when non-obvious (see `indexing/retriever.py`).
-- Simple internal helpers: no docstring required.
-
-### Error Handling
-- Catch only specific exceptions; bare `except Exception` only in node/middleware fallback paths where the system must not crash (e.g., `decide_retrieval`, `rewrite_query`).
-- On fallback, assign a safe default and log or return a human-readable reason.
-- Do **not** use empty `except` blocks.
-- `ValueError` for invalid config/input (e.g., missing API key); no custom exception hierarchy exists yet.
-
----
+- Catch specific exceptions unless a graph node or middleware must provide a safe
+  fallback.
+- A fallback must return or log a human-readable reason.
+- Do not add empty `except` blocks.
+- Use `ValueError` for invalid settings and input contracts unless an existing API
+  error type already applies.
 
 ## ARCHITECTURAL CONVENTIONS
 
-### Agent Graph
-- All nodes are plain functions `(state: GraphState) -> dict`. No class-based nodes.
-- Conditional edges are separate functions in `agent/edges.py` — keep routing logic out of nodes.
-- Every prompt string must live in `agent/prompts.py` and be retrieved via a `get_*_prompt()` function. Never inline system prompts in nodes or agent code.
-- Structured outputs (`with_structured_output`) use Pydantic models from `agent/schemas.py`.
+### Agent graph
 
-### LLM Router
-- Access LLMs exclusively via `get_llm_by_type(task_type)`. Never instantiate `ChatOpenAI` directly in nodes.
-- New task types: add the env var name to `_TASK_MODEL_ENV_NAMES` in `core/settings.py`.
+- Nodes are plain functions and live under `agent/nodes/`.
+- Conditional routing stays in `agent/edges.py`.
+- Prompts stay in `agent/prompts.py`; do not inline system prompts elsewhere.
+- Structured model outputs use Pydantic schemas from `agent/schemas.py`.
+- Access models only through `get_llm_by_type(task_type)`.
+- M4.1 must add a separate bounded adaptive path without breaking the current fixed
+  graph. Do not add M4.2 persistence while implementing M4.1.
 
 ### Settings
-- All configuration flows through `AppSettings` (frozen dataclass). No naked `os.getenv()` calls outside `core/settings.py`.
-- `load_settings()` is called once at startup (FastAPI lifespan or `main.py`); the result is passed down.
 
-### Index Reliability
-- API indexing runs only in `INDEX_WRITE_MODE=versioned`; legacy mode is API read-only, does not reconcile versioned pointers or consume queued jobs, and exists solely for explicit rollback.
-- Versioned mode must never silently read or seed a legacy index without an embedding manifest.
-- SQLite `app_state` is the authoritative active pointer; `active.json` is an atomic, startup-reconciled mirror.
-- Versioned CLI index/activation commands initialize and migrate SQLite before activation; API startup imports a validated file-only pointer only when SQLite has no active state.
-- Index jobs are persisted before execution and claimed only through the SQLite global/job leases.
-- Schema migrations are forward-only and create a SQLite recovery backup before changing an existing database.
-- User upload paths must remain under `UPLOAD_ROOT` after resolution; never concatenate an unchecked filename into a destination path.
+- All runtime configuration flows through the frozen `AppSettings`.
+- Do not call `os.getenv()` outside `core/settings.py`.
+- `load_settings()` runs at startup and the result is passed down.
+- The current defaults include:
+  - `RETRIEVAL_PIPELINE=v1_flat_rerank`
+  - `INDEX_WRITE_MODE=versioned`
+  - `PAPER_PARSER=pymupdf4llm`
+  - `EMBEDDING_INPUT_MODE=raw`
+  - `EMBEDDING_MAX_INPUT_CHARS=6000`
 
-### Paper Catalog
-- `papers.id` is the SHA-256 of the uploaded file bytes; different bytes are distinct papers and are not auto-merged.
-- `paper_versions`, `sections`, and `passages` use deterministic IDs derived from the paper, parser/normalizer versions, hierarchy, page, and quote.
-- Keep `quote_text` source-faithful. Metadata corrections may rebuild `retrieval_text` prefixes but must not change quotes.
-- Enforce `EMBEDDING_MAX_INPUT_CHARS` on the complete metadata prefix + passage before calling the embedding provider.
-- PDF parsing defaults to PyMuPDF4LLM and the deterministic normalizer. `PAPER_PARSER=legacy` remains the rollback path.
-- Parser failure, fallback, and `needs_ocr` are product states; do not hide them or promise OCR.
-- `ParsedPage.source_text` and `source_fingerprint` are deterministic page-evidence fields; they do not replace PyMuPDF4LLM Markdown used for sections, passages, and quotes.
-- A failed reparse must not downgrade a paper with a successful `latest_version_id`; retain the last usable catalog and record the latest attempt error separately.
-- Catalog materialization must read current metadata while holding the SQLite write transaction. Metadata updates, passage-prefix refresh, and their reindex job are one atomic transaction.
+### Fixed retrieval
+
+- `indexing/retrieval_pipeline.py` is the source of truth for fixed pipeline
+  definitions and index contracts.
+- B1, `v1_flat_rerank`, is the current default and frozen M4 baseline.
+- Do not switch the default to B2, B3 or S1 without a new frozen evaluation and
+  explicit promotion decision.
+- M4 retrieval calls must validate the baseline contract instead of reconstructing
+  B1 from remembered defaults.
+- `retrieval_text` may contain retrieval metadata. User-visible context and
+  citations must use source-faithful `quote_text`.
+- Query-time embedding settings must match the active index manifest. Fail on
+  incompatibility; do not silently rebuild or downgrade.
+
+### Evaluation integrity
+
+- Frozen test questions, labels, gold evidence, thresholds and graders cannot be
+  changed after seeing formal results.
+- M3.2 holdout has already been opened once. Do not rerun it or reuse it as M4.1
+  final test data.
+- Record dataset, config, parser artifact, index manifest and code hashes for formal
+  runs.
+- Preserve per-question wins, ties, losses, subset regressions, latency and bad
+  cases. Do not replace them with one aggregate score.
+- External model or embedding calls require authorization in the current session;
+  do not inherit approval from an earlier session.
+
+### Index reliability
+
+- API indexing runs only in `INDEX_WRITE_MODE=versioned`.
+- Legacy mode is read-only and exists for explicit rollback.
+- Versioned mode must not silently read or seed a legacy index without an embedding
+  manifest.
+- SQLite `app_state` is authoritative for the active index. `active.json` is an
+  atomic, startup-reconciled mirror.
+- Index jobs are persisted before execution and claimed through SQLite leases.
+- Migrations are forward-only and create a recovery backup before modifying an
+  existing database.
+- Upload paths must remain below `UPLOAD_ROOT` after resolution.
+
+### Paper catalog
+
+- `papers.id` is the SHA-256 of uploaded file bytes. Different bytes remain
+  different papers.
+- Paper versions, sections and passages use deterministic IDs.
+- Metadata correction may rebuild `retrieval_text`; it must not change
+  `quote_text`.
+- Enforce `EMBEDDING_MAX_INPUT_CHARS` on the complete embedding input.
+- PyMuPDF4LLM plus the deterministic normalizer is the default parser.
+- `PAPER_PARSER=legacy` is the rollback path.
+- Parser failure, fallback and `needs_ocr` are visible product states. Do not promise
+  OCR.
+- A failed reparse must retain the last successful catalog version.
+- Metadata updates, passage-prefix refresh and the reindex job are one transaction.
 
 ### Testing
-- Test files live in `tests/`, named `test_<module>.py`.
-- Shared fixtures in `tests/conftest.py` (sample_documents, sample_text, tmp_env_file).
-- Use `FakeEmbeddings` from `indexing/embeddings.py` for tests that need a vector store — no real API calls.
-- Use `tmp_path` (pytest built-in) for file system operations.
-- Use `monkeypatch` to isolate environment variables; always `delenv` before setting to avoid cross-test pollution.
-- Test names: `test_<what>_<condition>` (e.g., `test_bm25_retriever_respects_k_parameter`).
 
----
+- Tests live in `tests/` and use `test_<module>.py`.
+- Reuse fixtures from `tests/conftest.py`.
+- Use `FakeEmbeddings` for unit tests. Do not make real API calls.
+- Use `tmp_path` for filesystem tests and `monkeypatch` for environment isolation.
+- Clear inherited environment variables before setting values in settings tests.
+- Every bug fix needs a regression test; every new budget or state transition needs
+  boundary tests.
+
+## MILESTONE BOUNDARIES
+
+- `docs/research/v2_upgrade_plan.md` is the implementation source of truth.
+- `docs/research/phase2_goal_prompts.md` defines executable Goal prompts.
+- M4.1 implements and evaluates only the adaptive quality loop.
+- M4.2 starts only when `m4_1_quality_passed=true` and
+  `m4_2_entry_ready=true`.
+- M4.2 owns run tables, worker, checkpoint, SSE recovery and basic run UI.
+- M5 owns full trace and technical debugging UI.
+- Complete one Goal, create its acceptance report and stop. Do not continue to the
+  next Goal without user authorization.
 
 ## ANTI-PATTERNS
 
-- Do **not** commit `.venv/`, `__pycache__/`, `.ruff_cache/`, `data/index/`, or `logs/`.
-- Do **not** commit `.env` with real secrets; use `.env.example`.
-- Do **not** inline prompts outside `agent/prompts.py`.
-- Do **not** call `os.getenv()` outside `core/settings.py`.
-- Do **not** instantiate `ChatOpenAI` directly — always use `get_llm_by_type()`.
-- Do **not** bypass `VectorStore` to access FAISS internals directly.
-- Do **not** use `List`, `Dict`, `Optional` from `typing` — use built-in generics instead.
+- Do not commit `.venv/`, `__pycache__/`, `.pytest_cache/`, `.ruff_cache/`,
+  local indexes, model caches or logs.
+- Do not commit `.env`, API keys, prompts containing secrets or full environment
+  dumps.
+- Do not inline prompts outside `agent/prompts.py`.
+- Do not instantiate `ChatOpenAI` directly.
+- Do not bypass `VectorStore` to access FAISS internals.
+- Do not add a second retrieval pipeline implementation outside the registry.
+- Do not tune against a formal holdout after opening it.
+- Do not describe planned M4 functionality as implemented.
+- Do not introduce Redis, Celery, PostgreSQL, a vector database, GraphRAG, RAPTOR or
+  multi-agent orchestration without a new approved plan.
