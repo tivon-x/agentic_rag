@@ -245,6 +245,66 @@
 - 完成后停止，不得自动执行 M4.2。
 ```
 
+## Goal 4A.1：M4.1.2 Adaptive 场景对齐复验
+
+```text
+目标：在不调整冻结 B1 检索链路的前提下，建立新的、面向“首轮部分覆盖且一次定向补检可补齐缺口”的 M4.1.2 冻结评测，验证 bounded Adaptive 是否在其真正适用场景中优于同一 B1 的一轮 fixed。M4.1.1 已失败且不得改写；本 Goal 只复验策略质量，不实施 M4.2。
+
+进入条件：
+- HEAD 含 M4.1.1 收口提交 `cec8918`，且 `docs/implementation/m4_1_1_retrieval_quality_acceptance.md` 存在。
+- B1 baseline 仍为 `v1_flat_rerank`，pipeline config hash 为 `ee7c1306250ba487ee2ca54de776fc70cb584c3bb02d4aca38cf7028e4956c17`；active index 未改变。
+- 用户明确批准执行 M4.1.2，并在真实模型调用前再次授权。
+- 任一条件不满足即停止；不得重跑 M3.2 holdout、不得覆盖 M4.1.1 结果。
+
+开始前必须读取：
+1. AGENTS.md。
+2. docs/research/v2_upgrade_plan.md 第 6、7、9、10、11、12、15 节。
+3. docs/implementation/m3_2_strategy_acceptance.md。
+4. artifacts/evals/v2_m3_2/m4_fixed_baseline.json。
+5. docs/implementation/m4_1_1_retrieval_quality_protocol.md。
+6. docs/implementation/m4_1_1_retrieval_quality_acceptance.md。
+7. docs/implementation/m4_1_2_adaptive_eval_handoff.md。
+
+执行边界：
+- 所有事实检索均校验并使用冻结 B1 contract；禁止修改 dense、BM25、fusion、reranker、top-k、context packing、embedding 或 active index。
+- 不修改 M4.1.1 数据、标签、gold、grader、报告或结论；新数据集与 M3.2 holdout、M4.1.1 原问题均不得重复或近似改写。
+- 先创建并冻结 M4.1.2 route/answer 数据、评分协议、阈值及 SHA-256，再修改任何 Adaptive prompt、route、planner、assessor、follow-up、answerer 或 grader。
+- M3 困难标签、authoring snapshot、case ID、gold 和 route 标签只能用于离线数据编写与审计，禁止成为运行时路由规则。
+- 保留 fixed graph/chat，默认始终为 `ANSWER_STRATEGY=fixed`；不新增 migration、worker、checkpoint、SSE 或前端模式。
+- prompts 位于 agent/prompts.py，结构化输出位于 agent/schemas.py，路由函数位于 agent/edges.py。
+
+必须完成：
+1. 新建 `m4_1_2_route_v1.json`（48 条，四类各 12）和 `m4_1_2_answer_v1.json`（至少 24 条）；answer 至少有 12 条 adaptive-eligible、8 条 fixed-eligible、4 条明确证据不足题。
+2. 可使用一次只读 B1 authoring snapshot 挑选题：fixed 类确认首轮覆盖全部 requirements；adaptive 类确认首轮缺至少一项且库中存在不同定向 query 可发现的页码可定位证据。记录 snapshot，但不得调用 Adaptive 挑题。
+3. 冻结后运行时必须先拆最多 3 项 requirements，再完整原问题做首轮 B1；只有实际 evidence insufficiency 才允许一次只面向 missing requirements 的补检。
+4. 冻结评分协议并拆分：确定性引用有效性、语义 quote 支持、gold 覆盖审计。结构化 grader 的布尔与理由矛盾记为 `grader_inconsistent`，不得在正式结果后自动修复或改分。
+5. 最终 major claim 必须有实际 evidence ID；确定性校验证据存在、index version、quote、页码与 ID 完整性。语义判断由冻结 grader 完成，并以 20% 盲审清单报告 false positive/negative/inconsistent。
+6. 保留 2 rounds、4 tool calls、12 evidence、12,000 tokens 上限，以及重复 query+scope、evidence IDs 无变化、coverage 无提升、预算耗尽、取消、模型或检索错误停止。第二轮后仅有限回答或 refuse，不得第三轮。
+7. fixed/adaptive 使用相同问题、history、scope、index version、模型和评分口径；保存逐题 evidence、requirements、coverage、stops、rounds、tool calls、token、延迟与评分错误。
+
+质量门槛：
+- route 每类 recall ≥ 0.75，macro F1 ≥ 0.80。
+- adaptive-eligible 子集至少 5 条 requirement coverage 改善，退化不超过 2 条。
+- fixed-eligible 子集报告误触发率，且 citation/support 不得低于 fixed。
+- 总体 citation correctness、citation completeness、major fact support rate 不低于 fixed；unsupported major claim count 不高于 fixed。
+- successful termination=100%，平均轮数≤1.5，每题 tool calls≤4，exact duplicate query+scope=0；延迟仅记录。
+
+验证：
+- 新增 route、预算、claim validation、scoring consistency 和分层评测测试。
+- uv run --extra dev python -m pytest tests/test_agent_graph.py tests/test_agent_budget.py tests/test_claim_validation.py tests/test_route_eval.py -q
+- uv run python -m evals.runner --config evals/configs/v2_m4_1_2_route.yaml
+- uv run python -m evals.runner --config evals/configs/v2_m4_1_2_answer.yaml
+- uv run --extra dev ruff check agent core evals tests
+- uv run --extra dev python -m pytest -q
+- npm --prefix web run lint
+- npm --prefix web run build
+
+交付：
+- 创建 docs/implementation/m4_1_2_adaptive_eval_acceptance.md，记录冻结 hash、authoring snapshot、逐题报告、分层结果、混淆矩阵、预算、评分误判、盲审清单、坏例、默认策略和回滚方式。
+- 只有所有门槛通过才可提出是否更新 M4.1 结论；M4.2 仍需用户单独批准，绝不自动启动。
+- 仅在实现与评测可复现后创建一个独立 commit，不推送；完成后停止。
+```
+
 ## Goal 4B：M4.2 持久 Run 与恢复
 
 ```text
