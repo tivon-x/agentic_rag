@@ -163,3 +163,14 @@ class AdaptiveAnswer(BaseModel):
     answer: str
     claims: list[AdaptiveClaim] = Field(default_factory=list)
     limitations: str = ""
+
+
+class ClaimSupportJudgment(BaseModel):
+    claim_index: int = Field(ge=0)
+    claim_spec_id: str | None = None
+    semantically_supported: bool = False
+    reason: str = ""
+
+
+class ClaimSupportAssessment(BaseModel):
+    items: list[ClaimSupportJudgment] = Field(default_factory=list)

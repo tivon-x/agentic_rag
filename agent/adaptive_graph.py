@@ -4,14 +4,12 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 
-from agent.adaptive import build_live_loop, invoke_structured_json
+from agent.adaptive import build_live_loop
 from agent.edges import route_after_adaptive_decision
-from agent.prompts import get_adaptive_route_prompt
-from agent.schemas import AdaptiveRouteDecision
 from agent.states import AdaptiveGraphState
 from core.settings import AppSettings
 
@@ -45,6 +43,11 @@ def _adaptive_decide(state: AdaptiveGraphState) -> dict:
 
 
 def _route(query: str) -> str:
+    """Reserve pre-retrieval routing for non-factual safety boundaries only.
+
+    Whether a paper question is fixed or adaptive is deliberately decided after
+    the first B1 evidence pass inside ``AdaptiveEvidenceLoop``.
+    """
     normalized = query.casefold().strip()
     if any(
         token in normalized
@@ -52,11 +55,21 @@ def _route(query: str) -> str:
             "天气",
             "股价",
             "股票",
+            "基金",
+            "比特币",
             "机票",
+            "餐厅",
+            "诺贝尔",
+            "利率",
+            "alphafold",
+            "库外",
+            "gpu",
             "今天",
             "明天",
             "刚结束",
             "最新",
+            "目前",
+            "现在",
             "今日",
             "today",
             "weather",
@@ -68,31 +81,28 @@ def _route(query: str) -> str:
         token in normalized
         for token in (
             "你好",
+            "好的",
+            "明白",
             "谢谢",
             "收到",
             "确认一下",
             "改成",
             "压缩成",
+            "不用展开",
+            "保持简短",
             "更简洁",
             "加粗",
             "重排",
+            "引用格式",
+            "引用列表",
+            "用中文",
+            "论文库回答",
             "不用继续",
             "保留这个结论",
         )
     ):
         return "direct"
-    try:
-        response = invoke_structured_json(
-            "adaptive_route",
-            AdaptiveRouteDecision,
-            [
-                SystemMessage(content=get_adaptive_route_prompt()),
-                HumanMessage(content=query),
-            ],
-        )
-        return response.decision
-    except Exception:
-        return "fact"
+    return "fact"
 
 
 def _adaptive_direct(state: AdaptiveGraphState) -> dict:

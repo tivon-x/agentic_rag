@@ -1,0 +1,807 @@
+{
+  "kind": "m4_1_1_route",
+  "dataset_case_count": 48,
+  "cases": [
+    {
+      "id": "route-m411-direct-01",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0246
+    },
+    {
+      "id": "route-m411-direct-02",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0152
+    },
+    {
+      "id": "route-m411-direct-03",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0076
+    },
+    {
+      "id": "route-m411-direct-04",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0131
+    },
+    {
+      "id": "route-m411-direct-05",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0061
+    },
+    {
+      "id": "route-m411-direct-06",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0067
+    },
+    {
+      "id": "route-m411-direct-07",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0136
+    },
+    {
+      "id": "route-m411-direct-08",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0088
+    },
+    {
+      "id": "route-m411-direct-09",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0081
+    },
+    {
+      "id": "route-m411-direct-10",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0125
+    },
+    {
+      "id": "route-m411-direct-11",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0057
+    },
+    {
+      "id": "route-m411-direct-12",
+      "expected": "direct",
+      "predicted": "direct",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "direct_no_retrieval",
+      "latency_ms": 0.0083
+    },
+    {
+      "id": "route-m411-fixed-01",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 1,
+      "evidence_ids": [
+        "13f333c23318eb17b7308e5c5a532a97f8fee5181754c5649d9938bb70689e6f",
+        "212c30e9c8db5ff6464513d056dba5bbf26bae3bfedbbe5fdf3f89de773800f3",
+        "9601e71e0c11459bc962e5fe174860b54b8cb0fcbe3271260490a3c97081a44e",
+        "b071767e30e60979a0d5a75ccd94fac110a4156382b655035feac85a4c81dd6d",
+        "aa22f3339e48d8732d84e00966cd96f5e3de9c097cc80357cc688e902bb8e0cf",
+        "d654f91b5b859a43083598ce1b97446229dfefb10bcebfa1db00e14680cfba28",
+        "1e551d4b1e4d626c12c463b55f1f6b37cc38ce3366042c04a84e6e924bfa4615",
+        "d4b487a25d96ad4244aee0d492f22f6c42e86f5be832be6a251f509b40766d6c"
+      ],
+      "termination_reason": "completed_first_round",
+      "latency_ms": 84693.9988
+    },
+    {
+      "id": "route-m411-fixed-02",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 1,
+      "evidence_ids": [
+        "aa22f3339e48d8732d84e00966cd96f5e3de9c097cc80357cc688e902bb8e0cf",
+        "13f333c23318eb17b7308e5c5a532a97f8fee5181754c5649d9938bb70689e6f",
+        "75d82936edade05510ddafb23cbc8fa8b31ec21d16333facb345fee94c0b43d4",
+        "212c30e9c8db5ff6464513d056dba5bbf26bae3bfedbbe5fdf3f89de773800f3",
+        "2c1b66c263977291525aa4d75c839c98a77157946a722fdc3e6fa77eca4a7479",
+        "6cc63c24af9a9843255e9103c29ffd9e42959dacb81b8eb01e93107bd68429bb",
+        "5f44edbfbad2a19db01784b8312f2de45f42fc8533045a71267a9c15927556e6",
+        "7e197756bb64185554fbaa224e5795221d0708cefe4074ae75f2c8ce4cb39fa8"
+      ],
+      "termination_reason": "completed_first_round",
+      "latency_ms": 62175.9156
+    },
+    {
+      "id": "route-m411-fixed-03",
+      "expected": "fixed",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "acd2244f0490c39489a924ab97f154f3ac833c6bd3ab92c9a4da0699dfbcac82",
+        "24be86cdd6c7a3ec2691e575cf084e88ee1f8f9b4e2f09f8cf8456eeebacde84",
+        "a53febc0ea8052194dcadb38d66c599c9d36b85caadaff40ceac1cf31342a86e",
+        "745b40397c6f71065cdd451fa77461e0096446fe59372f24b976439870b97419",
+        "f0a4a1a66e85b405f09e891019b4d9295cc92cbf589cc520b4d914511fe74cd8",
+        "5d3f4869bade89d68fdcf7ac8d13a37e409e6236c24d1dfab512c0f478e9929b",
+        "c33fc0682d937383cbc46651fc9d67b042c4e6e7845c1b9f8bf0848207b51657",
+        "458064a882d7f3aa616a3fd4fd144b4f844b34fa9d3c14381c35124e9629e451",
+        "365618d98509b35adab514522b67a88b13dc44ad28c31f3e65dd0dbf4392e07b",
+        "de444fa8ecc3470c0de31078a52bda01a1ee1110633c54bb90a40355e74124bd",
+        "77975a106fe6be27ddbcc8b27c4f00cb68ffa65dba5ee4367aa1af2ecb18e4dd",
+        "2a09b2d9d2b481f8c31047005729f31d44fcb0d850a6d99cceace8fc0092b04d"
+      ],
+      "termination_reason": "completed_second_round",
+      "latency_ms": 145441.92
+    },
+    {
+      "id": "route-m411-fixed-04",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 1,
+      "evidence_ids": [
+        "46c58f6bd9cbe235b859157411ccfac0ca544be78cd1e9de02f14ae8d5f63690",
+        "34896da673d25c7b4b61c6e65c8c92b2d199d2304154c9535da2eb37fe1dd033",
+        "5b58736e51bbcce17c6a63ba004eefeddf9e10d2a2ecd069dd08e5a0f96a760f",
+        "90c9a2e87e7fbc0db23caa977eb77bfe894c735c3061214b40683d72e4e89991",
+        "0ee265a9f7e761a11b0c40e8e9beee8c50ad74a74a13e68640e0a88918184282",
+        "aa875fe35622cd884e3ada46474f4b632aeaad0dfd989476adcab65e81d3a731",
+        "af78d8c661c48db45215f6d48a3e6acf71e2ef17b7a560a72a2e3afef0f50654",
+        "f788abda008831fb454f073fb38307e59325092cda34d47f99fb453e0e75474f"
+      ],
+      "termination_reason": "completed_first_round",
+      "latency_ms": 65708.881
+    },
+    {
+      "id": "route-m411-fixed-05",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 1,
+      "evidence_ids": [
+        "86058e27b8e56420e877a8f7f2de4dafacb219465b495718f3d8efe31913b00a",
+        "98d91ce9e8914eb0f28a969b8ddc3079945f9c38892abdc8bca00a28673632a5",
+        "9dddd21e2d286e97d0ddc0f886a68f13e5b238932e66adebd97543a8feb7a0a4",
+        "6c7bc333402764672e9a0356652d26a8323f57318ef583f40544ba7c9d7391d3",
+        "3dcd6ad16c684f3d57c65194c9dd6961e97e7a7c2e5d30a70cc91c6e3fc9179d",
+        "446ff9207c25a8d7bba02abdf66fbc74e95166e4ea0083b411c4b5ad00a81cc3",
+        "7189b90c7b8cb14b80ca3f4b62b35f0b01bfebfce473bb8518d43e3179749e2b",
+        "5999d870ce8e57d3a15fd80ebf10584f439575d03071ef3093b015f1550bc873"
+      ],
+      "termination_reason": "completed_first_round",
+      "latency_ms": 34147.3666
+    },
+    {
+      "id": "route-m411-fixed-06",
+      "expected": "fixed",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "11195ccce92d654d46ffae81b329729ea1243e4c283d55092dd946f6f5afadcc",
+        "5f7a55be753f3059d0a431242040051be23d8ffe8a4b2ad45b9ec47f54732fa4",
+        "40037a23f5e48b0eee8769d85753867b8a19ee76e6f0dde789cfb263faf19dc8",
+        "1f6c3a3d0c9f104f9035f183cd6f138cd85aa2fdcd215726e0cc3b380cb335d4",
+        "7203a8f065f3d5ad1eb1f98f0eb111b4495254ac5d63c2fc376805eaccf6b78d",
+        "d2b94ebddb9bdf9c5d7d18426a5423a2464ba63a5df537e3ffe7b5b0ccf3d25a",
+        "5c420dc023385638e87fd775f8c02c3902add03cd538a70d794f61b01eb4a495",
+        "02fcb2bd9b8cc37b9b5c2c0b8015c4bacde0124da4befbeb5775765ce1b53c09",
+        "1f305596d3e2b86496319a01e4f3a7609ccfa19c02ea2dd501e3aa575ee850e6",
+        "6341f18a583382c755728a99269c30e4e69b7d6d8e20871c9032bc3639ae2c1b",
+        "c8ab6e0ccfe677449aabf2c414fad410184eb13d4f60b02dea6952af2136bc7b",
+        "1dba209898f13bde3a442a4979f2b5d8e648f24efe1e536968cd3a5be641b78e"
+      ],
+      "termination_reason": "coverage_not_improved",
+      "latency_ms": 67474.8215
+    },
+    {
+      "id": "route-m411-fixed-07",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 1,
+      "evidence_ids": [
+        "aaebe7fa769db1342ce3c25521f1de20ff7639430317f31703bdce46c559f3cf",
+        "e159ee3b749bd59e60468898a9389eeb8228cbf3d76e5042f89d8797d5dd14e6",
+        "896028c6053e5c5f979ef87f77402bce3283207203155a4db310824761c9e6b6",
+        "55638357d03f08bb18a8d64e119079fec56d60ea56e74c7782f4b910fda32c23",
+        "9cddda6befcf51117504527be4c12de0b97368bb5c95c1fb66a06aee54ff65a5",
+        "da63db9b9ecf9b0b43129b23a9e7a3b88ab0da42de02cbd861cbf717c6147801",
+        "ea22690c36247e0d6ca4426c5dcf7b1a211643e06bd60c7f58a2537501173fef",
+        "fa47deb860ca4d72bee4266c7415e722d756d9d6e7e74452c9ea2f0c01850364"
+      ],
+      "termination_reason": "completed_first_round",
+      "latency_ms": 28251.6826
+    },
+    {
+      "id": "route-m411-fixed-08",
+      "expected": "fixed",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "9c4e3df93746ba0ef922060ffa2862cf53ce06052c118b2640ce9ee793cf0661",
+        "ec6a72127fc18aa0203993707df5ef84b7b4f13155ab23c10caf4c6a0acead9a",
+        "dd64ac5145606c1be66d9803c8a82a8dbb35cfecbb4d669f7f4a97204b802569",
+        "1e2aae410f14b0dbe89456cd73e10ccb9570feb77740c661b3451f2c7c056214",
+        "b2699b7929dab95afcd0377779122fde26bf65fee6ef841760751ba8e90be957",
+        "2d7f513fa855b0c3fce5fcc158294e697870ce2294344ef5163fdf3e98a3e685",
+        "2aab2ed930085433dfb86324d3286f5f4132dc4f902d9e7e5775903f33f29cd5",
+        "ab3a2ad5c65ad161d25d771f93b1f71e870a06744df3caef52a004c45b5d3e52",
+        "1f305596d3e2b86496319a01e4f3a7609ccfa19c02ea2dd501e3aa575ee850e6",
+        "c8ab6e0ccfe677449aabf2c414fad410184eb13d4f60b02dea6952af2136bc7b",
+        "aaf1eb8685e6a654d54ec43affa5dc655dab155c87af6c4fc0472f21e1a2c5ee",
+        "11bc9f767c105d72fa80fedd82a86da780c4d8d59295d70a4e637ad807ae6a3d"
+      ],
+      "termination_reason": "coverage_not_improved",
+      "latency_ms": 87493.1188
+    },
+    {
+      "id": "route-m411-fixed-09",
+      "expected": "fixed",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "6df307ee5700f8d269463225b72cf551a4857fc5cd56102449b6497e671a14f5",
+        "f0f25f4d4d0ff9fd89b6358b28bb700c62100264cb6f904bed24fb7c295eeba0",
+        "ecb5faefe7165ae7cc816fd5157ccde37e124008e01b27e3608ad3e2779d6a35",
+        "f59bf8a4237e6c0740bb9e6c8ff9e01f67bb0abbbb872345e65e67e47e0f5f3a",
+        "ae7c1234eb1f26c662152beda1f02b697288defa24d35b6a8aa5da170bd4de7b",
+        "477663b6803403f0952a26c2d29a70b82cc515c345888e62eb57b7f39dd5ad75",
+        "292e565f18c1cbef22b6d23f86ed334636870bc2cd198ebc63d37bef6508349e",
+        "c0bf47ac84bd0a27b78851740db64775977a37fd3edbbf65be683249b10e765f",
+        "7757dd3cd803762b4dd8d90132ec26c8d6c2bbf98483a635e90365675b776173",
+        "1f305596d3e2b86496319a01e4f3a7609ccfa19c02ea2dd501e3aa575ee850e6",
+        "56c3a5e524341019a12b86526967cebb2a7473666d771c161aa35d5b998f5d02",
+        "aaf1eb8685e6a654d54ec43affa5dc655dab155c87af6c4fc0472f21e1a2c5ee"
+      ],
+      "termination_reason": "coverage_not_improved",
+      "latency_ms": 97318.4007
+    },
+    {
+      "id": "route-m411-fixed-10",
+      "expected": "fixed",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "b963d7eb5293e766ab50cad6fcc42710739ebef5366e1fb9255e537a9cae41ec",
+        "fe3c01a797b4de7da2c55446bc62d9e8c452e9a540ed06ab3e6ea4287a1e6a06",
+        "a3d73f9095b818753b381785b8ac164b9e921759731efae22b467e7e10228f71",
+        "d53ec51634d7092f15dde7141bf52cf7c1307eda033f344cb811204a7eddce5d",
+        "583ce0dfe3838956dc87e830818b4e6a7cce3b632070e86aa2c41320dcbacc79",
+        "889c9e0613aa314c1f2ceebc83ccf51481118a8b7619cf5729e71ef6e261792f",
+        "22bdd86ee5c62f093e7c2baaa263173c3a9928ed6e4acbb92c633c61fd93b901",
+        "375722a48d40cb3d6f22e2ca1afb86ccc9f43fccc6d510a73c7d530e80837f3c",
+        "1f305596d3e2b86496319a01e4f3a7609ccfa19c02ea2dd501e3aa575ee850e6",
+        "aaf1eb8685e6a654d54ec43affa5dc655dab155c87af6c4fc0472f21e1a2c5ee",
+        "56c3a5e524341019a12b86526967cebb2a7473666d771c161aa35d5b998f5d02",
+        "c8ab6e0ccfe677449aabf2c414fad410184eb13d4f60b02dea6952af2136bc7b"
+      ],
+      "termination_reason": "second_round_incomplete",
+      "latency_ms": 103327.0426
+    },
+    {
+      "id": "route-m411-fixed-11",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 1,
+      "evidence_ids": [
+        "b69643099be998ac308695c3d3506107686329a67f486e7ba1fc6780453fe33d",
+        "0d2ed5b882ce4652ae67741480cc8a23f7f407389bf6c1d80ffdc4c99e7bc0a0",
+        "f07b1339a13acd2cf4c62e963bd056f199362b3ff2a847f5e4caf5127c55fa36",
+        "4c5808b0f12dea9da5afce8cef08e6a933bf950cd98bbf26c3d97df7e44002da",
+        "f8b5df7fc68c121a87db37622df8de86bffe278a3a1cb97846f291dd5debfc75",
+        "32b82d56fbd4ba04319e8a09c342337285553b228dd13e5c6916d14e5f23f6e2",
+        "89c4cc7207407730b94ad24d12e5ff58a6dfcfe676345ecc228b627b645ad837",
+        "b5803c7afcb52d7772ca644b40c83323449ccc48d9482434f9d27af1de50b513"
+      ],
+      "termination_reason": "completed_first_round",
+      "latency_ms": 27174.6717
+    },
+    {
+      "id": "route-m411-fixed-12",
+      "expected": "fixed",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 1,
+      "evidence_ids": [
+        "68dd0e14f1cb1b0bc4d535b7832e417a076467084a25cc717c068d14a9818c91",
+        "ff7d5612d6566cc1c303ee3b45ca266b7d5247510f866cc4776fda1405f92a9b",
+        "16309bce5f9d57b779f5561cde4246993124f48f2f636a670a90cffe9bbe53d5",
+        "96684c6f2f8dabe7e1969823f2209374e5d962d7e3924c08f0f4a286ec22866e",
+        "12c0d89c9d56269b6195229b30ccec8f9bf1abccbd0df9338367e128746e6632",
+        "0a8b459180d9dbee11bd1b58c82c1476c115bc9ade29d8bd69533b92e24cd389",
+        "f6ce139f2196f6cc34d2fde699467aaff69364aaa1c7277ae84c9f5abd787ce2",
+        "a3bf11bcaa06026d40e324b68b4c1929bd0d8c13ce6f7ba19a1cb7e7bde75820"
+      ],
+      "termination_reason": "completed_first_round",
+      "latency_ms": 75076.1564
+    },
+    {
+      "id": "route-m411-adaptive-01",
+      "expected": "adaptive",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 1,
+      "evidence_ids": [
+        "aa22f3339e48d8732d84e00966cd96f5e3de9c097cc80357cc688e902bb8e0cf",
+        "b071767e30e60979a0d5a75ccd94fac110a4156382b655035feac85a4c81dd6d",
+        "212c30e9c8db5ff6464513d056dba5bbf26bae3bfedbbe5fdf3f89de773800f3",
+        "6cc63c24af9a9843255e9103c29ffd9e42959dacb81b8eb01e93107bd68429bb",
+        "13f333c23318eb17b7308e5c5a532a97f8fee5181754c5649d9938bb70689e6f",
+        "1e551d4b1e4d626c12c463b55f1f6b37cc38ce3366042c04a84e6e924bfa4615",
+        "558a3cad1753375e82f3087d51494e2e29d9c0aef82c6fbd7e67b91e0e8fd80d",
+        "1074c10c8e011a37a15b4a872e3d7a3006d43f8e8179bec227bbbfdcd9b1a8de"
+      ],
+      "termination_reason": "completed_first_round",
+      "latency_ms": 70290.0803
+    },
+    {
+      "id": "route-m411-adaptive-02",
+      "expected": "adaptive",
+      "predicted": "fixed",
+      "rounds": 1,
+      "tool_calls": 1,
+      "evidence_ids": [
+        "4e96344ed66d29486a7480d1a19d061d8a60317b7cf6de56436533f3423803a5",
+        "0d2ed5b882ce4652ae67741480cc8a23f7f407389bf6c1d80ffdc4c99e7bc0a0",
+        "4c5808b0f12dea9da5afce8cef08e6a933bf950cd98bbf26c3d97df7e44002da",
+        "08e6a41fee719f3e105cf74f19e77cf69f120f7ec3f5f77a188bac9101d8849f",
+        "f07b1339a13acd2cf4c62e963bd056f199362b3ff2a847f5e4caf5127c55fa36",
+        "942f120e78984f6d30ccb99607726f5940f1e6901a641836a90ee75718b08d47",
+        "5c04083e2a9087dda93db82ffc748ed31226db0803326d318d98ff825daa68d8",
+        "b69643099be998ac308695c3d3506107686329a67f486e7ba1fc6780453fe33d"
+      ],
+      "termination_reason": "completed_first_round",
+      "latency_ms": 48530.524
+    },
+    {
+      "id": "route-m411-adaptive-03",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "071bb243a8179a41d480ea2c068058f0ff8f385a69b69070a4f2c4c0ddece185",
+        "2d3ad56a0ab3ff00924907ae55b69239dac8dafeee3db3d0fefe2a3e42184d17",
+        "aa875fe35622cd884e3ada46474f4b632aeaad0dfd989476adcab65e81d3a731",
+        "5c596d9788084f2faea81772ce66713af9d47bcd18d9b97e4568490fa720cb70",
+        "f2d38058e1b2f8b9ad9464918e87bb4a7ebc30cf85ff2385b56cb7786298b1d2",
+        "e2742a444259a2724cd263a7c267813ca3e283863debf6e93d4705e2c2653d8f",
+        "bb10a83b6f5b8a28ff0fe36634948ed12e61b15dde862c46b836bcea5c31687c",
+        "4730f2bc33458823a2103ff9a39ee85f0332347e6f213112072e84900d6f4d82",
+        "950b45809a15a9fae191cc1dc06b428cec36459e3e0f8cdf72250dc567b1afa9",
+        "4abdbd4b1972b86c168981286804fb1595941ef3c6bdf8f8deed59fa8b75cb84"
+      ],
+      "termination_reason": "completed_second_round",
+      "latency_ms": 149129.0865
+    },
+    {
+      "id": "route-m411-adaptive-04",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "86058e27b8e56420e877a8f7f2de4dafacb219465b495718f3d8efe31913b00a",
+        "9dddd21e2d286e97d0ddc0f886a68f13e5b238932e66adebd97543a8feb7a0a4",
+        "3dcd6ad16c684f3d57c65194c9dd6961e97e7a7c2e5d30a70cc91c6e3fc9179d",
+        "973533b2ca200af40d9aa64fc67591900460038eaf078180f7bab49a3da63467",
+        "89e8e0efe6da4fdf0dcd7980bed773478e466b8483c322f45888360ec3caa204",
+        "6b4d66d824558ba2f70e2faaf38e618fb9e9b1327223c6c4a4c271fac68f6990",
+        "98d91ce9e8914eb0f28a969b8ddc3079945f9c38892abdc8bca00a28673632a5",
+        "7189b90c7b8cb14b80ca3f4b62b35f0b01bfebfce473bb8518d43e3179749e2b",
+        "2216ed65476d98cc13d72c4cf99d0771154ee18efeecffade4f7e63dfd99947f",
+        "3ed5db3c660343635b31d8dceba91a8db1d0939d864ce4dc981983236eae8d38",
+        "4a9dcc9a4c25bc1be313a161beb45a65f7e22d0c8633ece79ceaafa15b45da26",
+        "17735910f751de1082828c6b44fe7970c49500968dde57c749a8b8d20a8b4077"
+      ],
+      "termination_reason": "completed_second_round",
+      "latency_ms": 118608.4521
+    },
+    {
+      "id": "route-m411-adaptive-05",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "11195ccce92d654d46ffae81b329729ea1243e4c283d55092dd946f6f5afadcc",
+        "40037a23f5e48b0eee8769d85753867b8a19ee76e6f0dde789cfb263faf19dc8",
+        "5f7a55be753f3059d0a431242040051be23d8ffe8a4b2ad45b9ec47f54732fa4",
+        "d2b94ebddb9bdf9c5d7d18426a5423a2464ba63a5df537e3ffe7b5b0ccf3d25a",
+        "7203a8f065f3d5ad1eb1f98f0eb111b4495254ac5d63c2fc376805eaccf6b78d",
+        "8d5807e0fb3428956710773a4362d6ff81a31c1e96d7635fe37c761f0a58f0b5",
+        "24be86cdd6c7a3ec2691e575cf084e88ee1f8f9b4e2f09f8cf8456eeebacde84",
+        "1f6c3a3d0c9f104f9035f183cd6f138cd85aa2fdcd215726e0cc3b380cb335d4",
+        "1f305596d3e2b86496319a01e4f3a7609ccfa19c02ea2dd501e3aa575ee850e6",
+        "aaf1eb8685e6a654d54ec43affa5dc655dab155c87af6c4fc0472f21e1a2c5ee",
+        "56c3a5e524341019a12b86526967cebb2a7473666d771c161aa35d5b998f5d02",
+        "c8ab6e0ccfe677449aabf2c414fad410184eb13d4f60b02dea6952af2136bc7b"
+      ],
+      "termination_reason": "coverage_not_improved",
+      "latency_ms": 126549.9299
+    },
+    {
+      "id": "route-m411-adaptive-06",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "16b28130cc1d1b9ae78d3c1f13c6622af828427eb598075cdad37da59dbed3b0",
+        "aaebe7fa769db1342ce3c25521f1de20ff7639430317f31703bdce46c559f3cf",
+        "896028c6053e5c5f979ef87f77402bce3283207203155a4db310824761c9e6b6",
+        "142ca4cb3ae53cd421f2cbe495308a8d298e205b3da880d391212bdfa8fc3234",
+        "0a322c0223181bdc767f48a79fad5032f02319d8a162eb892b46533ea57326f3",
+        "fd108b01b65105d83fd67650db042fc5d4f233a3e70e78e2a82f24829acf6f18",
+        "2324fc8d7e1e1f2e135a5c9ce8375f4f7540555f2a4e7ad716682b507564633d",
+        "c8b3844fdf27d05ebf22b4aaa8d0d44f22a657605966d74ac5d2505cb118a5dc",
+        "42296f5b6bcec3458bdb11f76d7092e03b1489a8ad1caef8486f9849f0feae03",
+        "4172c8ab0479d897f7319305a544fd92af6049dcaac9b8fdf4403a535810b23f",
+        "027e7068c5449d129b98ce26e988eb163e411f5ddd6798cb3b3b3891e421d912",
+        "03530be1ae49d8d68e711c88b5281fe960070db81019f84d67badfca09455218"
+      ],
+      "termination_reason": "completed_second_round",
+      "latency_ms": 125866.3261
+    },
+    {
+      "id": "route-m411-adaptive-07",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "2d7f513fa855b0c3fce5fcc158294e697870ce2294344ef5163fdf3e98a3e685",
+        "9c4e3df93746ba0ef922060ffa2862cf53ce06052c118b2640ce9ee793cf0661",
+        "ec6a72127fc18aa0203993707df5ef84b7b4f13155ab23c10caf4c6a0acead9a",
+        "3118a27a1454f86cd3c07014dc9e90a513b2b9c300dfaf2d40a9d2238f239115",
+        "1e2aae410f14b0dbe89456cd73e10ccb9570feb77740c661b3451f2c7c056214",
+        "dd64ac5145606c1be66d9803c8a82a8dbb35cfecbb4d669f7f4a97204b802569",
+        "114194bf0b8082548097cf86dccf562c65ae741269e615f136116c613104e135",
+        "2b885e55672bf7d37ba5e5363abf19f076365fc4b464455e6220d576e37678ba",
+        "b2699b7929dab95afcd0377779122fde26bf65fee6ef841760751ba8e90be957",
+        "48a25f04996b3c26c065c6fedb82fc98e79812bd56584ca0d90ae778842d8104",
+        "ab3a2ad5c65ad161d25d771f93b1f71e870a06744df3caef52a004c45b5d3e52",
+        "624b152e837fb7dfa7332859410112ea458a658ca6340b559183f261ab238e74"
+      ],
+      "termination_reason": "coverage_not_improved",
+      "latency_ms": 122213.549
+    },
+    {
+      "id": "route-m411-adaptive-08",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "ecb5faefe7165ae7cc816fd5157ccde37e124008e01b27e3608ad3e2779d6a35",
+        "6df307ee5700f8d269463225b72cf551a4857fc5cd56102449b6497e671a14f5",
+        "f0f25f4d4d0ff9fd89b6358b28bb700c62100264cb6f904bed24fb7c295eeba0",
+        "ae7c1234eb1f26c662152beda1f02b697288defa24d35b6a8aa5da170bd4de7b",
+        "f59bf8a4237e6c0740bb9e6c8ff9e01f67bb0abbbb872345e65e67e47e0f5f3a",
+        "ecfa1c0c7b7bc80f6a969b5e4fed2aa387f0a2152236324c64292f5ad2436fa2",
+        "22777905d29bf5b8504168146e86f68a129d1fe63415b8f4df434644429130db",
+        "70b851b52f51932cf9fec0db6965dd47c93f12899b3eaccc57494d92d089ae2f",
+        "9655ee8fe51a0a2a803cca195aa74f36f0f40b4761a9ef7552b6daee493a3499",
+        "292e565f18c1cbef22b6d23f86ed334636870bc2cd198ebc63d37bef6508349e"
+      ],
+      "termination_reason": "coverage_not_improved",
+      "latency_ms": 87076.6772
+    },
+    {
+      "id": "route-m411-adaptive-09",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "fe3c01a797b4de7da2c55446bc62d9e8c452e9a540ed06ab3e6ea4287a1e6a06",
+        "f3cc1342cdfd7a9cdf8ffcf35e7effc404cfc7b86bbcc56393ab7e9cdafd42fc",
+        "d53ec51634d7092f15dde7141bf52cf7c1307eda033f344cb811204a7eddce5d",
+        "7f46f5a8de510b0e671a14dde12e579e2d1dad8f62b0980403915c5aa07d5446",
+        "a3d73f9095b818753b381785b8ac164b9e921759731efae22b467e7e10228f71",
+        "22bdd86ee5c62f093e7c2baaa263173c3a9928ed6e4acbb92c633c61fd93b901",
+        "889c9e0613aa314c1f2ceebc83ccf51481118a8b7619cf5729e71ef6e261792f",
+        "b963d7eb5293e766ab50cad6fcc42710739ebef5366e1fb9255e537a9cae41ec",
+        "ab07a5f128369086772fca507cf0402d46ee058f4e05196c1b311a4d697eb025",
+        "45ec54d26746ed9c88435126e18b80ce56360086e506484f9d6e116b5d2e6c1b",
+        "80747c4b85c953fee250003fed2ef0ad269ad18d70c43760451a0045fbbc3c3f"
+      ],
+      "termination_reason": "second_round_incomplete",
+      "latency_ms": 84539.8847
+    },
+    {
+      "id": "route-m411-adaptive-10",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "68dd0e14f1cb1b0bc4d535b7832e417a076467084a25cc717c068d14a9818c91",
+        "12c0d89c9d56269b6195229b30ccec8f9bf1abccbd0df9338367e128746e6632",
+        "c06aeeb8203fb4ed9fc2199db29971cd3ed0ee78abfe108e8d1f57dc5c86dfb3",
+        "16309bce5f9d57b779f5561cde4246993124f48f2f636a670a90cffe9bbe53d5",
+        "f6ce139f2196f6cc34d2fde699467aaff69364aaa1c7277ae84c9f5abd787ce2",
+        "4a40ce4b5ab8c5f9c32d19721fe6f32d53a70081b203e2a0c5511bb6470ccc39",
+        "11ea93b68ba87168ca9901bda9fe0e114160c36e894c1948f11a16b60c16e5fc",
+        "499b166313e31351368b5b49a1df195f966c00c21c58d754a3e0ef90b0f339e6",
+        "707707ae2953cd5aeb3f8689f6e5be783c4b7318faa506530d1046f9c359cdaa",
+        "80747c4b85c953fee250003fed2ef0ad269ad18d70c43760451a0045fbbc3c3f",
+        "c7eb0b942cc177bb85905199df92201ccd9afa0c8ab4d41607b5bc520ab82330",
+        "9b6be86565c3078ab517ffe01f9575563877e8c0c5cebf6a62e34fe29395b274"
+      ],
+      "termination_reason": "completed_second_round",
+      "latency_ms": 115970.813
+    },
+    {
+      "id": "route-m411-adaptive-11",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "020ad37b1825c7b38478e5dcdc21dc935d9f7a02e4b174e0e76eb30bad02e3d5",
+        "ae7c1234eb1f26c662152beda1f02b697288defa24d35b6a8aa5da170bd4de7b",
+        "f0f25f4d4d0ff9fd89b6358b28bb700c62100264cb6f904bed24fb7c295eeba0",
+        "c0bf47ac84bd0a27b78851740db64775977a37fd3edbbf65be683249b10e765f",
+        "8c774726f7f751d30a03f3825511c21aa80e51a4a964765fa13db2fbb583cc62",
+        "6df307ee5700f8d269463225b72cf551a4857fc5cd56102449b6497e671a14f5",
+        "6d195b803ebad461afd9abc0c4f209179c138f0224a792593dbf59387865313b",
+        "a3977906c8993378fe83e0812bc1cbf1a295396be962ac917e6d989dd24931b3",
+        "c478057e13740736e535498cf81105daccfacafc53d6cbc926d9069d2c7c8102",
+        "fb5f6858dbe86490e713db4cc730eb656bd9eb7670a5097d2c87ca4d89121eeb",
+        "b1588952c11bdf86f6e99d39581088753cba55efd2449f40bc3f3fa55148e98c",
+        "22777905d29bf5b8504168146e86f68a129d1fe63415b8f4df434644429130db"
+      ],
+      "termination_reason": "coverage_not_improved",
+      "latency_ms": 104232.4667
+    },
+    {
+      "id": "route-m411-adaptive-12",
+      "expected": "adaptive",
+      "predicted": "adaptive",
+      "rounds": 2,
+      "tool_calls": 2,
+      "evidence_ids": [
+        "942f120e78984f6d30ccb99607726f5940f1e6901a641836a90ee75718b08d47",
+        "5c04083e2a9087dda93db82ffc748ed31226db0803326d318d98ff825daa68d8",
+        "08e6a41fee719f3e105cf74f19e77cf69f120f7ec3f5f77a188bac9101d8849f",
+        "4e96344ed66d29486a7480d1a19d061d8a60317b7cf6de56436533f3423803a5",
+        "e2750d059c68f29ff43181870326d2aa407ef2ef5bfefcf9ad432cdc553f061f",
+        "51ac53e102d51f4c7cef48bcb88501edb1aa69a0f9518806200bdf91bf28c97c",
+        "07b439ab73a42e4b761869fc5ed575c5bc2e0e4701c812951e81d1c8433f549e",
+        "63dfc3640bb5c0f95fc752acd591e08345229b80a544b158b28f2f8272149b5b",
+        "2c1b66c263977291525aa4d75c839c98a77157946a722fdc3e6fa77eca4a7479",
+        "49f1c139e31eeb9a4fccb81f2379be66398c14b0a9219bd448745a79628132b5",
+        "842546e2d80784fc4f82ab0b14ec5282b27ae7acd578c185d51d0a7d9e921d37",
+        "6322824cfb5452991c8663437de7531eecb79465e0f3312662d57344038f3115"
+      ],
+      "termination_reason": "completed_second_round",
+      "latency_ms": 78426.7723
+    },
+    {
+      "id": "route-m411-refuse-01",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0194
+    },
+    {
+      "id": "route-m411-refuse-02",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0022
+    },
+    {
+      "id": "route-m411-refuse-03",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0037
+    },
+    {
+      "id": "route-m411-refuse-04",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0021
+    },
+    {
+      "id": "route-m411-refuse-05",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0026
+    },
+    {
+      "id": "route-m411-refuse-06",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0017
+    },
+    {
+      "id": "route-m411-refuse-07",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0018
+    },
+    {
+      "id": "route-m411-refuse-08",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0027
+    },
+    {
+      "id": "route-m411-refuse-09",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0024
+    },
+    {
+      "id": "route-m411-refuse-10",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0019
+    },
+    {
+      "id": "route-m411-refuse-11",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.002
+    },
+    {
+      "id": "route-m411-refuse-12",
+      "expected": "refuse",
+      "predicted": "refuse",
+      "rounds": 0,
+      "tool_calls": 0,
+      "evidence_ids": [],
+      "termination_reason": "refuse_no_retrieval",
+      "latency_ms": 0.0026
+    }
+  ],
+  "metrics": {
+    "confusion_matrix": {
+      "direct": {
+        "direct": 12,
+        "fixed": 0,
+        "adaptive": 0,
+        "refuse": 0
+      },
+      "fixed": {
+        "direct": 0,
+        "fixed": 7,
+        "adaptive": 5,
+        "refuse": 0
+      },
+      "adaptive": {
+        "direct": 0,
+        "fixed": 2,
+        "adaptive": 10,
+        "refuse": 0
+      },
+      "refuse": {
+        "direct": 0,
+        "fixed": 0,
+        "adaptive": 0,
+        "refuse": 12
+      }
+    },
+    "class_recall": {
+      "direct": 1.0,
+      "fixed": 0.5833,
+      "adaptive": 0.8333,
+      "refuse": 1.0
+    },
+    "macro_f1": 0.8519,
+    "direct_refuse_safety_passed": true,
+    "latency": {
+      "mean_ms": 43952.4732,
+      "p95_ms": 126310.6686
+    }
+  },
+  "frozen_manifest": "evals/datasets/m4_1_1_dataset_manifest.json",
+  "baseline_contract": "artifacts/evals/v2_m3_2/m4_fixed_baseline.json",
+  "evaluation_index_manifest": "artifacts/evals/v2_m3_2/old_dev/manifests/b1.json",
+  "task_models": {
+    "adaptive_plan": "qwen3.7-max-2026-06-08",
+    "adaptive_sufficiency": "qwen3.7-max-2026-06-08",
+    "adaptive_follow_up": "qwen3.7-max-2026-06-08",
+    "adaptive_answer": "qwen3.7-max-2026-06-08",
+    "adaptive_claim_grader": "qwen3.7-max-2026-06-08"
+  }
+}

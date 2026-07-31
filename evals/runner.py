@@ -968,7 +968,8 @@ def main() -> None:
 
     import yaml
 
-    from evals.m4_1_runner import run_from_config
+    from evals.m4_1_1_runner import run_from_config as run_m4_1_1_config
+    from evals.m4_1_runner import run_from_config as run_m4_1_config
     from evals.v2_runner import main as v2_main
 
     if "--config" in sys.argv:
@@ -977,8 +978,12 @@ def main() -> None:
             candidate = Path(sys.argv[index + 1])
             if candidate.exists():
                 payload = yaml.safe_load(candidate.read_text(encoding="utf-8"))
-                if isinstance(payload, dict) and str(payload.get("kind", "")).startswith("m4_1_"):
-                    run_from_config(candidate)
+                kind = str(payload.get("kind", "")) if isinstance(payload, dict) else ""
+                if kind.startswith("m4_1_1_"):
+                    run_m4_1_1_config(candidate)
+                    return
+                if kind.startswith("m4_1_"):
+                    run_m4_1_config(candidate)
                     return
     v2_main()
 

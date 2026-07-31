@@ -1,0 +1,16 @@
+schema_version: 1
+kind: m4_1_1_route
+dataset: evals/datasets/m4_1_1_route_v1.json
+dataset_manifest: evals/datasets/m4_1_1_dataset_manifest.json
+output_dir: artifacts/evals/v2_m4_1_1
+baseline_contract: artifacts/evals/v2_m3_2/m4_fixed_baseline.json
+evaluation_index_manifest: artifacts/evals/v2_m3_2/old_dev/manifests/b1.json
+task_models:
+  adaptive_plan: qwen3.7-max-2026-06-08
+  adaptive_sufficiency: qwen3.7-max-2026-06-08
+  adaptive_follow_up: qwen3.7-max-2026-06-08
+  adaptive_answer: qwen3.7-max-2026-06-08
+  adaptive_claim_grader: qwen3.7-max-2026-06-08
+thresholds:
+  direct_refuse_recall_min: 0.75
+  latency: record_only

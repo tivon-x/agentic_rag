@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
@@ -12,7 +13,12 @@ from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
 from pydantic import BaseModel
 
-from agent.schemas import AdaptiveAnswer, AdaptivePlan, EvidenceSufficiency
+from agent.schemas import (
+    AdaptiveAnswer,
+    AdaptivePlan,
+    ClaimSupportAssessment,
+    EvidenceSufficiency,
+)
 from core.settings import AppSettings
 from indexing.index_versions import get_active_version_id
 from indexing.retrieval_pipeline import get_pipeline_config
@@ -44,6 +50,7 @@ Planner = Callable[[str], list[dict[str, str]]]
 Assessor = Callable[[list[dict[str, str]], list[dict[str, Any]]], list[dict[str, Any]]]
 FollowUp = Callable[[list[dict[str, Any]]], str]
 Answerer = Callable[[str, list[dict[str, Any]], list[dict[str, Any]]], dict[str, Any]]
+FirstRoundQueries = Callable[[str, list[dict[str, str]]], list[str]]
 StructuredModel = TypeVar("StructuredModel", bound=BaseModel)
 
 
@@ -80,6 +87,7 @@ class AdaptiveEvidenceLoop:
         assessor: Assessor,
         follow_up: FollowUp,
         answerer: Answerer,
+        first_round_queries: FirstRoundQueries | None = None,
     ) -> None:
         self.retriever = retriever
         self.expected_index_version = expected_index_version
@@ -87,6 +95,7 @@ class AdaptiveEvidenceLoop:
         self.assessor = assessor
         self.follow_up = follow_up
         self.answerer = answerer
+        self.first_round_queries = first_round_queries
 
     def run(
         self,
@@ -127,7 +136,11 @@ class AdaptiveEvidenceLoop:
                 query=query,
             )
 
-        first_queries = [item["query"] for item in plan_items]
+        first_queries = (
+            self.first_round_queries(query, plan_items)
+            if self.first_round_queries is not None
+            else [item["query"] for item in plan_items]
+        )
         for retrieval_query in first_queries:
             if _is_cancelled(cancelled):
                 return self._result(
@@ -246,7 +259,10 @@ class AdaptiveEvidenceLoop:
             termination = "completed_second_round"
         else:
             termination = "second_round_incomplete"
-        strategy = "adaptive" if _coverage_total(updated) > prior_coverage else "refuse"
+        # The route was chosen as adaptive as soon as the first B1 pass was
+        # insufficient. A later bounded stop changes the answer limitations,
+        # not the route that was selected.
+        strategy = "adaptive"
         return self._result(strategy, plan_items, evidence, updated, rounds, tool_calls, termination, started, query)
 
     def _retrieve(self, query: str, *, scope: list[str] | None) -> list[dict[str, Any]]:
@@ -306,6 +322,44 @@ def build_live_loop(settings: AppSettings, retriever: Any) -> AdaptiveEvidenceLo
         assessor=_live_assessor,
         follow_up=_live_follow_up,
         answerer=_live_answerer,
+        first_round_queries=lambda query, _: [query],
+    )
+
+
+def run_fixed_b1(
+    settings: AppSettings,
+    retriever: Any,
+    query: str,
+    *,
+    scope: list[str] | None = None,
+) -> AdaptiveRunResult:
+    """Run the frozen one-round B1 baseline with the same answer schema as adaptive."""
+    loop = build_live_loop(settings, retriever)
+    started = perf_counter()
+    try:
+        evidence = _limit_evidence(loop._retrieve(query, scope=scope))
+    except Exception:
+        return loop._result(
+            "refuse",
+            [],
+            [],
+            [],
+            1,
+            0,
+            "retrieval_error",
+            started,
+            query,
+        )
+    return loop._result(
+        "fixed",
+        [{"id": "fixed-query", "requirement": query, "query": query}],
+        evidence,
+        [],
+        1,
+        1,
+        "fixed_one_round",
+        started,
+        query,
     )
 
 
@@ -323,8 +377,15 @@ def _live_planner(query: str) -> list[dict[str, str]]:
                 HumanMessage(content=query),
             ],
         )
-        planned = [item.model_dump() for item in response.requirements]
-        return planned or _fallback_plan(query)
+        planned = _bounded_plan(
+            [item.model_dump() for item in response.requirements],
+            query,
+        )
+        # A single requirement has no independent sub-question. Keep its full
+        # user wording so the B1 query does not lose table/model identifiers.
+        if len(planned) == 1:
+            planned[0]["query"] = query
+        return planned
     except Exception:
         return _fallback_plan(query)
 
@@ -363,12 +424,12 @@ def _live_follow_up(missing: list[dict[str, Any]]) -> str:
         return str(missing[0].get("recommended_follow_up_query", "")) if missing else ""
 
 
-def _live_answerer(_: str, evidence: list[dict[str, Any]], assessments: list[dict[str, Any]]) -> dict[str, Any]:
+def _live_answerer(query: str, evidence: list[dict[str, Any]], assessments: list[dict[str, Any]]) -> dict[str, Any]:
     from langchain_core.messages import HumanMessage, SystemMessage
 
     from agent.prompts import get_adaptive_answer_prompt
 
-    payload = {"evidence": evidence, "assessments": assessments}
+    payload = {"query": query, "evidence": evidence, "assessments": assessments}
     try:
         response = _invoke_structured_json(
             "adaptive_answer",
@@ -464,12 +525,36 @@ def _validate_claims(answer: dict[str, Any], evidence: list[dict[str, Any]], ass
         if bool(claim.get("major", True)) and not ids:
             continue
         claims.append({"claim": str(claim.get("claim", "")).strip(), "evidence_ids": ids, "major": bool(claim.get("major", True))})
+    answer_text = str(answer.get("answer", "")).strip()
+    if not claims:
+        claims = _extract_cited_claims(answer_text, valid_ids)
     limitations = str(answer.get("limitations", "")).strip()
     missing = [item["requirement_id"] for item in assessments if not item["covered"]]
     if missing:
         suffix = "Missing evidence for: " + ", ".join(missing) + "."
         limitations = f"{limitations} {suffix}".strip()
-    return {"answer": str(answer.get("answer", "")).strip(), "claims": claims, "limitations": limitations}
+    return {"answer": answer_text, "claims": claims, "limitations": limitations}
+
+
+def _extract_cited_claims(answer: str, valid_ids: set[str]) -> list[dict[str, Any]]:
+    """Preserve cited factual sentences when a structured model omits claims."""
+    result: list[dict[str, Any]] = []
+    for segment in re.split(r"(?:\n\s*\n|(?<=[。！？!?])\s+)", answer):
+        evidence_ids = [
+            item
+            for item in re.findall(r"\b[a-f0-9]{64}\b", segment)
+            if item in valid_ids
+        ]
+        claim = re.sub(r"\[[^\]]*\]", "", segment).strip()
+        if claim and evidence_ids:
+            result.append(
+                {
+                    "claim": claim,
+                    "evidence_ids": list(dict.fromkeys(evidence_ids)),
+                    "major": True,
+                }
+            )
+    return result
 
 
 def _all_covered(assessments: list[dict[str, Any]]) -> bool:
@@ -505,7 +590,7 @@ def invoke_structured_json(
         raise ValueError("Structured model response did not contain a JSON object.")
     start = min(starts)
     payload, _ = json.JSONDecoder().raw_decode(content[start:])
-    if model is EvidenceSufficiency and isinstance(payload, list):
+    if model in {EvidenceSufficiency, ClaimSupportAssessment} and isinstance(payload, list):
         payload = {"items": payload}
     return model.model_validate(payload)
 

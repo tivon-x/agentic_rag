@@ -247,8 +247,10 @@ def get_evidence_sufficiency_prompt() -> str:
 each requirement. For every requirement return its ID, covered flag, evidence IDs,
 coverage from 0 to 1, a concrete missing reason, and a follow-up query only when
 that requirement is still missing. This is a semantic judgement, not a deterministic
-proof. Never cite an ID that is absent from the supplied evidence. Return only the
-JSON structured assessment."""
+proof. Mark a requirement missing only when no supplied quote directly supports its
+core fact; do not require a second search merely for paraphrase, extra context, or
+an optional detail. Never cite an ID that is absent from the supplied evidence.
+Return only the JSON structured assessment."""
 
 
 def get_adaptive_follow_up_prompt() -> str:
@@ -258,8 +260,24 @@ facts. Return the query as plain text."""
 
 
 def get_adaptive_answer_prompt() -> str:
-    return """Answer using only supplied source-faithful evidence. Every major
-factual claim must list one or more supporting evidence IDs. Omit unsupported
-claims. If evidence is incomplete, state the missing requirement in limitations;
-if a major requirement is absent, give a bounded refusal instead of inventing an
-answer. Return only the JSON structured answer."""
+    return """Answer the supplied user query using only source-faithful evidence.
+Every factual sentence in the answer must have a matching major item in `claims`
+with one or more supporting evidence IDs; do not leave `claims` empty when the
+answer contains factual content. Omit unsupported claims. If evidence is
+incomplete, state the missing requirement in limitations; if a major requirement
+is absent, give a bounded refusal instead of inventing an answer. Return only the
+JSON structured answer."""
+
+
+def get_claim_support_grader_prompt() -> str:
+    return """Judge final major claims against the supplied source-faithful
+evidence and frozen claim specifications. For every final major claim return its
+zero-based claim_index, the matching claim_spec_id when one exists, whether the
+quoted evidence semantically supports that claim, and a short reason. The frozen
+claim specification defines the target claim, but any supplied evidence ID may
+support it: do not require an exact gold evidence ID. A claim is unsupported when
+it cites no supplied evidence, the cited quote does not support it, it overstates
+the quote, or it does not match a required claim. This is a semantic judgement;
+do not infer missing facts. Set `semantically_supported` to true exactly when
+your reason says the cited quote supports or matches the target claim. Return only
+JSON with an items array."""

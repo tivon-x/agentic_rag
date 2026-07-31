@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "milestone": "M4.1.1",
+  "frozen_at": "2026-07-31",
+  "frozen_statement": "Questions, labels, requirements, claim specifications, acceptable evidence IDs, thresholds and grader semantics are frozen before M4.1.1 strategy changes or formal execution. M3.2 holdout and opened M4.1 datasets are excluded from this final set.",
+  "route_dataset": {
+    "path": "evals/datasets/m4_1_1_route_v1.json",
+    "sha256": "01372eff9bea8d7a96b8bafb5ac13402d5342a4cc093632ee1f63d6143cbdd7d",
+    "case_count": 48,
+    "class_counts": {"direct": 12, "fixed": 12, "adaptive": 12, "refuse": 12}
+  },
+  "answer_dataset": {
+    "path": "evals/datasets/m4_1_1_answer_v1.json",
+    "sha256": "e7eadb3d63a199b87d2f7c1fe3ea16ba0bb9bbf1a8bfe9df98126589b07abbaa",
+    "case_count": 24,
+    "authoring_source_counts": {"m3_difficulty_taxonomy": 12, "independent": 12}
+  },
+  "baseline_contract": {
+    "path": "artifacts/evals/v2_m3_2/m4_fixed_baseline.json",
+    "selected_pipeline_name": "v1_flat_rerank",
+    "pipeline_config_hash": "ee7c1306250ba487ee2ca54de776fc70cb584c3bb02d4aca38cf7028e4956c17"
+  },
+  "evaluation_index_manifest": "artifacts/evals/v2_m3_2/old_dev/manifests/b1.json",
+  "scoring": {
+    "requirement_coverage": "A requirement is covered only when a final major claim cites an acceptable evidence ID for that requirement.",
+    "citation_correctness": "Major claims with citations are correct only when each cited ID is an acceptable evidence ID for the claim specification; semantic judgement is separately audited.",
+    "citation_completeness": "Required claim specifications represented by a supported final major claim divided by all claim specifications.",
+    "major_fact_support_rate": "Supported final major claims divided by all final major claims.",
+    "unsupported_major_claim_count": "Final major claims without a valid supported citation."
+  },
+  "thresholds": {
+    "coverage_improvements_min": 5,
+    "coverage_regressions_max": 2,
+    "citation_non_regression": true,
+    "major_fact_support_non_regression": true,
+    "unsupported_major_claim_non_regression": true,
+    "successful_termination_rate": 1.0,
+    "max_rounds": 2,
+    "max_tool_calls": 4,
+    "duplicate_query_scope_count": 0,
+    "latency": "record_only"
+  }
+}

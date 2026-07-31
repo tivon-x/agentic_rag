@@ -25,6 +25,11 @@ _TASK_MODEL_ENV_NAMES = {
     "direct": "LLM_MODEL_DIRECT",
     "out_of_scope": "LLM_MODEL_OUT_OF_SCOPE",
     "aggregate": "LLM_MODEL_AGGREGATE",
+    "adaptive_plan": "LLM_MODEL_ADAPTIVE_PLAN",
+    "adaptive_sufficiency": "LLM_MODEL_ADAPTIVE_SUFFICIENCY",
+    "adaptive_follow_up": "LLM_MODEL_ADAPTIVE_FOLLOW_UP",
+    "adaptive_answer": "LLM_MODEL_ADAPTIVE_ANSWER",
+    "adaptive_claim_grader": "LLM_MODEL_ADAPTIVE_CLAIM_GRADER",
 }
 
 

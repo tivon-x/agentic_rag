@@ -1,0 +1,266 @@
+[
+  {
+    "id": "answer-m411-01",
+    "query": "Transformer 不采用循环或卷积的设计前提是什么？这又为什么需要 positional encoding？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"architecture","text":"说明 Transformer 放弃循环和卷积的架构前提","acceptable_evidence_ids":["4c5808b0f12dea9da5afce8cef08e6a933bf950cd98bbf26c3d97df7e44002da"]},
+      {"id":"position","text":"说明 positional encoding 的必要性","acceptable_evidence_ids":["2c1b66c263977291525aa4d75c839c98a77157946a722fdc3e6fa77eca4a7479"]}
+    ],
+    "claim_specs": [
+      {"id":"architecture-claim","requirement_id":"architecture","text":"Transformer 以 attention 为核心，不依赖循环或卷积。","acceptable_evidence_ids":["4c5808b0f12dea9da5afce8cef08e6a933bf950cd98bbf26c3d97df7e44002da"],"major":true},
+      {"id":"position-claim","requirement_id":"position","text":"positional encoding 向没有循环的模型提供序列位置信息。","acceptable_evidence_ids":["2c1b66c263977291525aa4d75c839c98a77157946a722fdc3e6fa77eca4a7479"],"major":true}
+    ],
+    "allowed_answer_shape":"two-part causal explanation with citations","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-02",
+    "query": "Scaled Dot-Product Attention 的缩放是为了解决什么数值问题？同一论文在 WMT14 英德任务给出的 BLEU 又是多少？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"scaling","text":"解释 sqrt(d_k) 缩放的数值动机","acceptable_evidence_ids":["942f120e78984f6d30ccb99607726f5940f1e6901a641836a90ee75718b08d47"]},
+      {"id":"bleu","text":"定位 WMT14 英德 BLEU","acceptable_evidence_ids":["4c5808b0f12dea9da5afce8cef08e6a933bf950cd98bbf26c3d97df7e44002da"]}
+    ],
+    "claim_specs": [
+      {"id":"scaling-claim","requirement_id":"scaling","text":"缩放避免高维点积使 softmax 落入梯度很小的区域。","acceptable_evidence_ids":["942f120e78984f6d30ccb99607726f5940f1e6901a641836a90ee75718b08d47"],"major":true},
+      {"id":"bleu-claim","requirement_id":"bleu","text":"论文报告了 WMT14 英德的 BLEU 结果。","acceptable_evidence_ids":["4c5808b0f12dea9da5afce8cef08e6a933bf950cd98bbf26c3d97df7e44002da"],"major":true}
+    ],
+    "allowed_answer_shape":"method and numeric-result answer with citations","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-03",
+    "query": "循环网络正则化把 50% dropout 放在何处？Regularized LSTM 的 Penn Treebank 78.4 perplexity 对应什么实验结果？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"dropout","text":"定位 50% dropout 的连接类型","acceptable_evidence_ids":["aa875fe35622cd884e3ada46474f4b632aeaad0dfd989476adcab65e81d3a731"]},
+      {"id":"perplexity","text":"定位 Penn Treebank 78.4 perplexity","acceptable_evidence_ids":["4730f2bc33458823a2103ff9a39ee85f0332347e6f213112072e84900d6f4d82"]}
+    ],
+    "claim_specs": [
+      {"id":"dropout-claim","requirement_id":"dropout","text":"50% dropout 的放置必须按论文所述的 non-recurrent connections 报告。","acceptable_evidence_ids":["aa875fe35622cd884e3ada46474f4b632aeaad0dfd989476adcab65e81d3a731"],"major":true},
+      {"id":"perplexity-claim","requirement_id":"perplexity","text":"78.4 是 Penn Treebank 表中一个 Regularized LSTM 的 test perplexity 结果。","acceptable_evidence_ids":["4730f2bc33458823a2103ff9a39ee85f0332347e6f213112072e84900d6f4d82"],"major":true}
+    ],
+    "allowed_answer_shape":"method plus experiment answer with citations","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-04",
+    "query": "RNNsearch 的 proposed model 怎样把对齐和翻译联合起来？RNNsearch-50* 在英法翻译上的 BLEU 是多少？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"alignment","text":"说明联合学习对齐和翻译的方法","acceptable_evidence_ids":["cf65741543eb09f5a52f6fb69600c29e05b6071de901889e34e28a006d889def"]},
+      {"id":"bleu","text":"定位 RNNsearch-50* 英法 BLEU","acceptable_evidence_ids":["86058e27b8e56420e877a8f7f2de4dafacb219465b495718f3d8efe31913b00a"]}
+    ],
+    "claim_specs": [
+      {"id":"alignment-claim","requirement_id":"alignment","text":"RNNsearch 在生成翻译时为目标词学习软对齐权重。","acceptable_evidence_ids":["cf65741543eb09f5a52f6fb69600c29e05b6071de901889e34e28a006d889def"],"major":true},
+      {"id":"bleu-claim","requirement_id":"bleu","text":"RNNsearch-50* 的英法实验表包含 BLEU 34.16。","acceptable_evidence_ids":["86058e27b8e56420e877a8f7f2de4dafacb219465b495718f3d8efe31913b00a"],"major":true}
+    ],
+    "allowed_answer_shape":"two cited claims","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-05",
+    "query": "MPNN 在 message passing 中怎样更新节点 hidden state？Relation Network 在 CLEVR 表中报告的准确率又是什么？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"mpnn","text":"说明 MPNN 节点状态更新","acceptable_evidence_ids":["2a09b2d9d2b481f8c31047005729f31d44fcb0d850a6d99cceace8fc0092b04d"]},
+      {"id":"clevr","text":"定位 Relation Network 的 CLEVR 准确率","acceptable_evidence_ids":["0357b8737522050625b68f34d8067ae9d081acd31c74b2020bb42afe24ccd38a"]}
+    ],
+    "claim_specs": [
+      {"id":"mpnn-claim","requirement_id":"mpnn","text":"MPNN 使用消息聚合与更新函数改变节点 hidden state。","acceptable_evidence_ids":["2a09b2d9d2b481f8c31047005729f31d44fcb0d850a6d99cceace8fc0092b04d"],"major":true},
+      {"id":"clevr-claim","requirement_id":"clevr","text":"Relation Network 的 CLEVR 实验表报告了准确率结果。","acceptable_evidence_ids":["0357b8737522050625b68f34d8067ae9d081acd31c74b2020bb42afe24ccd38a"],"major":true}
+    ],
+    "allowed_answer_shape":"cross-paper method/result answer","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-06",
+    "query": "Deep Speech 2 对 recurrent network 使用 Batch Normalization 的方式是什么？它在 WSJ eval'92 的 WER 又是多少？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"batch-normalization","text":"说明 recurrent Batch Normalization 方法","acceptable_evidence_ids":["42296f5b6bcec3458bdb11f76d7092e03b1489a8ad1caef8486f9849f0feae03"]},
+      {"id":"wer","text":"定位 WSJ eval'92 WER","acceptable_evidence_ids":["aaebe7fa769db1342ce3c25521f1de20ff7639430317f31703bdce46c559f3cf"]}
+    ],
+    "claim_specs": [
+      {"id":"batch-normalization-claim","requirement_id":"batch-normalization","text":"Deep Speech 2 在 recurrent network 上采用论文描述的 Batch Normalization 方式。","acceptable_evidence_ids":["42296f5b6bcec3458bdb11f76d7092e03b1489a8ad1caef8486f9849f0feae03"],"major":true},
+      {"id":"wer-claim","requirement_id":"wer","text":"WSJ eval'92 表中包含 5.33 WER。","acceptable_evidence_ids":["aaebe7fa769db1342ce3c25521f1de20ff7639430317f31703bdce46c559f3cf"],"major":true}
+    ],
+    "allowed_answer_shape":"method plus numeric result with citations","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-07",
+    "query": "VLAE 对 lossy code 的信息分配原则是什么？CIFAR-10 表中 79.03 nats 对应哪项模型结果？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"information","text":"说明 lossy code 信息分配","acceptable_evidence_ids":["5fc9362278e582e82cc13250c31bea729fbc95d78cee20bfd7305e79ca76ba3e"]},
+      {"id":"nll","text":"定位 79.03 nats 结果","acceptable_evidence_ids":["ff36a383cd39ac86d4842c738421411c17e01a6ed8ca6fe548da162543318a4f"]}
+    ],
+    "claim_specs": [
+      {"id":"information-claim","requirement_id":"information","text":"VLAE 通过其层级结构显式安排 lossy code 所承载的信息。","acceptable_evidence_ids":["5fc9362278e582e82cc13250c31bea729fbc95d78cee20bfd7305e79ca76ba3e"],"major":true},
+      {"id":"nll-claim","requirement_id":"nll","text":"CIFAR-10 表中 79.03 nats 对应一个明确列出的模型结果。","acceptable_evidence_ids":["ff36a383cd39ac86d4842c738421411c17e01a6ed8ca6fe548da162543318a4f"],"major":true}
+    ],
+    "allowed_answer_shape":"method plus table answer","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-08",
+    "query": "RMC 如何让多个 memory slots 发生交互？sequence recall 实验的 99.9% accuracy 对应什么设置？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"interaction","text":"说明 RMC slots interaction","acceptable_evidence_ids":["22777905d29bf5b8504168146e86f68a129d1fe63415b8f4df434644429130db"]},
+      {"id":"accuracy","text":"定位 sequence recall 99.9% 设置","acceptable_evidence_ids":["9e699aec5ef3c42d09d42f4ca56addec85225e6037685974334658d626e40a7c"]}
+    ],
+    "claim_specs": [
+      {"id":"interaction-claim","requirement_id":"interaction","text":"RMC 使用 attention 机制让 memory slots 相互通信。","acceptable_evidence_ids":["22777905d29bf5b8504168146e86f68a129d1fe63415b8f4df434644429130db"],"major":true},
+      {"id":"accuracy-claim","requirement_id":"accuracy","text":"sequence recall 表将 99.9% accuracy 归于一个明确配置。","acceptable_evidence_ids":["9e699aec5ef3c42d09d42f4ca56addec85225e6037685974334658d626e40a7c"],"major":true}
+    ],
+    "allowed_answer_shape":"mechanism plus experiment answer","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-09",
+    "query": "Pointer Network 为什么能让输出字典随输入改变？convex hull 实验表中的 99.9% accuracy 对应哪个长度？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"dictionary","text":"解释动态输出字典","acceptable_evidence_ids":["80747c4b85c953fee250003fed2ef0ad269ad18d70c43760451a0045fbbc3c3f"]},
+      {"id":"accuracy","text":"定位 convex hull 99.9% 长度","acceptable_evidence_ids":["9655ee8fe51a0a2a803cca195aa74f36f0f40b4761a9ef7552b6daee493a3499"]}
+    ],
+    "claim_specs": [
+      {"id":"dictionary-claim","requirement_id":"dictionary","text":"Pointer Network 通过指向输入位置而非固定词表来形成动态输出字典。","acceptable_evidence_ids":["80747c4b85c953fee250003fed2ef0ad269ad18d70c43760451a0045fbbc3c3f"],"major":true},
+      {"id":"accuracy-claim","requirement_id":"accuracy","text":"convex hull 表把 99.9% accuracy 与一个输入长度对应。","acceptable_evidence_ids":["9655ee8fe51a0a2a803cca195aa74f36f0f40b4761a9ef7552b6daee493a3499"],"major":true}
+    ],
+    "allowed_answer_shape":"mechanism plus table answer","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-10",
+    "query": "Neural Turing Machine 中 controller 与 external memory 的职责如何区分？这与 Pointer Network 的动态指针输出有什么关键差别？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"ntm","text":"说明 NTM controller-memory 分工","acceptable_evidence_ids":["16309bce5f9d57b779f5561cde4246993124f48f2f636a670a90cffe9bbe53d5"]},
+      {"id":"pointer","text":"说明 Pointer Network 动态指针","acceptable_evidence_ids":["80747c4b85c953fee250003fed2ef0ad269ad18d70c43760451a0045fbbc3c3f"]}
+    ],
+    "claim_specs": [
+      {"id":"ntm-claim","requirement_id":"ntm","text":"NTM 的 controller 通过读写头访问外部 memory。","acceptable_evidence_ids":["16309bce5f9d57b779f5561cde4246993124f48f2f636a670a90cffe9bbe53d5"],"major":true},
+      {"id":"pointer-claim","requirement_id":"pointer","text":"Pointer Network 的输出指向输入元素，而不是对外部 memory 读写。","acceptable_evidence_ids":["80747c4b85c953fee250003fed2ef0ad269ad18d70c43760451a0045fbbc3c3f"],"major":true}
+    ],
+    "allowed_answer_shape":"two-part contrast with citations","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-11",
+    "query": "AlexNet 采用 ReLU 的训练速度理由是什么？ILSVRC-2012 的 top-5 test error 又是多少？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"relu","text":"说明 ReLU 的训练速度理由","acceptable_evidence_ids":["3812b8a45600845e651e927650692a48595c267d6ceea6e7c1cd3f96e71a8f3f"]},
+      {"id":"error","text":"定位 ILSVRC-2012 top-5 test error","acceptable_evidence_ids":["11a5fba57f1efa3d60102b24c0acdb7e7d75b456a162fc9a5d9c7158ef2bc8f1"]}
+    ],
+    "claim_specs": [
+      {"id":"relu-claim","requirement_id":"relu","text":"论文将 ReLU 相比 tanh 的训练收敛速度作为采用理由。","acceptable_evidence_ids":["3812b8a45600845e651e927650692a48595c267d6ceea6e7c1cd3f96e71a8f3f"],"major":true},
+      {"id":"error-claim","requirement_id":"error","text":"ILSVRC-2012 表中报告了 AlexNet 的 top-5 test error。","acceptable_evidence_ids":["11a5fba57f1efa3d60102b24c0acdb7e7d75b456a162fc9a5d9c7158ef2bc8f1"],"major":true}
+    ],
+    "allowed_answer_shape":"method plus result answer","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-12",
+    "query": "Relation Network 的 g_theta/f_phi 分别做什么？RMC 的 sequence recall 高准确率来自哪项实验配置？",
+    "history": [], "scope": [],
+    "requirements": [
+      {"id":"relation-network","text":"说明 g_theta/f_phi 的角色","acceptable_evidence_ids":["f3c6de774b3c5d1a41dea5855127a079296fa6545978a49627351babd38414b8"]},
+      {"id":"rmc-result","text":"定位 RMC sequence recall 99.9% 配置","acceptable_evidence_ids":["9e699aec5ef3c42d09d42f4ca56addec85225e6037685974334658d626e40a7c"]}
+    ],
+    "claim_specs": [
+      {"id":"relation-network-claim","requirement_id":"relation-network","text":"Relation Network 先用 g_theta 聚合对象对关系，再由 f_phi 输出推断。","acceptable_evidence_ids":["f3c6de774b3c5d1a41dea5855127a079296fa6545978a49627351babd38414b8"],"major":true},
+      {"id":"rmc-result-claim","requirement_id":"rmc-result","text":"RMC 的 sequence recall 表以具体配置报告 99.9% accuracy。","acceptable_evidence_ids":["9e699aec5ef3c42d09d42f4ca56addec85225e6037685974334658d626e40a7c"],"major":true}
+    ],
+    "allowed_answer_shape":"cross-paper mechanism/result answer","refusal_expected":false,"authoring_source":"m3_difficulty_taxonomy"
+  },
+  {
+    "id": "answer-m411-13",
+    "query": "Attention Is All You Need 提出的核心网络结构是什么？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"transformer","text":"说明 Transformer 架构","acceptable_evidence_ids":["4c5808b0f12dea9da5afce8cef08e6a933bf950cd98bbf26c3d97df7e44002da"]}],
+    "claim_specs": [{"id":"transformer-claim","requirement_id":"transformer","text":"论文提出以 attention 为核心的 Transformer 架构。","acceptable_evidence_ids":["4c5808b0f12dea9da5afce8cef08e6a933bf950cd98bbf26c3d97df7e44002da"],"major":true}],
+    "allowed_answer_shape":"short cited fact","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-14",
+    "query": "Transformer 为什么需要把位置信息加入输入表示？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"position","text":"解释 positional encoding 的目的","acceptable_evidence_ids":["2c1b66c263977291525aa4d75c839c98a77157946a722fdc3e6fa77eca4a7479"]}],
+    "claim_specs": [{"id":"position-claim","requirement_id":"position","text":"positional encoding 提供 token 顺序信息。","acceptable_evidence_ids":["2c1b66c263977291525aa4d75c839c98a77157946a722fdc3e6fa77eca4a7479"],"major":true}],
+    "allowed_answer_shape":"short cited explanation","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-15",
+    "query": "MPNN 的节点表示在一轮 message passing 后如何变化？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"mpnn","text":"说明 message passing 节点更新","acceptable_evidence_ids":["2a09b2d9d2b481f8c31047005729f31d44fcb0d850a6d99cceace8fc0092b04d"]}],
+    "claim_specs": [{"id":"mpnn-claim","requirement_id":"mpnn","text":"节点新状态由聚合到的消息和更新函数确定。","acceptable_evidence_ids":["2a09b2d9d2b481f8c31047005729f31d44fcb0d850a6d99cceace8fc0092b04d"],"major":true}],
+    "allowed_answer_shape":"short cited method","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-16",
+    "query": "循环神经网络正则化中的 50% dropout 应避开哪类连接？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"dropout","text":"定位 dropout 连接类型","acceptable_evidence_ids":["aa875fe35622cd884e3ada46474f4b632aeaad0dfd989476adcab65e81d3a731"]}],
+    "claim_specs": [{"id":"dropout-claim","requirement_id":"dropout","text":"50% dropout 应用于论文指定的 non-recurrent connections。","acceptable_evidence_ids":["aa875fe35622cd884e3ada46474f4b632aeaad0dfd989476adcab65e81d3a731"],"major":true}],
+    "allowed_answer_shape":"short cited implementation fact","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-17",
+    "query": "RNNsearch-50* 的 English-to-French BLEU 数值是多少？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"bleu","text":"定位英法 BLEU","acceptable_evidence_ids":["86058e27b8e56420e877a8f7f2de4dafacb219465b495718f3d8efe31913b00a"]}],
+    "claim_specs": [{"id":"bleu-claim","requirement_id":"bleu","text":"RNNsearch-50* 在 English-to-French 表中报告 BLEU 34.16。","acceptable_evidence_ids":["86058e27b8e56420e877a8f7f2de4dafacb219465b495718f3d8efe31913b00a"],"major":true}],
+    "allowed_answer_shape":"short cited numeric fact","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-18",
+    "query": "Relation Network 在 CLEVR 基准上是否超过 95.5% accuracy？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"clevr","text":"定位 CLEVR accuracy","acceptable_evidence_ids":["0357b8737522050625b68f34d8067ae9d081acd31c74b2020bb42afe24ccd38a"]}],
+    "claim_specs": [{"id":"clevr-claim","requirement_id":"clevr","text":"RN 的 CLEVR 表中准确率超过 95.5%。","acceptable_evidence_ids":["0357b8737522050625b68f34d8067ae9d081acd31c74b2020bb42afe24ccd38a"],"major":true}],
+    "allowed_answer_shape":"short cited numeric answer","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-19",
+    "query": "Deep Speech 2 在 WSJ eval'92 上报告了多少 WER？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"wer","text":"定位 WSJ WER","acceptable_evidence_ids":["aaebe7fa769db1342ce3c25521f1de20ff7639430317f31703bdce46c559f3cf"]}],
+    "claim_specs": [{"id":"wer-claim","requirement_id":"wer","text":"WSJ eval'92 的表中报告 5.33 WER。","acceptable_evidence_ids":["aaebe7fa769db1342ce3c25521f1de20ff7639430317f31703bdce46c559f3cf"],"major":true}],
+    "allowed_answer_shape":"short cited numeric fact","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-20",
+    "query": "VLAE 的 CIFAR-10 对比中，79.03 nats 是什么结果？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"nll","text":"定位 VLAE 79.03 nats","acceptable_evidence_ids":["ff36a383cd39ac86d4842c738421411c17e01a6ed8ca6fe548da162543318a4f"]}],
+    "claim_specs": [{"id":"nll-claim","requirement_id":"nll","text":"CIFAR-10 表把 79.03 nats 作为一个模型的结果列出。","acceptable_evidence_ids":["ff36a383cd39ac86d4842c738421411c17e01a6ed8ca6fe548da162543318a4f"],"major":true}],
+    "allowed_answer_shape":"short cited table answer","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-21",
+    "query": "RMC 的 sequence recall 试验中，99.9% accuracy 对应什么？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"accuracy","text":"定位 RMC 99.9% 配置","acceptable_evidence_ids":["9e699aec5ef3c42d09d42f4ca56addec85225e6037685974334658d626e40a7c"]}],
+    "claim_specs": [{"id":"accuracy-claim","requirement_id":"accuracy","text":"sequence recall 表将 99.9% accuracy 对应到一个具体设置。","acceptable_evidence_ids":["9e699aec5ef3c42d09d42f4ca56addec85225e6037685974334658d626e40a7c"],"major":true}],
+    "allowed_answer_shape":"short cited table answer","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-22",
+    "query": "Pointer Network 的 convex hull 结果中，哪个输入长度达到 99.9% accuracy？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"accuracy","text":"定位 convex hull 99.9% 长度","acceptable_evidence_ids":["9655ee8fe51a0a2a803cca195aa74f36f0f40b4761a9ef7552b6daee493a3499"]}],
+    "claim_specs": [{"id":"accuracy-claim","requirement_id":"accuracy","text":"convex hull 结果表将 99.9% accuracy 与特定序列长度关联。","acceptable_evidence_ids":["9655ee8fe51a0a2a803cca195aa74f36f0f40b4761a9ef7552b6daee493a3499"],"major":true}],
+    "allowed_answer_shape":"short cited table answer","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-23",
+    "query": "Attention Is All You Need 在 WMT14 English-to-German 的 BLEU 是多少？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"bleu","text":"定位 WMT14 英德 BLEU","acceptable_evidence_ids":["4c5808b0f12dea9da5afce8cef08e6a933bf950cd98bbf26c3d97df7e44002da"]}],
+    "claim_specs": [{"id":"bleu-claim","requirement_id":"bleu","text":"论文报告了 WMT14 English-to-German 的 BLEU。","acceptable_evidence_ids":["4c5808b0f12dea9da5afce8cef08e6a933bf950cd98bbf26c3d97df7e44002da"],"major":true}],
+    "allowed_answer_shape":"short cited numeric fact","refusal_expected":false,"authoring_source":"independent"
+  },
+  {
+    "id": "answer-m411-24",
+    "query": "Neural Turing Machine 里，controller 如何利用 external memory？",
+    "history": [], "scope": [],
+    "requirements": [{"id":"ntm","text":"说明 controller 与 external memory 的关系","acceptable_evidence_ids":["16309bce5f9d57b779f5561cde4246993124f48f2f636a670a90cffe9bbe53d5"]}],
+    "claim_specs": [{"id":"ntm-claim","requirement_id":"ntm","text":"controller 通过可微读写操作访问 external memory。","acceptable_evidence_ids":["16309bce5f9d57b779f5561cde4246993124f48f2f636a670a90cffe9bbe53d5"],"major":true}],
+    "allowed_answer_shape":"short cited architecture explanation","refusal_expected":false,"authoring_source":"independent"
+  }
+]

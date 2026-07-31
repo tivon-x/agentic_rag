@@ -45,6 +45,30 @@ def test_first_round_sufficient_does_not_follow_up():
     assert retriever.calls == ["first"]
 
 
+def test_live_style_first_round_query_can_keep_full_user_wording():
+    retriever = FakeRetriever({"full question": [_document("e1")]})
+    loop = AdaptiveEvidenceLoop(
+        retriever,
+        expected_index_version=None,
+        planner=lambda _: [
+            {"id": "r1", "requirement": "first fact", "query": "shortened query"},
+            {"id": "r2", "requirement": "second fact", "query": "another shortened query"},
+        ],
+        assessor=lambda _, evidence: [
+            {"requirement_id": "r1", "covered": bool(evidence), "evidence_ids": ["e1"], "coverage": 1.0},
+            {"requirement_id": "r2", "covered": bool(evidence), "evidence_ids": ["e1"], "coverage": 1.0},
+        ],
+        follow_up=lambda _: "second",
+        answerer=_answerer,
+        first_round_queries=lambda query, _: [query],
+    )
+
+    result = loop.run("full question")
+
+    assert result.strategy == "fixed"
+    assert retriever.calls == ["full question"]
+
+
 def test_follow_up_is_once_and_only_for_missing_requirements():
     retriever = FakeRetriever({"first": [_document("e1")], "missing": [_document("e2")]})
 
