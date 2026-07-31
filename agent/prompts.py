@@ -246,10 +246,13 @@ def get_evidence_sufficiency_prompt() -> str:
     return """Evaluate whether the supplied source-faithful evidence quotes support
 each requirement. For every requirement return its ID, covered flag, evidence IDs,
 coverage from 0 to 1, a concrete missing reason, and a follow-up query only when
-that requirement is still missing. This is a semantic judgement, not a deterministic
-proof. Mark a requirement missing only when no supplied quote directly supports its
-core fact; do not require a second search merely for paraphrase, extra context, or
-an optional detail. Never cite an ID that is absent from the supplied evidence.
+that requirement is still missing. A covered requirement must cite at least one
+supplied evidence ID whose quote directly supports its core fact. This is a semantic
+judgement, not a deterministic proof. Mark a requirement missing only when no
+supplied quote directly supports its core fact; do not require a second search merely
+for paraphrase, extra context, or an optional detail. A missing requirement's follow-up
+must name only the missing fact and must not repeat a covered requirement. Never cite
+an ID that is absent from the supplied evidence.
 Return only the JSON structured assessment."""
 
 

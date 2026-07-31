@@ -7,6 +7,7 @@ from langchain_core.documents import Document
 
 from agent.adaptive import _live_answerer, _to_evidence, _validate_claims
 from agent.schemas import AdaptiveAnswer
+from evals.m4_1_2_runner import score_claims_m4_1_2
 
 
 def test_major_claim_without_valid_evidence_is_removed_and_gap_is_reported():
@@ -67,3 +68,37 @@ def test_cited_answer_text_is_backfilled_when_structured_claims_are_missing():
             "major": True,
         }
     ]
+
+
+def test_m4_1_2_keeps_equivalent_valid_evidence_out_of_gold_audit_only():
+    evidence = [
+        {
+            "evidence_id": "returned",
+            "quote": "The reported fact is directly stated.",
+            "paper_id": "paper",
+            "section_path": ["Results"],
+            "page": 1,
+        }
+    ]
+    scores = score_claims_m4_1_2(
+        [{"claim": "The reported fact is directly stated.", "evidence_ids": ["returned"]}],
+        [{"id": "r1", "requirement_id": "r1", "acceptable_evidence_ids": ["gold"]}],
+        [{"claim_index": 0, "claim_spec_id": "r1", "semantically_supported": True, "reason": "The quote directly supports the claim."}],
+        evidence,
+    )
+
+    assert scores["major_fact_support_rate"] == 1.0
+    assert scores["gold_evidence_miss_count"] == 1
+
+
+def test_m4_1_2_records_grader_boolean_reason_conflict_without_repairing_score():
+    evidence = [{"evidence_id": "e1", "quote": "fact", "paper_id": "paper", "section_path": ["s"], "page": 1}]
+    scores = score_claims_m4_1_2(
+        [{"claim": "fact", "evidence_ids": ["e1"]}],
+        [{"id": "r1", "requirement_id": "r1", "acceptable_evidence_ids": ["e1"]}],
+        [{"claim_index": 0, "claim_spec_id": "r1", "semantically_supported": False, "reason": "The quote directly supports the claim."}],
+        evidence,
+    )
+
+    assert scores["grader_inconsistent_indices"] == [0]
+    assert scores["major_fact_support_rate"] == 0.0

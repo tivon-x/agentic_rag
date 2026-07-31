@@ -181,7 +181,9 @@ class AdaptiveEvidenceLoop:
         evidence = _limit_evidence(evidence)
         try:
             assessments = _normalize_assessments(
-                self.assessor(plan_items, evidence), plan_items
+                self.assessor(plan_items, evidence),
+                plan_items,
+                {item["evidence_id"] for item in evidence},
             )
         except Exception:
             return self._result(
@@ -247,7 +249,11 @@ class AdaptiveEvidenceLoop:
         rounds = 2
         evidence = _limit_evidence(evidence)
         try:
-            updated = _normalize_assessments(self.assessor(plan_items, evidence), plan_items)
+            updated = _normalize_assessments(
+                self.assessor(plan_items, evidence),
+                plan_items,
+                {item["evidence_id"] for item in evidence},
+            )
         except Exception:
             return self._result("refuse", plan_items, evidence, assessments, rounds, tool_calls, "model_error", started, query)
         updated_ids = {item["evidence_id"] for item in evidence}
@@ -506,12 +512,31 @@ def _limit_evidence(evidence: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return result
 
 
-def _normalize_assessments(assessments: list[dict[str, Any]], plan_items: list[dict[str, str]]) -> list[dict[str, Any]]:
+def _normalize_assessments(
+    assessments: list[dict[str, Any]],
+    plan_items: list[dict[str, str]],
+    available_evidence_ids: set[str],
+) -> list[dict[str, Any]]:
     by_id = {str(item.get("requirement_id", "")): item for item in assessments}
     normalized = []
     for plan in plan_items:
         raw = by_id.get(plan["id"], {})
-        normalized.append({"requirement_id": plan["id"], "covered": bool(raw.get("covered", False)), "evidence_ids": [str(value) for value in raw.get("evidence_ids", []) if str(value)], "coverage": max(0.0, min(1.0, float(raw.get("coverage", 0.0)))), "missing_reason": str(raw.get("missing_reason", "")), "recommended_follow_up_query": str(raw.get("recommended_follow_up_query", ""))})
+        evidence_ids = [
+            str(value)
+            for value in raw.get("evidence_ids", [])
+            if str(value) in available_evidence_ids
+        ]
+        coverage = max(0.0, min(1.0, float(raw.get("coverage", 0.0))))
+        normalized.append(
+            {
+                "requirement_id": plan["id"],
+                "covered": bool(raw.get("covered", False)) and bool(evidence_ids) and coverage > 0,
+                "evidence_ids": evidence_ids,
+                "coverage": coverage if evidence_ids else 0.0,
+                "missing_reason": str(raw.get("missing_reason", "")),
+                "recommended_follow_up_query": str(raw.get("recommended_follow_up_query", "")),
+            }
+        )
     return normalized
 
 

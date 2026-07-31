@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from langchain_core.documents import Document
 
-from agent.adaptive import AdaptiveEvidenceLoop
+from agent.adaptive import AdaptiveEvidenceLoop, _normalize_assessments
 
 
 class FakeRetriever:
@@ -164,3 +164,21 @@ def test_cancel_and_retrieval_errors_stop_without_more_calls():
 
     assert broken.termination_reason == "retrieval_error"
     assert broken.tool_calls == 0
+
+
+def test_assessor_cannot_mark_requirement_covered_with_unreturned_evidence():
+    assessments = _normalize_assessments(
+        [
+            {
+                "requirement_id": "r1",
+                "covered": True,
+                "evidence_ids": ["invented"],
+                "coverage": 1.0,
+            }
+        ],
+        [{"id": "r1", "requirement": "fact", "query": "fact"}],
+        {"returned"},
+    )
+
+    assert assessments[0]["covered"] is False
+    assert assessments[0]["coverage"] == 0.0

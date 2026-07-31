@@ -969,6 +969,7 @@ def main() -> None:
     import yaml
 
     from evals.m4_1_1_runner import run_from_config as run_m4_1_1_config
+    from evals.m4_1_2_runner import run_from_config as run_m4_1_2_config
     from evals.m4_1_runner import run_from_config as run_m4_1_config
     from evals.v2_runner import main as v2_main
 
@@ -979,6 +980,9 @@ def main() -> None:
             if candidate.exists():
                 payload = yaml.safe_load(candidate.read_text(encoding="utf-8"))
                 kind = str(payload.get("kind", "")) if isinstance(payload, dict) else ""
+                if kind.startswith("m4_1_2_"):
+                    run_m4_1_2_config(candidate)
+                    return
                 if kind.startswith("m4_1_1_"):
                     run_m4_1_1_config(candidate)
                     return
