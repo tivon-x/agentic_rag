@@ -371,45 +371,43 @@
 - 完成后停止，不得自动执行 M5。
 ```
 
-## Goal 5：M5 固定检索产品收口
+## Goal 5：M5 Chat 证据卡片与会话回看
 
 ```text
-目标：以冻结的 `v1_flat_rerank` 为唯一产品检索路径，完成个人论文库的固定检索体验收口。用户应能看懂答案依赖的证据、直接打开原 PDF 页，并在证据不足、空库、解析降级或检索失败时获得明确反馈。
+目标：让 Chat 的每一条回答保存并展示其结构化证据。用户刷新会话后仍能看到论文、章节、页码和 quote，并能直接跳转到对应 PDF 页面。
 
 进入条件：
-- `docs/implementation/m3_2_strategy_acceptance.md` 与 `docs/implementation/m4_1_2_adaptive_eval_acceptance.md` 存在。
-- 默认 `RETRIEVAL_PIPELINE=v1_flat_rerank`、`ANSWER_STRATEGY=fixed`，并且 M4.2 没有开始实施。
 - 用户明确批准执行本 Goal。
 
-开始前读取 AGENTS.md、web/AGENTS.md、docs/research/v2_upgrade_plan.md、M3.2 与 M4.1.2 验收报告。修改 Next.js 前读取当前安装版本的相关官方文档。
+开始前读取 AGENTS.md、web/AGENTS.md、docs/research/v2_upgrade_plan.md、当前 Chat API、Chat 页面、引用组件和相关测试。修改 Next.js 前读取当前安装版本的相关官方文档。
 
 执行边界：
-- 固定 B1 是唯一产品路径，不新增普通用户可选的 BM25、dense、RRF、rerank、S1 或 Adaptive 开关。
-- 不重跑或修改任何冻结评测，不新增 Adaptive、run worker、checkpoint、数据库 migration 或外部服务。
-- 复用现有 Search、fixed chat、Library、Paper 与 evidence schema；新增体验不得改变 active index、检索契约或引用原文。
+- 不改检索策略、graph、索引、数据库 schema、模型调用、SSE 连接模型或普通用户设置。
+- 复用现有 evidence schema 和会话 JSON 存储；不能只保存 Markdown，不能丢失原有 assistant 消息。
+- 页面设计使用 UI skill，沿用当前应用的视觉系统，并完成桌面和 375px 宽度的可用性检查。
 
 必须完成：
-1. 明确展示回答的论文、章节、页码和 quote，并支持跳转到原 PDF 页。
-2. 对空库、无匹配证据、解析降级、索引不可用和模型失败提供用户可理解的状态与下一步操作。
-3. 确保 fixed chat 的有限回答或拒答不新增无证据论文事实。
-4. 为上述状态补齐后端或前端回归测试，并保持现有 API 兼容。
+1. assistant message 增加可选的结构化 evidence，SSE evidence 事件和 `GET /api/chat/{session_id}` 返回相同字段。
+2. `POST /api/chat` 后的流式完成路径将 answer 与其 evidence 一起写入会话；历史会话读取后每轮 answer 仍能显示自己的 evidence。
+3. 每张证据卡片显示论文名、章节、页码和 quote，并链接到 `/papers/{paper_id}?page={page}`。没有 evidence 时显示明确的空状态。
+4. 补齐 API、会话持久化、连续两轮回答、刷新回看、无 evidence 与 PDF 跳转链接的测试。
 
 验证：
 - uv run --extra dev python -m pytest -q
 - uv run --extra dev ruff check .
 - npm --prefix web run lint
 - npm --prefix web run build
-- 手工走通导入论文、Search、fixed chat、打开页码证据、无证据提问和解析降级提示。
+- 手工提问两轮、刷新页面、重开会话并逐个打开证据卡片。检查桌面和 375px 宽度。
 
 交付：
-- 创建 docs/implementation/m5_fixed_product_acceptance.md，记录用户流程、状态边界、验证、坏例、回滚方式和实际修改文件。
+- 创建 docs/implementation/m5_chat_evidence_acceptance.md，记录 API 兼容、会话回看、视觉检查、验证、坏例、回滚方式和实际修改文件。
 - 仅在全部验证通过后创建独立 commit，不推送。完成后停止，等待用户决定是否执行 M6。
 ```
 
-## Goal 6：M6 评测实验室与面试演示材料
+## Goal 6：M6 评测实验室
 
 ```text
-目标：把现有可复现评测转成只读的实验室展示，并把项目的面试叙事落到真实证据上。重点是让访问者理解为何产品固定使用 B1，而不是让其配置或运行未经证明的检索策略。
+目标：把现有可复现评测转成只读实验室展示，让访问者理解为何产品固定使用 B1，而不是让其配置或运行未经证明的检索策略。
 
 进入条件：
 - `docs/implementation/m5_fixed_product_acceptance.md` 存在且 M5 验收通过。
@@ -426,17 +424,44 @@
 必须完成：
 1. 展示固定 B1、S1、M4.1.1、M4.1.2 的目的、数据集版本、关键指标、逐题胜平负或混淆摘要、延迟与代表坏例。
 2. 清晰显示晋级决策：S1 因 holdout Context Recall 未通过，Adaptive 因路由误触发和答案质量未证明净收益，产品默认保持 fixed。
-3. 提供一份基于真实验收记录的演示流程和简历要点，覆盖稳定证据索引、检索实验、冻结评测、负结果决策与回滚边界。
-4. 检查页面和文档不暴露 API Key、prompt、完整本地路径、未脱敏问题或模型凭据。
+3. 检查页面和数据不暴露 API Key、prompt、完整本地路径、未脱敏问题或模型凭据。
 
 验证：
 - uv run --extra dev python -m pytest -q
 - uv run --extra dev ruff check .
 - npm --prefix web run lint
 - npm --prefix web run build
-- 手工核对实验室指标与原始验收报告一致，并完成一次 5 分钟演示。
+- 手工核对实验室指标与原始验收报告一致。
 
 交付：
 - 创建 docs/implementation/m6_evaluation_lab_acceptance.md，记录数据来源、脱敏规则、页面检查、演示稿、验证和回滚方式。
-- 仅在全部验证通过后创建独立 commit，不推送。完成后停止，后续 Compare、Workspace、备份或部署须另立新 Goal。
+- 仅在全部验证通过后创建独立 commit，不推送。完成后停止，等待用户决定是否执行 M7。
+```
+
+## Goal 7：M7 项目设计与面试指南
+
+```text
+目标：编写一份深入浅出的中文项目指南，帮助项目作者理解并讲清这个项目的用户问题、架构、检索、证据、评测、失败决策和工程取舍。
+
+进入条件：
+- M6 验收报告存在且用户明确批准执行本 Goal。
+
+执行边界：
+- 以当前代码、M1 至 M6 验收报告和冻结评测资产为唯一事实来源。
+- 清楚区分已实现能力、实验失败结论和未实施计划，不写虚构指标或能力。
+- 不修改运行代码、评测数据、默认策略或外部依赖。
+
+必须完成：
+1. 在 `docs/` 新增中文项目指南，解释用户问题、模块关系、上传到回答的数据流、B1 固定检索、引用与索引契约。
+2. 解释 M3/M4 的实验设计、门槛、结果和为什么保留 B1。
+3. 提供至少 15 组基于事实的面试问题与回答框架，包括技术选型、评测、失败决策、可靠性、边界和下一步。
+4. 每个关键结论链接到对应代码或验收文档，并提供 10 分钟演示顺序。
+
+验证：
+- git diff --check
+- 手工按指南完成 10 分钟项目讲解，并随机追问 5 个指标或设计决定。
+
+交付：
+- 创建 docs/implementation/m7_project_guide_acceptance.md，记录事实来源、讲解检查、已知限制与修改文件。
+- 仅在全部检查通过后创建独立 commit，不推送。完成后停止。
 ```
