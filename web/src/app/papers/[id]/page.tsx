@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { fetchPaper, updatePaperMetadata } from "@/lib/api";
 import type { MetadataEvidence, PaperDetail } from "@/lib/types";
 
@@ -116,10 +117,10 @@ export default function PaperDetailPage() {
         id="main-content"
         className="mx-auto min-h-[70vh] max-w-3xl px-5 py-20 sm:px-8"
       >
-        <p role="alert" className="border-l-4 border-red-600 pl-4 text-red-800">
+        <p role="alert" className="border-t border-[var(--signal-red)] pt-3 text-[var(--signal-red)]">
           {error}
         </p>
-        <Link href="/library" className="mt-8 inline-flex border-b border-slate-500">
+        <Link href="/library" className="text-link mt-8 inline-flex w-fit">
           返回论文库
         </Link>
       </main>
@@ -132,7 +133,7 @@ export default function PaperDetailPage() {
         id="main-content"
         className="mx-auto min-h-[70vh] max-w-7xl px-5 py-20 sm:px-8"
       >
-        <p className="text-sm text-slate-500">正在读取论文与页码证据…</p>
+        <p className="text-sm text-[var(--muted-ink)]">正在读取论文与页码证据…</p>
       </main>
     );
   }
@@ -147,7 +148,7 @@ export default function PaperDetailPage() {
       id="main-content"
       className="mx-auto flex w-full max-w-[96rem] flex-col gap-8 px-5 py-8 sm:px-8"
     >
-      <header className="space-y-5 border-b border-[var(--line)] pb-7">
+      <header className="space-y-5 border-b border-[var(--ink)] pb-7">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <Link
             href="/library"
@@ -161,7 +162,7 @@ export default function PaperDetailPage() {
               href={`${paper.file_url}#page=${page}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-10 items-center border border-[var(--line)] bg-[var(--panel)] px-4 text-sm font-semibold hover:border-[var(--accent)]"
+              className="inline-flex min-h-11 items-center border border-[var(--line-strong)] bg-[var(--panel)] px-4 text-sm font-semibold transition-[border-color,color] duration-160 hover:border-[var(--ink-blue)] hover:text-[var(--ink-blue)]"
             >
               在新窗口打开原页
             </a>
@@ -185,25 +186,25 @@ export default function PaperDetailPage() {
           </div>
         </div>
         {degradedReason ? (
-          <p className="border-l-4 border-amber-600 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+          <p className="border-t border-[var(--signal-amber)] bg-[#fbf4e8] px-4 py-3 text-sm leading-6 text-[var(--signal-amber)]">
             解析说明：{degradedReason}
           </p>
         ) : null}
       </header>
 
       {notice ? (
-        <p role="status" className="border-l-4 border-emerald-600 pl-4 text-sm">
+        <p role="status" className="border-t border-[var(--ink-blue)] pt-3 text-sm text-[var(--ink-blue)]">
           {notice}
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="border-l-4 border-red-600 pl-4 text-sm text-red-800">
+        <p role="alert" className="border-t border-[var(--signal-red)] pt-3 text-sm text-[var(--signal-red)]">
           {error}
         </p>
       ) : null}
 
       <section className="grid min-h-[75vh] gap-6 xl:grid-cols-[18rem_minmax(0,1fr)_23rem]">
-        <aside className="max-h-[75vh] overflow-y-auto border border-[var(--line)] bg-[var(--panel)] p-4">
+        <aside className="max-h-[75vh] overflow-y-auto border-y border-[var(--line)] bg-[var(--panel)] p-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-serif text-xl">目录</h2>
             <span className="text-xs text-slate-500">
@@ -242,7 +243,7 @@ export default function PaperDetailPage() {
           </ol>
         </aside>
 
-        <div className="flex min-w-0 flex-col border border-[var(--line)] bg-slate-200">
+        <div className="flex min-w-0 flex-col border border-[var(--line)] bg-[#e8e5dc]">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3">
             <div>
               <p className="font-mono text-xs text-slate-500">
@@ -320,14 +321,13 @@ export default function PaperDetailPage() {
                 />
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold">作者，每行一位</span>
-                  <textarea
-                    value={form.authors}
-                    rows={4}
-                    className="w-full border border-slate-300 bg-white px-3 py-2 text-sm"
-                    onChange={(event) =>
-                      setForm({ ...form, authors: event.target.value })
-                    }
-                  />
+                    <Textarea
+                      value={form.authors}
+                      rows={4}
+                      onChange={(event) =>
+                        setForm({ ...form, authors: event.target.value })
+                      }
+                    />
                 </label>
                 <MetadataInput
                   label="年份"
@@ -379,9 +379,9 @@ export default function PaperDetailPage() {
           </Card>
 
           {paper.paper_version ? (
-            <Card className="rounded-none bg-[var(--foreground)] text-white">
-              <p className="editorial-kicker !text-emerald-300">Parser record</p>
-              <dl className="mt-4 space-y-3 text-xs leading-6 text-slate-300">
+            <Card className="ink-button-label rounded-none border-[var(--ink)] bg-[var(--ink)]">
+              <p className="editorial-kicker !text-[#9cc9eb]">Parser record</p>
+              <dl className="mt-4 space-y-3 text-xs leading-6 text-[#d8d5cd]">
                 <div>
                   <dt>解析器</dt>
                   <dd className="text-white">

@@ -133,9 +133,9 @@ export default function LibraryPage() {
   return (
     <main
       id="main-content"
-      className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14"
+      className="mx-auto flex w-full max-w-[90rem] flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14"
     >
-      <header className="grid items-end gap-7 border-b border-[var(--line)] pb-9 lg:grid-cols-[1fr_auto]">
+      <header className="grid items-end gap-7 border-b border-[var(--ink)] pb-9 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="space-y-4">
           <p className="editorial-kicker">Library / Papers</p>
           <h1 className="page-title">论文目录</h1>
@@ -144,14 +144,14 @@ export default function LibraryPage() {
             会保留为独立论文，不自动合并修订版。
           </p>
         </div>
-        <dl className="grid grid-cols-3 gap-7 border-l border-[var(--line)] pl-7">
+        <dl className="grid grid-cols-3 gap-7 border-t border-[var(--line)] pt-4 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
           <Metric label="当前结果" value={counts.total} />
           <Metric label="可检索" value={counts.ready} />
           <Metric label="需处理" value={counts.attention} />
         </dl>
       </header>
 
-      <section className="grid gap-8 lg:grid-cols-[22rem_1fr]">
+      <section className="grid gap-10 lg:grid-cols-[20rem_minmax(0,1fr)]">
         <aside className="space-y-5">
           <FileUpload
             files={files}
@@ -163,7 +163,7 @@ export default function LibraryPage() {
           />
 
           {jobs.length > 0 ? (
-            <Card className="space-y-4 rounded-none border-l-4 border-l-[var(--accent)]">
+            <Card className="space-y-4 rounded-none border-t-2 border-t-[var(--ink-blue)]">
               <h2 className="font-serif text-xl">最近任务</h2>
               {jobs.slice(0, 4).map((job) => (
                 <div
@@ -171,13 +171,13 @@ export default function LibraryPage() {
                   className="border-t border-[var(--line)] pt-3 text-sm"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-mono text-xs text-slate-500">
+                    <span className="font-mono text-xs text-[var(--muted-ink)]">
                       {job.id.slice(0, 8)}
                     </span>
                     <JobStatus status={job.status} />
                   </div>
                   {job.error_message ? (
-                    <p className="mt-2 text-xs leading-6 text-red-700">
+                    <p className="mt-2 text-xs leading-6 text-[var(--signal-red)]">
                       {job.error_message}
                     </p>
                   ) : null}
@@ -204,7 +204,7 @@ export default function LibraryPage() {
             <select
               id="parse-status"
               value={parseStatus}
-              className="min-h-11 border border-slate-300 bg-[var(--panel)] px-3 text-sm"
+              className="min-h-11 border border-[var(--line-strong)] bg-[var(--panel)] px-3 text-sm text-[var(--ink)] transition-[border-color] duration-160 focus:border-[var(--ink-blue)]"
               onChange={(event) =>
                 setParseStatus(event.target.value as "" | ParseStatus)
               }
@@ -221,18 +221,18 @@ export default function LibraryPage() {
           </div>
 
           {notice ? (
-            <p role="status" className="border-l-4 border-emerald-600 pl-4 text-sm">
+            <p role="status" className="border-t border-[var(--ink-blue)] pt-3 text-sm text-[var(--ink-blue)]">
               {notice}
             </p>
           ) : null}
           {error ? (
-            <p role="alert" className="border-l-4 border-red-600 pl-4 text-sm text-red-800">
+            <p role="alert" className="border-t border-[var(--signal-red)] pt-3 text-sm text-[var(--signal-red)]">
               {error}
             </p>
           ) : null}
 
           {isLoading ? (
-            <p className="py-14 text-center text-sm text-slate-500">
+            <p className="border-y border-[var(--line)] py-14 text-center text-sm text-[var(--muted-ink)]">
               正在读取论文目录…
             </p>
           ) : papers.length === 0 ? (
@@ -243,7 +243,7 @@ export default function LibraryPage() {
               </p>
             </Card>
           ) : (
-            <ol className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
+              <ol className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
               {papers.map((paper, index) => (
                 <PaperRow key={paper.id} paper={paper} index={index + 1} />
               ))}
@@ -268,33 +268,33 @@ function PaperRow({ paper, index }: { paper: PaperSummary; index: number }) {
   const confidence = paper.metadata.title?.confidence;
   const reason = paper.fallback_reason || paper.parse_error;
   return (
-    <li className="grid gap-4 bg-[var(--panel)] px-4 py-6 sm:grid-cols-[3rem_1fr_auto] sm:px-5">
-      <span className="font-mono text-xs text-slate-400">
+    <li className="grid gap-4 bg-[var(--panel)] px-4 py-6 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:px-5 sm:py-7">
+      <span className="font-mono text-xs text-[var(--muted-ink)]">
         {String(index).padStart(2, "0")}
       </span>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={paper.parse_status} />
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-[var(--muted-ink)]">
             标题置信度 {formatConfidence(confidence)}
           </span>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-[var(--muted-ink)]">
             来源 {paper.metadata.title?.source ?? "unknown"}
           </span>
         </div>
         <Link
           href={`/papers/${paper.id}`}
-          className="mt-3 block font-serif text-xl leading-snug text-slate-950 hover:text-[var(--accent-strong)]"
+          className="mt-3 block font-serif text-xl leading-snug text-[var(--ink)] hover:text-[var(--accent-strong)]"
         >
           {paper.title || paper.file_name}
         </Link>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-[var(--muted-ink)]">
           {formatAuthors(paper.authors)}
           {paper.year ? ` · ${paper.year}` : ""}
           {paper.venue ? ` · ${paper.venue}` : ""}
         </p>
         {reason ? (
-          <p className="mt-3 border-l-2 border-amber-600 pl-3 text-xs leading-6 text-amber-900">
+          <p className="mt-3 border-t border-[var(--signal-amber)] pt-2 text-xs leading-6 text-[var(--signal-amber)]">
             {reason}
           </p>
         ) : null}
@@ -302,13 +302,13 @@ function PaperRow({ paper, index }: { paper: PaperSummary; index: number }) {
       <div className="flex items-center gap-2 sm:flex-col sm:items-end">
         <Link
           href={`/papers/${paper.id}`}
-          className="inline-flex min-h-10 items-center border-b border-[var(--accent)] text-sm font-semibold text-[var(--accent-strong)]"
+          className="text-link inline-flex"
         >
           查看详情
         </Link>
         <a
           href={`${paper.file_url}#page=1`}
-          className="inline-flex min-h-10 items-center text-xs text-slate-500 hover:text-slate-950"
+          className="inline-flex min-h-10 items-center text-xs text-[var(--muted-ink)] hover:text-[var(--ink)]"
         >
           打开 PDF
         </a>
@@ -323,7 +323,7 @@ function StatusBadge({ status }: { status: ParseStatus }) {
     <span
       className={
         warning
-          ? "inline-flex border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900"
+          ? "inline-flex border border-[var(--signal-amber)] bg-[#fbf4e8] px-2 py-1 text-xs font-semibold text-[var(--signal-amber)]"
           : "status-pill"
       }
     >

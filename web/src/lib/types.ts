@@ -1,8 +1,21 @@
 export type ChatRole = "user" | "assistant" | "system";
 
+export type ChatEvidence = {
+  node_id: string;
+  paper_id: string | null;
+  paper_title: string | null;
+  source: string;
+  section_path: string[];
+  page: number | null;
+  quote: string;
+  score: number | null;
+  relevance: string | null;
+};
+
 export type ChatMessage = {
   role: ChatRole;
   content: string;
+  evidence?: ChatEvidence[] | null;
 };
 
 export type ChatResponse = {
@@ -63,6 +76,7 @@ export type StreamToken = {
   content?: string;
   session_id: string;
   citations_markdown?: string;
+  evidence?: ChatEvidence[] | null;
   error?: string;
 };
 

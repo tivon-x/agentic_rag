@@ -37,9 +37,9 @@ export default function SearchPage() {
   return (
     <main
       id="main-content"
-      className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14"
+      className="mx-auto flex w-full max-w-[90rem] flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14"
     >
-      <header className="space-y-5 border-b border-[var(--line)] pb-9">
+      <header className="space-y-5 border-b border-[var(--ink)] pb-9">
         <p className="editorial-kicker">Search / Page evidence</p>
         <h1 className="page-title">搜索页码证据</h1>
         <p className="page-description">
@@ -69,23 +69,23 @@ export default function SearchPage() {
       </form>
 
       {error ? (
-        <p role="alert" className="border-l-4 border-red-600 pl-4 text-sm text-red-800">
+        <p role="alert" className="border-t border-[var(--signal-red)] pt-3 text-sm text-[var(--signal-red)]">
           {error}
         </p>
       ) : null}
 
       {response ? (
         <section aria-live="polite" className="space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-slate-600">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] pb-4">
+            <p className="text-sm text-[var(--muted-ink)]">
               “{response.query}” 找到 {response.total} 条证据
             </p>
-            <p className="font-mono text-xs text-slate-400">
+            <p className="font-mono text-xs text-[var(--muted-ink)]">
               INDEX {response.index_version}
             </p>
           </div>
           {response.degraded_reason ? (
-            <p className="border-l-4 border-amber-600 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p className="border-t border-[var(--signal-amber)] bg-[#fbf4e8] px-4 py-3 text-sm text-[var(--signal-amber)]">
               当前使用 BM25 降级检索：{response.degraded_reason}
             </p>
           ) : null}
@@ -102,21 +102,19 @@ export default function SearchPage() {
           ) : (
             <Card className="rounded-none border border-dashed border-[var(--line)] bg-transparent text-center shadow-none">
               <h2 className="font-serif text-2xl">没有匹配的页码证据</h2>
-              <p className="mt-3 text-sm text-slate-600">
+              <p className="mt-3 text-sm text-[var(--muted-ink)]">
                 尝试更具体的方法名、指标名或论文中的原始术语。
               </p>
             </Card>
           )}
         </section>
       ) : (
-        <section className="grid gap-px bg-[var(--line)] md:grid-cols-3">
+        <section className="border-y border-[var(--line)]" aria-label="搜索提示">
           {["方法名与模型名", "实验指标与数据集", "原文结论与限制"].map(
             (label, index) => (
-              <div key={label} className="bg-[var(--panel)] p-6">
-                <p className="font-mono text-xs text-[var(--accent-strong)]">
-                  0{index + 1}
-                </p>
-                <p className="mt-6 font-serif text-xl">{label}</p>
+              <div key={label} className="flex items-center gap-5 border-b border-[var(--line)] py-5 last:border-b-0">
+                <span className="font-mono text-xs text-[var(--ink-blue)]">0{index + 1}</span>
+                <p className="font-serif text-xl">{label}</p>
               </div>
             ),
           )}
@@ -129,12 +127,12 @@ export default function SearchPage() {
 function ResultCard({ result, rank }: { result: SearchResult; rank: number }) {
   return (
     <li>
-      <article className="grid gap-0 border border-[var(--line)] bg-[var(--panel)] lg:grid-cols-[4rem_1fr_16rem]">
-        <div className="border-b border-[var(--line)] p-4 font-mono text-xs text-slate-400 lg:border-r lg:border-b-0">
+      <article className="grid gap-0 border-y border-[var(--line)] bg-[var(--panel)] lg:grid-cols-[4rem_minmax(0,1fr)_16rem]">
+        <div className="border-b border-[var(--line)] p-4 font-mono text-xs text-[var(--muted-ink)] lg:border-r lg:border-b-0">
           {String(rank).padStart(2, "0")}
         </div>
         <div className="min-w-0 p-5 sm:p-7">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted-ink)]">
             <span className="status-pill">
               P. {result.page_start}
               {result.page_end !== result.page_start ? `–${result.page_end}` : ""}
@@ -142,10 +140,10 @@ function ResultCard({ result, rank }: { result: SearchResult; rank: number }) {
             <span>{result.section_title}</span>
             <span>{result.block_type}</span>
           </div>
-          <h2 className="mt-4 font-serif text-2xl leading-snug text-slate-950">
+          <h2 className="mt-4 font-serif text-2xl leading-snug text-[var(--ink)]">
             {result.paper_title || "未命名论文"}
           </h2>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-[var(--muted-ink)]">
             {result.authors.length ? result.authors.join("、") : "作者未知"}
             {result.year ? ` · ${result.year}` : ""}
           </p>
@@ -153,7 +151,7 @@ function ResultCard({ result, rank }: { result: SearchResult; rank: number }) {
           <div className="mt-6 flex flex-wrap gap-4">
             <Link
               href={result.paper_url}
-              className="inline-flex min-h-10 items-center border-b border-[var(--accent)] text-sm font-semibold text-[var(--accent-strong)]"
+              className="text-link inline-flex"
             >
               在论文详情中定位
             </Link>
@@ -161,7 +159,7 @@ function ResultCard({ result, rank }: { result: SearchResult; rank: number }) {
               href={result.pdf_url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-10 items-center text-sm font-semibold text-slate-600 hover:text-slate-950"
+              className="inline-flex min-h-10 items-center text-sm font-semibold text-[var(--muted-ink)] hover:text-[var(--ink)]"
             >
               直接打开 PDF 原页
             </a>
@@ -177,7 +175,7 @@ function EvidenceQuote({ text }: { text: string }) {
   const isLong = text.length > 1000;
   return (
     <div className="mt-5">
-      <blockquote className="border-l-2 border-[var(--accent)] pl-4 text-sm leading-7 text-slate-700">
+      <blockquote className="border-t border-[var(--ink-blue)] pt-3 text-sm leading-7 text-[var(--ink)]">
         {isLong ? `${text.slice(0, 1000).trimEnd()}…` : text}
       </blockquote>
       {isLong ? (
@@ -185,7 +183,7 @@ function EvidenceQuote({ text }: { text: string }) {
           <summary className="min-h-10 cursor-pointer font-semibold text-[var(--accent-strong)]">
             展开完整原文摘录
           </summary>
-          <blockquote className="mt-3 border-l-2 border-slate-300 pl-4 leading-7 text-slate-600">
+          <blockquote className="mt-3 border-t border-[var(--line)] pt-3 leading-7 text-[var(--muted-ink)]">
             {text}
           </blockquote>
         </details>

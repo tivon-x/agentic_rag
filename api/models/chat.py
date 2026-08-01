@@ -6,11 +6,26 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class ChatEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    node_id: str = Field(min_length=1)
+    paper_id: str | None = None
+    paper_title: str | None = None
+    source: str = Field(min_length=1)
+    section_path: list[str] = Field(default_factory=list)
+    page: int | None = Field(default=None, ge=1)
+    quote: str = Field(min_length=1)
+    score: float | None = None
+    relevance: str | None = None
+
+
 class ChatMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     role: Literal["user", "assistant", "system"] = "user"
     content: str = Field(min_length=1)
+    evidence: list[ChatEvidence] | None = None
 
 
 class ChatRequest(BaseModel):
@@ -44,4 +59,5 @@ class StreamToken(BaseModel):
     content: str | None = None
     session_id: str
     citations_markdown: str | None = None
+    evidence: list[ChatEvidence] | None = None
     error: str | None = None

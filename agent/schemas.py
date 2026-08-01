@@ -37,6 +37,14 @@ class QueryPlan(BaseModel):
 class EvidenceItem(BaseModel):
     doc_id: str = Field(description="Document identifier for the cited evidence.")
     node_id: str = Field(description="Node identifier for the cited evidence.")
+    paper_id: str | None = Field(
+        default=None,
+        description="Catalog paper identifier when the evidence belongs to a paper.",
+    )
+    paper_title: str | None = Field(
+        default=None,
+        description="Catalog paper title when available in passage metadata.",
+    )
     source: str = Field(description="Original source file or label.")
     section_path: list[str] = Field(
         default_factory=list,

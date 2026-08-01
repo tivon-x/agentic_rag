@@ -1,7 +1,9 @@
-from langchain_core.retrievers import BaseRetriever
-from langchain.tools import tool
 import contextvars
+import hashlib
 import logging
+
+from langchain.tools import tool
+from langchain_core.retrievers import BaseRetriever
 
 
 class ToolFactory:
@@ -33,7 +35,17 @@ class ToolFactory:
             or str(metadata.get("source", "")).strip(),
             "node_id": str(metadata.get("node_id", "")).strip()
             or str(metadata.get("id", "")).strip()
-            or f"{subquery}:{hash(quote)}",
+            or hashlib.sha256(f"{subquery}\0{quote}".encode()).hexdigest(),
+            "paper_id": (
+                str(metadata["paper_id"]).strip()
+                if metadata.get("paper_id")
+                else None
+            ),
+            "paper_title": (
+                str(metadata["paper_title"]).strip()
+                if metadata.get("paper_title")
+                else None
+            ),
             "source": str(metadata.get("source", "")).strip() or "unknown",
             "section_path": [str(item) for item in section_path if str(item).strip()],
             "page": metadata.get("page")

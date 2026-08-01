@@ -14,13 +14,13 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex min-h-10 items-center justify-center rounded-md px-4 py-2.5 text-sm font-semibold transition-[transform,background-color,color,border-color] duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100",
+        "inline-flex min-h-11 items-center justify-center border px-4 py-2.5 text-sm font-semibold transition-[transform,background-color,color,border-color] duration-160 active:scale-95 disabled:cursor-not-allowed disabled:opacity-55 disabled:active:scale-100",
         variant === "primary" &&
-          "bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)]",
+          "ink-button-label border-[var(--ink)] bg-[var(--ink)] hover:border-[var(--accent-strong)] hover:bg-[var(--accent-strong)]",
         variant === "secondary" &&
-          "border border-slate-300 bg-white text-slate-900 hover:border-emerald-600 hover:text-emerald-700",
+          "border-[var(--line-strong)] bg-[var(--paper)] text-[var(--ink)] hover:border-[var(--ink-blue)] hover:text-[var(--ink-blue)]",
         variant === "ghost" &&
-          "bg-transparent text-slate-700 hover:bg-slate-900/5",
+          "border-transparent bg-transparent text-[var(--muted-ink)] hover:border-[var(--line)] hover:text-[var(--ink)]",
         className,
       )}
       {...props}

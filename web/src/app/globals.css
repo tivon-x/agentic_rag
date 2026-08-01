@@ -1,23 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --background: oklch(0.965 0.018 84);
-  --foreground: oklch(0.25 0.025 233);
-  --panel: oklch(0.99 0.009 84);
-  --panel-strong: oklch(0.995 0.004 84);
-  --panel-muted: oklch(0.945 0.018 84);
-  --line: oklch(0.84 0.022 78);
-  --accent: oklch(0.48 0.09 177);
-  --accent-strong: oklch(0.37 0.075 177);
-  --warning: oklch(0.57 0.13 55);
-  --danger: oklch(0.52 0.17 24);
+  --canvas: #f6f4ee;
+  --paper: #fffdf8;
+  --ink: #181715;
+  --muted-ink: #6d6a63;
+  --line: #d9d5cc;
+  --ink-blue: #0b5ea8;
+  --signal-amber: #a56513;
+  --signal-red: #b33a2f;
+
+  /* Compatibility aliases for the existing utility classes. */
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --panel: var(--paper);
+  --panel-strong: #fffefa;
+  --panel-muted: #efede6;
+  --line-strong: #b8b3a8;
+  --accent: var(--ink-blue);
+  --accent-strong: #08477f;
+  --warning: var(--signal-amber);
+  --danger: var(--signal-red);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Segoe UI",
-    sans-serif;
+  --color-background: var(--canvas);
+  --color-foreground: var(--ink);
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC",
+    "Microsoft YaHei", sans-serif;
 }
 
 * {
@@ -25,15 +35,22 @@
 }
 
 html {
-  background: var(--background);
+  background: var(--canvas);
   scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
 
 body {
-  color: var(--foreground);
-  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Segoe UI",
-    sans-serif;
+  min-width: 320px;
   min-height: 100vh;
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC",
+    "Microsoft YaHei", sans-serif;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -41,33 +58,114 @@ a {
   text-decoration: none;
 }
 
+.ink-button-label {
+  color: var(--paper);
+}
+
+.file-input-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0 0 0 0);
+}
+
+.upload-dropzone:focus-within {
+  outline: 2px solid var(--ink-blue);
+  outline-offset: 4px;
+}
+
+.chat-role-label {
+  color: var(--muted-ink);
+}
+
+.chat-message-user .chat-role-label {
+  color: var(--paper);
+}
+
 button,
 a,
 input,
 textarea,
-select {
-  outline-color: var(--accent);
+select,
+summary {
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--ink-blue);
   outline-offset: 3px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--ink-blue) 20%, var(--paper));
+  color: var(--ink);
 }
 
 .app-shell {
   min-height: 100vh;
-  background-color: var(--background);
+  background: var(--canvas);
 }
 
-.skip-link {
-  position: fixed;
-  left: 1rem;
-  top: 1rem;
-  z-index: 50;
-  transform: translateY(-5rem);
-  background: var(--foreground);
-  color: white;
-  padding: 0.75rem 1rem;
+.masthead {
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper);
 }
 
-.skip-link:focus {
-  transform: translateY(0);
+.masthead-inner {
+  display: flex;
+  width: min(100% - 2.5rem, 90rem);
+  min-height: 5rem;
+  margin: 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.brand-lockup {
+  display: inline-flex;
+  min-height: 2.75rem;
+  flex-direction: column;
+  justify-content: center;
+  border-bottom: 1px solid transparent;
+}
+
+.brand-lockup:hover,
+.brand-lockup:focus-visible {
+  border-bottom-color: var(--ink-blue);
+}
+
+.brand-name {
+  font-family: "Iowan Old Style", Baskerville, "Songti SC", STSong, serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.brand-caption {
+  margin-top: 0.28rem;
+  color: var(--muted-ink);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  line-height: 1;
+}
+
+.masthead-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
 }
 
 .nav-link {
@@ -75,61 +173,305 @@ select {
   min-height: 2.5rem;
   align-items: center;
   border-bottom: 2px solid transparent;
-  padding: 0.5rem 0.65rem;
+  padding: 0.45rem 0.7rem;
+  color: var(--muted-ink);
   font-size: 0.875rem;
   font-weight: 650;
-  color: oklch(0.42 0.025 233);
-  transition:
-    border-color 140ms ease,
-    color 140ms ease;
+  transition-property: border-color, color;
+  transition-duration: 160ms;
+  transition-timing-function: ease-out;
 }
 
 .nav-link:hover,
 .nav-link:focus-visible {
-  border-color: var(--accent);
-  color: var(--accent-strong);
+  border-color: var(--ink-blue);
+  color: var(--ink-blue);
+}
+
+.site-footer {
+  display: flex;
+  width: min(100% - 2.5rem, 90rem);
+  margin: 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--line);
+  padding: 1.25rem 0 2rem;
+  color: var(--muted-ink);
+  font-size: 0.75rem;
+}
+
+.skip-link {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 50;
+  transform: translateY(-5rem);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.65rem 0.9rem;
+  transition-property: transform;
+  transition-duration: 160ms;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .editorial-kicker {
-  color: var(--accent-strong);
-  font-size: 0.72rem;
-  font-weight: 750;
-  letter-spacing: 0.2em;
+  color: var(--ink-blue);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
   text-transform: uppercase;
 }
 
 .page-title {
-  font-family: Georgia, "Noto Serif SC", "Songti SC", serif;
-  font-size: clamp(2rem, 5vw, 4.75rem);
+  font-family: "Iowan Old Style", Baskerville, "Songti SC", STSong, serif;
+  font-size: clamp(2.25rem, 6vw, 5.2rem);
   font-weight: 500;
-  letter-spacing: -0.045em;
-  line-height: 0.98;
+  line-height: 1.04;
+  text-wrap: balance;
 }
 
 .page-description {
   max-width: 46rem;
-  color: oklch(0.42 0.025 233);
+  color: var(--muted-ink);
   font-size: 1rem;
   line-height: 1.8;
+  text-wrap: pretty;
 }
 
 .prose-block {
   white-space: pre-wrap;
-  line-height: 1.8;
+  text-wrap: pretty;
 }
 
-.status-pill {
+.status-pill,
+.status-marker,
+.evidence-count {
   display: inline-flex;
   min-height: 1.75rem;
   align-items: center;
-  gap: 0.4rem;
-  border: 1px solid color-mix(in oklch, var(--accent) 32%, transparent);
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--accent) 9%, var(--panel));
-  padding: 0.25rem 0.7rem;
+  gap: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--ink-blue) 45%, var(--line));
+  background: color-mix(in srgb, var(--ink-blue) 7%, var(--paper));
+  padding: 0.22rem 0.55rem;
+  color: var(--ink-blue);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.status-dot,
+.evidence-marker {
+  display: inline-block;
+  width: 0.48rem;
+  height: 0.48rem;
+  flex: 0 0 auto;
+  background: var(--ink-blue);
+}
+
+.evidence-marker {
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
+.text-link {
+  min-height: 2.25rem;
+  align-items: center;
+  border-bottom: 1px solid var(--ink-blue);
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition-property: color, border-color;
+  transition-duration: 160ms;
+}
+
+.text-link:hover,
+.text-link:focus-visible {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.form-error {
+  border-top: 1px solid var(--signal-red);
+  padding-top: 0.65rem;
+  color: var(--signal-red);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.chat-header {
+  display: grid;
+  align-items: end;
+  gap: 2rem;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 2rem;
+}
+
+.chat-layout {
+  display: grid;
+  gap: 3rem;
+  padding-top: 2.5rem;
+}
+
+.chat-column {
+  min-width: 0;
+}
+
+.chat-transcript {
+  display: flex;
+  min-height: 32rem;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem 0;
+}
+
+.chat-empty {
+  display: flex;
+  min-height: 19rem;
+  flex-direction: column;
+  justify-content: center;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 2rem 0;
+}
+
+.chat-message {
+  width: min(100%, 48rem);
+  border-top: 1px solid var(--line);
+  padding: 1.1rem 1.25rem 1.35rem;
+  background: var(--paper);
+}
+
+.chat-message-user {
+  align-self: flex-end;
+  border-top-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.chat-message-user .evidence-count,
+.chat-message-user .status-dot {
+  border-color: var(--paper);
+  background: var(--paper);
+}
+
+.chat-composer {
+  display: grid;
+  gap: 0.8rem;
+  border-top: 1px solid var(--ink);
+  padding-top: 1.25rem;
+}
+
+.evidence-rail {
+  min-width: 0;
+  align-self: start;
+  border-top: 2px solid var(--ink-blue);
+  padding-top: 0.8rem;
+}
+
+.evidence-empty {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 1.3rem 0 1.5rem;
+}
+
+.evidence-entry {
+  padding: 1.2rem 0 1.35rem;
+}
+
+.evidence-number {
+  display: inline-flex;
+  width: 1.65rem;
+  min-height: 1.65rem;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink-blue);
+  color: var(--paper);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.66rem;
+  line-height: 1;
+}
+
+.evidence-disclosure summary {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  color: var(--ink-blue);
+  cursor: pointer;
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--accent-strong);
+  list-style: none;
+}
+
+.evidence-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.evidence-disclosure summary::before {
+  margin-right: 0.45rem;
+  content: "+";
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.evidence-disclosure[open] summary::before {
+  content: "−";
+}
+
+@media (min-width: 900px) {
+  .chat-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .chat-layout {
+    grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .chat-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(22rem, 0.6fr);
+    gap: 4rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .masthead-inner,
+  .site-footer {
+    width: min(100% - 2rem, 90rem);
+  }
+
+  .masthead-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.8rem 0 0.7rem;
+  }
+
+  .masthead-nav {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .nav-link {
+    padding-right: 0.55rem;
+    padding-left: 0;
+  }
+
+  .site-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .chat-message {
+    padding-right: 0.9rem;
+    padding-left: 0.9rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

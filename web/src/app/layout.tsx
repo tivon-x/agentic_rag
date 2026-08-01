@@ -29,15 +29,13 @@ export default function RootLayout({
           跳到正文
         </a>
         <div className="app-shell">
-          <header className="border-b border-[var(--line)] bg-[var(--panel)]">
-            <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
-              <Link
-                href="/"
-                className="font-serif text-lg font-semibold tracking-tight text-slate-950"
-              >
-                {text.nav.brand}
+          <header className="masthead">
+            <div className="masthead-inner">
+              <Link href="/" className="brand-lockup">
+                <span className="brand-name">{text.nav.brand}</span>
+                <span className="brand-caption">LOCAL PAPER LIBRARY</span>
               </Link>
-              <nav aria-label="主导航" className="flex items-center gap-1 sm:gap-4">
+              <nav aria-label="主导航" className="masthead-nav">
                 <Link href="/library" className="nav-link">
                   {text.nav.library}
                 </Link>
@@ -51,6 +49,10 @@ export default function RootLayout({
             </div>
           </header>
           {children}
+          <footer className="site-footer">
+            <span>证据优先，回到原页。</span>
+            <span className="font-mono text-[0.68rem]">FIXED RAG / LOCAL FIRST</span>
+          </footer>
         </div>
       </body>
     </html>
