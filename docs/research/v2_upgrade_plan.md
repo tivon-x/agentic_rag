@@ -1,27 +1,40 @@
 # Agentic RAG V2 升级方案
 
-> 修订日期：2026-07-25  
-> 状态：待用户审批，只允许先执行 Core M1 至 M3  
-> 推荐主线：论文证据底座 + metadata-prefixed hybrid retrieval + 有界补检 + 双模式科研工作区
+> 修订日期：2026-08-01
+> 状态：M1 至 M3.2 已完成，M4.1、M4.1.1、M4.1.2 已完成且未通过质量门槛。下一步只可按本方案执行固定检索产品收口。
+> 推荐主线：稳定的 B1 论文证据检索 + 用户可感知的证据体验 + 可复现实验室展示
+
+## 当前执行状态
+
+下表是本文件的当前事实状态，优先级高于后文保留的历史设计。历史段落用于说明当时的约束、实验和决策，不是待执行任务。
+
+| 里程碑 | 状态 | 结论与依据 |
+|---|---|---|
+| M1 | 已完成 | 可靠索引、迁移、任务恢复和不可变索引版本已交付。 |
+| M2 | 已完成 | 论文目录、解析、页码证据、Library、Paper 与 Search 已交付。 |
+| M3 / M3.1 / M3.2 | 已完成 | 固定策略已收口，`v1_flat_rerank` 是冻结 B1；复杂固定候选未获晋级。 |
+| M4.1 / M4.1.1 / M4.1.2 | 已完成，未通过 | bounded Adaptive 在两次复验均未证明净收益，默认固定为 `ANSWER_STRATEGY=fixed`。详见 `docs/implementation/m4_1_1_retrieval_quality_acceptance.md` 与 `docs/implementation/m4_1_2_adaptive_eval_acceptance.md`。 |
+| M4.2 | 终止，不执行 | 它依赖 M4.1 质量通过。不得为未通过的 Adaptive 增加持久 run、checkpoint、worker 或用户入口。 |
+| 下一步 | 待用户逐项授权 | M5 固定检索产品收口，随后才可考虑 M6 评测实验室与面试演示材料。 |
 
 ## 1. 决策摘要
 
-V2 不再按一次性重写推进。完整路线分为三层：
+V2 不再按一次性重写推进。当前路线分为产品主线、实验展示与面试材料三层：
 
 | 层级 | 范围 | 进入条件 | 是否属于首次审批 |
 |---|---|---|---|
-| Core | 可靠索引、论文目录、页码证据、Search、固定 V2 检索、精简评测 | 本方案获批 | 是 |
-| Enhanced | 持久 run worker、有界补检、claim 校验、调试 trace | Core 检索达到 M3 门槛，用户再次确认 | 否 |
-| Product | 多论文比较、研究结果保存、备份、部署收口 | Enhanced 的质量与延迟门槛成立，用户再次确认 | 否 |
+| 已完成基础 | 可靠索引、论文目录、页码证据、Search、固定 B1 检索、可复现评测 | 已完成 | 是 |
+| 产品主线 | 固定 B1 的回答、引用、失败反馈与前端体验收口 | 用户单独批准 M5 | 否 |
+| 实验展示 | 只读评测实验室、对比报告、坏例与面试演示材料 | M5 完成且用户单独批准 M6 | 否 |
 
-首次实施边界只有 M1、M2、M3。它们完成后，产品已经能稳定导入论文、搜索个人论文库、查看原文页码、运行固定 RAG，并用可复现评测证明检索变化。M4.1 至 M6 的技术方向已经确定，但不会与 Core 捆绑实施。
+M1 至 M3.2 已经完成，产品已经能稳定导入论文、搜索个人论文库、查看原文页码、运行固定 RAG，并用可复现实验证明检索变化。Adaptive 的两次冻结复验没有支持上线，因此项目不再把复杂策略当成产品必经路线。
 
 V2 的四个核心亮点是：
 
 1. 论文、章节、passage、页码和原文引用使用稳定标识，答案能回到证据页。
 2. 检索表示与引用原文分离，通过 metadata prefix、BM25、dense、RRF、重排和受控扩展提升召回，同时保持引用不被改写。
-3. 固定检索是正式基线，有界 adaptive 只在证据不足时进入，最多补检两轮。
-4. 评测按 parser、retrieval、answer、route 分库，报告成对差异、坏例和成本，不再用一个小数据集支撑所有结论。
+3. `v1_flat_rerank` 是唯一产品检索路径，证据不足时给出有限回答或明确拒答，不做隐式补检。
+4. 评测按 parser、retrieval、answer、route 分库，保存成对差异、坏例和成本；未通过的候选保留为实验资产，不伪装成产品能力。
 
 Docling、GraphRAG、多 Agent、RAPTOR、GROBID 服务、专用向量数据库和云任务队列不进入 V2。Docling 当前适合结构和版面解析，但官方仍把标题、作者、参考文献和语言元数据列为后续能力，且现有仓库尚无足够 parser gold 证明其收益值得承担依赖与运行成本。V2 Core 使用仓库已安装的 PyMuPDF4LLM，保留 legacy parser 回退。
 
@@ -76,12 +89,11 @@ Docling、GraphRAG、多 Agent、RAPTOR、GROBID 服务、专用向量数据库�
 - Search、固定 V2 检索、页码证据和 final-only answer。
 - parser 与 retrieval 精简评测。
 
-**Enhanced**
+**历史 Enhanced 设计，已终止**
 
-- M4.1 先验证 direct、fixed、adaptive、refuse 四类策略和一次定向补检。
-- M4.2 再接入持久 run queue、LangGraph checkpoint 和进程重启恢复。
-- claim-evidence 校验、预算终止和最终拒答。
-- 持久 trace 和技术调试面板。
+- M4.1 已完成两次复验，未证明 direct、fixed、adaptive、refuse 路由和一次定向补检有净收益。
+- M4.2 的持久 run、LangGraph checkpoint 和进程重启恢复不再实施。
+- claim-evidence 校验、预算终止、持久 trace 仅保留为已验证过的实验资产，不新增产品入口。
 
 **Product**
 
@@ -127,10 +139,8 @@ FastAPI 进程内最多启动一个 index worker 和一个 run worker。SQLite �
 
 1. Core 直接运行 fixed pipeline，得到候选、重排结果和 evidence。
 2. 证据不足时，Core 返回有限答案或拒答，不做隐式补检。
-3. M4.1 获批后，在现有 chat 边界验证 adaptive graph 的质量，不新增持久 run。
-4. M4.2 获批后，run worker 接管 adaptive graph 的持久执行和恢复。
-5. 所有 claim 校验完成后才产生 `answer.final`。
-6. 前端用 `paper_id + page_number` 打开原 PDF，并在侧栏显示 quote。
+3. 证据不足时，fixed chat 生成有限回答或拒答，不触发第二轮检索。
+4. 前端用 `paper_id + page_number` 打开原 PDF，并在侧栏显示 quote。
 
 ## 4. 数据模型和稳定标识
 
@@ -444,11 +454,11 @@ run.failed | run.cancelled
 | `GET` | `/api/chat/{session_id}` | 会话历史 |
 | `GET` | `/api/index-versions` | active 和历史版本 |
 
-Core 删除现有“转发所有模型 token”的行为。`/api/chat/stream` 在 M1 兼容保留，但只发 `progress` 和一个 `answer.final`，M4.2 再迁移到 run API。没有后端持久化的 Settings 页面不进入 V2。
+Core 删除现有“转发所有模型 token”的行为。`/api/chat/stream` 兼容保留，但只发 `progress` 和一个 `answer.final`。M4.2 run API 已终止，不进入 V2。
 
 ### 8.2 Enhanced API
 
-M4.1 不新增 API，继续通过现有 chat 边界显式验证 adaptive。M4.2 新增持久 run API：
+M4.1 不新增 API，继续通过现有 chat 边界完成实验验证。下表是已终止的 M4.2 历史 API 设计，不得实施：
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -629,13 +639,13 @@ M4.2 必须满足：
 - 同一 session 的第二个并发 run 返回 409，SSE 能按 `Last-Event-ID` 从持久事件继续。
 - fixed 回滚链路不依赖 run worker 或 checkpoint 数据库。
 
-M4.1 未达到门槛时，默认策略保持 B1 fixed，不进入 M4.2。M4.1 通过后仍保持 `ANSWER_STRATEGY=fixed` 默认值，adaptive 作为显式可选路径；是否切换默认值由后续完整产品验收决定。
+M4.1、M4.1.1、M4.1.2 均未达到质量门槛，默认策略固定为 B1，且不进入 M4.2。Adaptive 不作为产品可选路径；后续只有在另立 Goal、冻结全新数据并证明净收益后，才可重新讨论。
 
 ## 11. 实施里程碑
 
 完整路线预计修改或新增 35 至 45 个文件，超过 8 个文件，影响 `core/`、`indexing/`、`agent/`、`evals/`、`api/`、`web/` 和 `tests/`。每个里程碑控制在一个可审查主题内，完成后项目必须可运行。
 
-### M1：运行与索引可靠性
+### M1：运行与索引可靠性（已完成）
 
 **目标**
 
@@ -688,7 +698,7 @@ uv run --extra dev ruff check api core indexing main.py tests
 
 保留旧索引读取适配器和 `INDEX_WRITE_MODE=legacy` 一个版本周期。active pointer 可切回上一 ready version。数据库升级前自动复制 `sessions.db`；代码回滚不删除新增表。
 
-### M2：论文目录与页码证据
+### M2：论文目录与页码证据（已完成）
 
 **目标**
 
@@ -747,7 +757,7 @@ npm --prefix web run build
 
 `PAPER_PARSER=legacy` 只影响新任务。M2 catalog 和 parsed artifact 不删除，上一 active index 继续可读。M2 parser 门槛失败则停止进入 M3。
 
-### M3：固定 V2 检索和精简评测
+### M3：固定 V2 检索和精简评测（已完成）
 
 **目标**
 
@@ -804,7 +814,7 @@ uv run --extra dev ruff check indexing core evals tests
 
 `RETRIEVAL_PIPELINE=v1_flat_rerank|v2_fixed|v2_expanded` 独立切换。每个 index version 记录 tokenizer 和 retrieval schema，不混用不兼容版本。
 
-### M3.1：固定检索性能优化实验
+### M3.1：固定检索性能优化实验（已完成，未晋级）
 
 M3 的 B2/B3 是历史冻结实验，原结论保持失败，不回写、不覆盖，也不把后续
 消融改名为已通过的 B2。M3.1 的唯一正式候选命名为
@@ -833,7 +843,7 @@ M3.1 全部门槛通过后才允许把默认 fixed pipeline 切换为
 `v2_fixed_optimized` 并标记后续策略收口具备进入条件。后续里程碑仍必须等待用户再次
 明确批准；M3.1 完成后停止，不自动实施 M3.2 或 M4.1。
 
-### M3.2：固定策略收口
+### M3.2：固定策略收口（已完成）
 
 M3.1 的原 promotion gate 和失败结论保持不变：`m3_1_core_passed=false`，
 它不因 M3.2 的完成而被改写。M3.2 不是 M3.1 的第二次尝试，也不新增参数
@@ -853,7 +863,9 @@ holdout 只运行一次且完整保留，且用户明确批准 Enhanced。因此
 `m3_1_core_passed`、`m3_strategy_closed` 和 `m4_entry_ready` 是三个独立字段：
 在收口成功完成时分别为 `false`、`true`、`true`。
 
-### M4.1：有界 adaptive 质量闭环
+### M4.1：有界 adaptive 质量闭环（已完成，未通过）
+
+M4.1、M4.1.1 与 M4.1.2 均已完成。两次复验均未通过 route 与 answer 质量门槛，冻结报告和坏例是实验室展示材料，不是继续调参或重跑的许可。
 
 **进入条件**
 
@@ -899,12 +911,11 @@ npm --prefix web run build
 checkpoint，失败时删除可选 Adaptive 接线即可回到 M3.2 状态。质量门槛失败时
 `m4_1_quality_passed=false`、`m4_2_entry_ready=false`，不得进入 M4.2。
 
-### M4.2：持久 run 与恢复
+### M4.2：持久 run 与恢复（终止，不执行）
 
 **进入条件**
 
-M4.1 验收存在，`m4_1_quality_passed=true`、`m4_2_entry_ready=true`，且用户
-单独批准 M4.2。
+M4.1 两次复验均未通过，`m4_1_quality_passed=false`、`m4_2_entry_ready=false`。本节保留为历史设计，不得实施、不得作为后续工作的前置条件。
 
 **主要文件**
 
@@ -953,64 +964,61 @@ checkpoint 时使用保存输入幂等重启；assistant message、claims、evid
 数据库 migration 保持 forward-only，新表可以保留不用。checkpoint 数据库可删除，
 不影响已完成答案和 evidence。
 
-### M5：调试 trace 和评测扩展
+### M5：固定检索产品收口（待授权）
 
 **进入条件**
 
-M4.1 质量门槛和 M4.2 恢复测试通过。
+用户单独批准，且当前分支仍保留冻结 B1 合同与 M4.1.2 验收记录。M5 不依赖 M4.1 或 M4.2 通过。
 
 **改造**
 
-- 原样重跑 M4.1 的 24 条 answer test 和 48 条 route/refusal test，确认 trace 与持久化没有改变结果。
-- `run_events`、candidate 和 evidence 形成可导出的 trace。
-- chat 技术模式显示计划、排名、补检、停止原因、延迟和 token。
-- trace 默认保存 7 天；用户保存的 artifact 不受影响。
-- 新增样本只能进入独立扩展集，不能修改 M4.1 冻结 test 或发布门槛。
+- 只使用 `v1_flat_rerank` 和现有 fixed chat，明确在证据不足时有限回答或拒答。
+- 完成用户能直接感知的体验：回答中的页码证据、原 PDF 跳转、检索失败原因、空库与解析降级反馈。
+- 保持索引版本和 embedding 契约校验，不能为演示临时切换不兼容检索配置。
+- 不增加 Adaptive 入口、持久 run、checkpoint、worker、SSE 重连或通用高级检索设置。
 
 **验收命令**
 
 ```bash
-uv run --extra dev python -m pytest tests/test_trace_repository.py tests/test_debug_api.py tests/test_route_eval.py -q
-uv run python -m evals.runner --config evals/configs/v2_route.yaml
-uv run python -m evals.runner --config evals/configs/v2_answer.yaml
+uv run --extra dev python -m pytest -q
+uv run --extra dev ruff check .
 npm --prefix web run lint
 npm --prefix web run build
 ```
 
 **回滚**
 
-`DEBUG_TRACE=false` 停止写详细 candidate 和 trace，只保留 run 结果与错误。Agent 行为不依赖调试页面。
+M5 的所有前端改动不得改变 B1 检索结果、引用内容或 active index。回滚为关闭新增 UI 入口，fixed chat、Search 和 Library 保持可用。
 
-### M6：比较、Workspace 和部署
+### M6：评测实验室与面试演示材料（待授权）
 
 **进入条件**
 
-M4.1 质量、延迟和成本门槛及 M4.2 恢复门槛通过，用户批准 Product。
+M5 验收完成且用户单独批准。M6 只展示真实、已冻结的实验结果，不把实验候选开放给普通用户配置。
 
 **改造**
 
-- Compare 固定 2 至 5 篇论文、1 至 6 个维度。
-- 每个比较单元格必须包含 evidence，缺证据显示“未找到”，不补写推测。
-- 保存 answer、comparison 和 evidence collection。
-- 提供 SQLite、uploads、indexes、parsed artifacts 的一致性备份命令。
-- Docker 启动 FastAPI 和 Next.js，数据目录使用 volume。
+- 新增只读“评测实验室”或开发者模式，展示 B1、S1 与 Adaptive 的配置摘要、冻结数据集版本、逐题胜平负、指标、延迟和坏例。
+- 实验室只读取已提交的报告和清洗后的 trace 摘要，不触发实时模型调用、不修改 active index，也不提供参数调节与“切换为更强策略”的承诺。
+- 将项目演示收口为：问题与约束、候选方案、冻结评测、失败决策、B1 产品体验和可回滚边界。
+- 简历、README 或演示稿只能引用真实指标与验收结论，明确 S1 与 Adaptive 未晋级的原因。
 
 **验收命令**
 
 ```bash
-uv run --extra dev python -m pytest tests/test_artifacts_api.py tests/test_compare.py tests/test_backup_restore.py -q
+uv run --extra dev python -m pytest -q
+uv run --extra dev ruff check .
 npm --prefix web run lint
 npm --prefix web run build
-docker compose up --build
 ```
 
 **人工检查**
 
-用 3 篇同主题论文生成方法、数据集、指标、局限四维比较，逐格打开 evidence。备份后在空数据目录恢复，论文、索引、会话和 artifact 数量一致。
+检查实验室中的 B1、S1、M4.1.1、M4.1.2 结论与验收文档一致，页面不出现 API Key、prompt、完整本地路径或可识别的未脱敏输入。用 5 分钟完整演示一次“导入论文、检索、打开页码证据、查看评测决策”。
 
 **回滚**
 
-Compare 和 Workspace 是独立路由及表，不影响 Search、fixed chat 或 adaptive graph。Docker 失败不阻止本机 `uv run uvicorn` 与 `npm run dev`。
+实验室是独立只读入口。回滚为移除入口，不影响 Search、fixed chat、Library 或索引。
 
 ## 12. 延迟、成本、失败恢复和保留
 
@@ -1111,7 +1119,7 @@ Enhanced 演示：
 
 ## 15. 实施授权边界
 
-M1 至 M3.2 已完成并形成独立验收记录。后续按 M4.1、M4.2、M5、M6 顺序逐个授权。M4.1 未通过质量门槛时不得进入 M4.2；M4.2 未通过恢复门槛时不得进入 M5。不得提前安装 Docling，不得新增外部服务。每个里程碑开始前记录分支和工作区，保护用户已有未提交文件；每个里程碑结束后单独提交验收结果和坏例，等待用户决定是否继续。
+M1 至 M3.2、M4.1、M4.1.1、M4.1.2 已完成并形成独立验收记录。M4.2 已终止，禁止实施。后续只能按 M5、M6 顺序逐个授权，M6 不得早于 M5。不得提前安装 Docling、不得新增外部服务、不得将 S1 或 Adaptive 设为用户可配置的普通产品选项。每个里程碑开始前记录分支和工作区，保护用户已有未提交文件；每个里程碑结束后单独提交验收结果和坏例，等待用户决定是否继续。
 
 ## 16. 评审问题关闭矩阵
 

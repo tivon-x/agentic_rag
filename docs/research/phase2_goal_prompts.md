@@ -1,15 +1,17 @@
 # Agentic RAG V2 第二阶段 Goal 提示词
 
+> 当前状态：M1 至 M3.2、M4.1、M4.1.1、M4.1.2 均已完成。M4.1 系列未通过质量门槛，`ANSWER_STRATEGY=fixed` 保持默认，M4.2 已终止且不得执行。
+
 ## 使用方式
 
 - 每次只创建一个 Goal，不要同时启动多个里程碑。
-- 按 M1、M2、M3、M3.1、M3.2、M4.1、M4.2、M5、M6 的顺序执行。
-- M1 至 M3.2 属于 Core。M4.1、M4.2、M5、M6 必须分别满足进入条件并获得用户再次授权。
+- 已完成 Goal 仅保留为历史执行记录，不能再次运行或覆盖冻结数据、报告和结论。
+- 后续只按 M5、M6 的顺序执行，并且每个 Goal 都需要用户再次授权。
 - `docs/research/v2_upgrade_plan.md` 是唯一实施方案。`tasks.md`、`.sisyphus/` 和旧项目指南只作为历史材料，发生冲突时不得覆盖 V2 方案。
 - 每个 Goal 完成后停止，等待用户评审，不得自动进入下一个 Goal。
 - 所有 Goal 都禁止自动推送远端、创建 PR、安装 Docling 或新增外部服务。
 
-## Goal 1：M1 运行与索引可靠性
+## Goal 1：M1 运行与索引可靠性（已完成）
 
 ```text
 目标：在 C:\Users\27564\Documents\code\ai\rag\agentic_rag 仓库中完成 Agentic RAG V2 的 M1“运行与索引可靠性”，建立可靠、可恢复、可回滚的 Core 运行底座。
@@ -68,7 +70,7 @@
 - 完成后停止，不得自动执行 M2。只有目标真实完成且没有剩余必做项时才把 Goal 标记为 complete。
 ```
 
-## Goal 2：M2 论文目录与页码证据
+## Goal 2：M2 论文目录与页码证据（已完成）
 
 ```text
 目标：完成 Agentic RAG V2 的 M2“论文目录与页码证据”，把现有通用文档 RAG 升级成可管理、可搜索、可回到原 PDF 页面的个人论文库产品。
@@ -122,7 +124,7 @@
 - 完成后停止，不得自动执行 M3。
 ```
 
-## Goal 3：M3 固定 V2 检索与精简评测
+## Goal 3：M3 固定 V2 检索与精简评测（已完成）
 
 ```text
 目标：完成 Agentic RAG V2 的 M3“固定 V2 检索与精简评测”，通过可复现实验证明 metadata-prefixed hybrid retrieval、mixed BM25、RRF、rerank 和可选 section neighbor expansion 的净收益。
@@ -180,7 +182,7 @@
 - 即使 M3 通过，也不得自动执行后续里程碑，必须等待用户再次批准。
 ```
 
-## Goal 4A：M4.1 有界 Adaptive 质量闭环
+## Goal 4A：M4.1 有界 Adaptive 质量闭环（已完成，未通过）
 
 ```text
 目标：冻结 M3.2 选出的 B1 检索链路，在不继续调检索参数的前提下，证明“证据缺口判断 + 一次定向补检”是否比 fixed B1 更好。M4.1 只解决策略质量，不实现持久 run、worker、checkpoint、SSE 重连或调试工作台。
@@ -245,7 +247,7 @@
 - 完成后停止，不得自动执行 M4.2。
 ```
 
-## Goal 4A.1：M4.1.2 Adaptive 场景对齐复验
+## Goal 4A.1：M4.1.2 Adaptive 场景对齐复验（已完成，未通过）
 
 ```text
 目标：在不调整冻结 B1 检索链路的前提下，建立新的、面向“首轮部分覆盖且一次定向补检可补齐缺口”的 M4.1.2 冻结评测，验证 bounded Adaptive 是否在其真正适用场景中优于同一 B1 的一轮 fixed。M4.1.1 已失败且不得改写；本 Goal 只复验策略质量，不实施 M4.2。
@@ -305,7 +307,9 @@
 - 仅在实现与评测可复现后创建一个独立 commit，不推送；完成后停止。
 ```
 
-## Goal 4B：M4.2 持久 Run 与恢复
+## Goal 4B：M4.2 持久 Run 与恢复（终止，不执行）
+
+> 本 Goal 仅保留历史设计，禁止复制、执行或以任何方式恢复为待办。M4.1 系列未通过质量门槛，M4.2 的进入条件永久不满足。
 
 ```text
 目标：在 M4.1 已证明 Adaptive 有净收益后，把可选 Adaptive 链路接入持久 run、单 worker、LangGraph checkpoint 和可重连事件流。M4.2 解决恢复和幂等，不重新设计或调优 M4.1 策略。
@@ -367,112 +371,72 @@
 - 完成后停止，不得自动执行 M5。
 ```
 
-## Goal 5：M5 Trace、可解释性与完整评测
+## Goal 5：M5 固定检索产品收口
 
 ```text
-目标：完成 Agentic RAG V2 的 M5“调试 trace 和评测扩展”，让每次回答都能追溯策略、计划、候选、重排、证据、补检、停止原因、延迟和 token。Adaptive 的首次质量证明已经在 M4.1 完成，M5 负责可解释性、诊断和扩展回归，不得重新定义 M4.1 的发布门槛。
+目标：以冻结的 `v1_flat_rerank` 为唯一产品检索路径，完成个人论文库的固定检索体验收口。用户应能看懂答案依赖的证据、直接打开原 PDF 页，并在证据不足、空库、解析降级或检索失败时获得明确反馈。
 
 进入条件：
-- M4.1 和 M4.2 已完成，对应验收报告存在。
-- M4.1 质量门槛通过，M4.2 的 serializer、lease、恢复、SSE 重连、并发和幂等测试全部通过。
-- 用户已明确要求执行本 Goal。
+- `docs/implementation/m3_2_strategy_acceptance.md` 与 `docs/implementation/m4_1_2_adaptive_eval_acceptance.md` 存在。
+- 默认 `RETRIEVAL_PIPELINE=v1_flat_rerank`、`ANSWER_STRATEGY=fixed`，并且 M4.2 没有开始实施。
+- 用户明确批准执行本 Goal。
 
-开始前读取 AGENTS.md、web/AGENTS.md、v2_upgrade_plan.md 第 7、8、10、11、12 节，以及 M1 至 M4.2 验收报告。
+开始前读取 AGENTS.md、web/AGENTS.md、docs/research/v2_upgrade_plan.md、M3.2 与 M4.1.2 验收报告。修改 Next.js 前读取当前安装版本的相关官方文档。
 
 执行边界：
-- 只实施 trace、技术模式和 Enhanced 评测，不实现 Compare、Workspace、备份或 Docker。
-- Trace 只用于观察和诊断，Agent 决策不得依赖调试页面是否开启。
-- 不泄露 prompt、API Key、完整环境变量或不必要的用户原文。
-- trace 默认保存 7 天，用户明确保存的 artifact 不受自动清理影响。
+- 固定 B1 是唯一产品路径，不新增普通用户可选的 BM25、dense、RRF、rerank、S1 或 Adaptive 开关。
+- 不重跑或修改任何冻结评测，不新增 Adaptive、run worker、checkpoint、数据库 migration 或外部服务。
+- 复用现有 Search、fixed chat、Library、Paper 与 evidence schema；新增体验不得改变 active index、检索契约或引用原文。
 
 必须完成：
-1. run_events、retrieval_candidates 和 evidence_items 组成可导出的稳定 trace。
-2. Chat 提供普通模式和技术模式。技术模式展示 route、query plan、每轮候选排名、融合与重排分数、接受/拒绝证据、补检原因、预算、停止原因、节点延迟和 token。
-3. 所有页面优先展示用户可理解的论文、章节、页码和 quote，内部 ID 只作为辅助信息。
-4. 原样重跑 M4.1 冻结的 24 条 answer test 和 48 条 route/refusal test，确认 trace 与持久化接入没有改变评分。新增样本只能进入独立扩展集，不能回写 M4.1 test。
-5. Answer 指标继续报告 claim support precision、citation correctness、citation completeness、requirement coverage、unsupported major claim 和 answer/refusal utility。
-6. Agent 指标继续报告 route macro F1、每类 confusion matrix、successful termination rate、平均检索轮数、tool calls、重复检索率、p50/p95 latency 和 LLM input/output tokens。
-7. 完成 Adaptive 诊断消融：固定 B1、B1 + routing、B1 + 证据充分性判断、B1 + 一次补检、B1 + 一次补检和 claim validation。不得使用已被 M3.2 淘汰的 B2/B3 作为 fixed 对照。
-8. 没有模型定价配置时只报告 token，不猜测货币成本。
-9. DEBUG_TRACE=false 时停止写详细 candidate 和 trace，但保留 run 结果、错误和正常 Agent 行为。
-
-质量门槛：
-- M4.1 冻结集的 route、answer、延迟和预算指标不得低于 M4.1 验收结果。
-- Trace 开关前后的 route、最终答案、claims、citations 和 termination reason 一致。
-- successful termination 和故障恢复不得出现重复消息、证据或工具副作用。
-- 发生质量回归时默认保持 fixed，不能为了展示 Agent 而强制启用 adaptive。
+1. 明确展示回答的论文、章节、页码和 quote，并支持跳转到原 PDF 页。
+2. 对空库、无匹配证据、解析降级、索引不可用和模型失败提供用户可理解的状态与下一步操作。
+3. 确保 fixed chat 的有限回答或拒答不新增无证据论文事实。
+4. 为上述状态补齐后端或前端回归测试，并保持现有 API 兼容。
 
 验证：
-- uv run --extra dev python -m pytest tests/test_trace_repository.py tests/test_debug_api.py tests/test_route_eval.py -q
-- uv run python -m evals.runner --config evals/configs/v2_route.yaml
-- uv run python -m evals.runner --config evals/configs/v2_answer.yaml
-- uv run --extra dev ruff check .
 - uv run --extra dev python -m pytest -q
+- uv run --extra dev ruff check .
 - npm --prefix web run lint
 - npm --prefix web run build
-
-人工检查：
-- 普通用户看不到不必要的内部调试噪声。
-- 技术模式能从最终 claim 反向定位到 evidence、passage、排名阶段和原 PDF 页。
-- 关闭 DEBUG_TRACE 后回答结果不改变。
-- Trace 保留和清理不会删除用户保存的 artifact。
+- 手工走通导入论文、Search、fixed chat、打开页码证据、无证据提问和解析降级提示。
 
 交付：
-- 创建 docs/implementation/m5_acceptance.md，保存完整评测结果、confusion matrix、Adaptive 消融、trace 示例、隐私检查、坏例、默认策略决定和回滚方法。
-- 仅在 M5 验收完成后创建独立 commit，不推送。
-- 完成后停止，不自动执行 M6。
+- 创建 docs/implementation/m5_fixed_product_acceptance.md，记录用户流程、状态边界、验证、坏例、回滚方式和实际修改文件。
+- 仅在全部验证通过后创建独立 commit，不推送。完成后停止，等待用户决定是否执行 M6。
 ```
 
-## Goal 6：M6 Compare、Workspace 与部署
+## Goal 6：M6 评测实验室与面试演示材料
 
 ```text
-目标：完成 Agentic RAG V2 的 M6“比较、Workspace 和部署”，把已经通过质量门槛的科研助手收口为可长期个人使用、可备份恢复、可本地部署的产品。
+目标：把现有可复现评测转成只读的实验室展示，并把项目的面试叙事落到真实证据上。重点是让访问者理解为何产品固定使用 B1，而不是让其配置或运行未经证明的检索策略。
 
 进入条件：
-- M4.1、M4.2 和 M5 已完成，对应验收报告存在。
-- Adaptive 的质量、延迟、成本和恢复门槛通过；如果 Adaptive 未通过，Product 必须继续使用 fixed 默认策略。
-- 用户明确批准 Product 并要求执行本 Goal。
+- `docs/implementation/m5_fixed_product_acceptance.md` 存在且 M5 验收通过。
+- M3.2、M4.1.1、M4.1.2 的报告和验收文档均存在，工作区保留其实际结论。
+- 用户明确批准执行本 Goal。
 
-开始前读取 AGENTS.md、web/AGENTS.md、v2_upgrade_plan.md 第 3、8、11、12、14、15 节，以及 M1 至 M5 验收报告。
+开始前读取 AGENTS.md、web/AGENTS.md、docs/research/v2_upgrade_plan.md、M3.2/M4.1.1/M4.1.2/M5 验收报告。修改 Next.js 前读取当前安装版本的相关官方文档。
 
 执行边界：
-- 只实现 Compare、Workspace、artifact、备份恢复和本地部署收口。
-- 不增加用户系统、团队协作、云服务、Redis、Celery、PostgreSQL、专用向量数据库或 SaaS 计费。
-- Docker 只封装现有 FastAPI 与 Next.js；SQLite、uploads、indexes 和 parsed artifacts 通过 volume 持久化。
-- Compare 不允许在缺证据时生成推测。
+- 实验室只读已提交的报告与经过脱敏的摘要，不触发模型调用、不运行评测、不修改 active index。
+- 不将 S1、B2/B3 或 Adaptive 做成面向普通用户的产品配置，也不把实验室结果表述为线上质量承诺。
+- 不实现 M4.2、Compare、Workspace、持久 run、checkpoint、队列、Docker 或新外部服务。
 
 必须完成：
-1. Compare 支持固定选择 2 至 5 篇论文、1 至 6 个比较维度。
-2. 每个比较单元格必须绑定 evidence；没有证据时显示“未找到”，不得用模型常识补写。
-3. 支持保存 answer、comparison 和 evidence collection，并能从 Workspace 重新打开。
-4. Artifact 保存稳定 evidence ID、paper/version、index version 和生成配置，原始 quote 可追溯到 PDF 页。
-5. 提供一致性备份和恢复命令，覆盖 SQLite、uploads、indexes 和 parsed artifacts。
-6. 备份命令默认只读检查并列出范围；覆盖或删除现有数据前必须显式确认。
-7. 恢复前校验 manifest、版本和目标目录，失败时不得留下半恢复状态。
-8. Docker Compose 启动 FastAPI 和 Next.js，所有数据目录使用明确 volume；本地 uv/pnpm 运行方式仍然可用。
-9. 更新 README，给出安装、索引论文、Search、Chat、Compare、备份、恢复和 Docker 的真实命令。
-10. 产品页面保持 Library、Search、Chat、Compare、Workspace 的清晰分工，不把技术 trace 强塞给普通用户。
+1. 展示固定 B1、S1、M4.1.1、M4.1.2 的目的、数据集版本、关键指标、逐题胜平负或混淆摘要、延迟与代表坏例。
+2. 清晰显示晋级决策：S1 因 holdout Context Recall 未通过，Adaptive 因路由误触发和答案质量未证明净收益，产品默认保持 fixed。
+3. 提供一份基于真实验收记录的演示流程和简历要点，覆盖稳定证据索引、检索实验、冻结评测、负结果决策与回滚边界。
+4. 检查页面和文档不暴露 API Key、prompt、完整本地路径、未脱敏问题或模型凭据。
 
 验证：
-- uv run --extra dev python -m pytest tests/test_artifacts_api.py tests/test_compare.py tests/test_backup_restore.py -q
 - uv run --extra dev python -m pytest -q
 - uv run --extra dev ruff check .
 - npm --prefix web run lint
 - npm --prefix web run build
-- docker compose up --build -d
-- 检查 FastAPI 和 Next.js 健康状态后运行 docker compose down，禁止使用 -v，保留持久化数据。
-
-人工检查：
-- 用 3 篇同主题论文生成方法、数据集、指标、局限四维比较，逐格打开 evidence 和原 PDF 页。
-- 制造一个无证据比较项，确认显示“未找到”。
-- 保存 answer、comparison 和 evidence collection，重启后仍可打开。
-- 备份后在空数据目录恢复，论文、索引、会话和 artifact 数量及 manifest 一致。
-- Docker 停止并重启后数据仍存在。
-- Docker 失败时，本机 uv run uvicorn 和 npm --prefix web run dev 仍能运行。
+- 手工核对实验室指标与原始验收报告一致，并完成一次 5 分钟演示。
 
 交付：
-- 创建 docs/implementation/m6_acceptance.md，记录产品流程、备份恢复验证、Docker 验证、数据一致性、截图或页面路径、测试结果、坏例和回滚方法。
-- 更新面向用户的 README，但不要提前撰写第三阶段的完整源码指南。
-- 仅在 M6 验收通过后创建独立 commit，不推送。
-- 完成后停止，并报告第二阶段是否整体完成、哪些功能采用 fixed 或 adaptive 默认策略，以及第三阶段项目指南可以依赖的最终事实材料。
+- 创建 docs/implementation/m6_evaluation_lab_acceptance.md，记录数据来源、脱敏规则、页面检查、演示稿、验证和回滚方式。
+- 仅在全部验证通过后创建独立 commit，不推送。完成后停止，后续 Compare、Workspace、备份或部署须另立新 Goal。
 ```
