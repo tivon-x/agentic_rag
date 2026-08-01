@@ -371,26 +371,30 @@
 - 完成后停止，不得自动执行 M5。
 ```
 
-## Goal 5：M5 Chat 证据卡片与会话回看
+## Goal 5：M5 证据导向的固定 RAG Web 应用（待授权）
 
 ```text
-目标：让 Chat 的每一条回答保存并展示其结构化证据。用户刷新会话后仍能看到论文、章节、页码和 quote，并能直接跳转到对应 PDF 页面。
+目标：交付一个可日常使用、可在面试中演示的固定 RAG Web 应用。以全站统一的证据阅读体验为主线，完成生产级的视觉重构，并让 Chat 的每条回答保存和展示其结构化证据。
 
 进入条件：
 - 用户明确批准执行本 Goal。
 
 开始前读取 AGENTS.md、web/AGENTS.md、docs/research/v2_upgrade_plan.md、当前 Chat API、Chat 页面、引用组件和相关测试。修改 Next.js 前读取当前安装版本的相关官方文档。
 
+执行时以 `docs/research/m5_fixed_product_implementation_plan.md` 为详细手册；本 Goal 只定义授权边界和验收门槛。
+
 执行边界：
 - 不改检索策略、graph、索引、数据库 schema、模型调用、SSE 连接模型或普通用户设置。
 - 复用现有 evidence schema 和会话 JSON 存储；不能只保存 Markdown，不能丢失原有 assistant 消息。
-- 页面设计使用 UI skill，沿用当前应用的视觉系统，并完成桌面和 375px 宽度的可用性检查。
+- 页面设计使用 UI skill，以根目录既有的 `DESIGN.md` 为准。采用中文、桌面优先的“纸刊学术编辑部”方向：暖白纸面、墨黑字、细分隔线、墨蓝证据标记；不得做成后台模板、渐变玻璃卡片或圆角卡片墙。
+- 不新增前端依赖；保留基础响应式可用性，并完成桌面和 375px 宽度的检查。
 
 必须完成：
-1. assistant message 增加可选的结构化 evidence，SSE evidence 事件和 `GET /api/chat/{session_id}` 返回相同字段。
-2. `POST /api/chat` 后的流式完成路径将 answer 与其 evidence 一起写入会话；历史会话读取后每轮 answer 仍能显示自己的 evidence。
-3. 每张证据卡片显示论文名、章节、页码和 quote，并链接到 `/papers/{paper_id}?page={page}`。没有 evidence 时显示明确的空状态。
-4. 补齐 API、会话持久化、连续两轮回答、刷新回看、无 evidence 与 PDF 跳转链接的测试。
+1. 落实既有 `DESIGN.md`，重构全局导航、首页、论文库、搜索、论文阅读和 Chat 的布局、字体、颜色、规则、表单、状态和可访问性；确保页面不是同质化卡片网格。
+2. assistant message 增加可选的结构化 evidence，SSE evidence 事件和 `GET /api/chat/{session_id}` 返回相同字段。
+3. `POST /api/chat` 后的流式完成路径将 answer 与其 evidence 一起写入会话；历史会话读取后每轮 answer 仍能显示自己的 evidence。
+4. 实现 evidence rail：每张证据条目显示论文名、章节、页码、quote 与论文跳转链接。没有 evidence 时显示明确的空状态。
+5. 补齐 API、会话持久化、连续两轮回答、刷新回看、无 evidence 与 PDF 跳转链接的测试。
 
 验证：
 - uv run --extra dev python -m pytest -q
@@ -398,9 +402,10 @@
 - npm --prefix web run lint
 - npm --prefix web run build
 - 手工提问两轮、刷新页面、重开会话并逐个打开证据卡片。检查桌面和 375px 宽度。
+- 实现、全量验证完成后，调用独立 review subagent 审查 API 兼容、会话持久化、证据完整性、可访问性、性能和回归风险。首选模型 `gpt-5.6-luna`，reasoning effort 设为 `max`。reviewer 只报告问题，不直接修改代码；实现者必须修复所有可修复问题并重跑受影响验证。仅不成立或超出本 Goal 范围的问题可不修复，且必须在验收报告说明判断依据。
 
 交付：
-- 创建 docs/implementation/m5_chat_evidence_acceptance.md，记录 API 兼容、会话回看、视觉检查、验证、坏例、回滚方式和实际修改文件。
+- 创建 docs/implementation/m5_fixed_product_acceptance.md，记录 API 兼容、会话回看、全站视觉检查、验证、review 模型与结论、坏例、回滚方式和实际修改文件。
 - 仅在全部验证通过后创建独立 commit，不推送。完成后停止，等待用户决定是否执行 M6。
 ```
 
@@ -414,12 +419,15 @@
 - M3.2、M4.1.1、M4.1.2 的报告和验收文档均存在，工作区保留其实际结论。
 - 用户明确批准执行本 Goal。
 
-开始前读取 AGENTS.md、web/AGENTS.md、docs/research/v2_upgrade_plan.md、M3.2/M4.1.1/M4.1.2/M5 验收报告。修改 Next.js 前读取当前安装版本的相关官方文档。
+开始前读取 AGENTS.md、web/AGENTS.md、根目录 DESIGN.md、docs/research/v2_upgrade_plan.md、M3.2/M4.1.1/M4.1.2/M5 验收报告。修改 Next.js 前读取当前安装版本的相关官方文档，并使用 UI skill 设计和检查实验室页面。
+
+执行时以 `docs/research/m6_evaluation_lab_implementation_plan.md` 为详细手册；本 Goal 只定义授权边界和验收门槛。
 
 执行边界：
 - 实验室只读已提交的报告与经过脱敏的摘要，不触发模型调用、不运行评测、不修改 active index。
 - 不将 S1、B2/B3 或 Adaptive 做成面向普通用户的产品配置，也不把实验室结果表述为线上质量承诺。
 - 不实现 M4.2、Compare、Workspace、持久 run、checkpoint、队列、Docker 或新外部服务。
+- 页面遵循 `DESIGN.md` 的证据导向视觉系统，作为现有 Web 应用的一部分，而不是独立的后台或数据看板模板。
 
 必须完成：
 1. 展示固定 B1、S1、M4.1.1、M4.1.2 的目的、数据集版本、关键指标、逐题胜平负或混淆摘要、延迟与代表坏例。
@@ -432,9 +440,10 @@
 - npm --prefix web run lint
 - npm --prefix web run build
 - 手工核对实验室指标与原始验收报告一致。
+- 实现、全量验证完成后，调用独立 review subagent 审查只读数据边界、指标与原始报告的一致性、脱敏、前端性能、可访问性和回归风险。首选模型 `gpt-5.6-luna`，reasoning effort 设为 `max`。reviewer 只报告问题，不直接修改代码；实现者必须修复所有可修复问题并重跑受影响验证。仅不成立或超出本 Goal 范围的问题可不修复，且必须在验收报告说明判断依据。
 
 交付：
-- 创建 docs/implementation/m6_evaluation_lab_acceptance.md，记录数据来源、脱敏规则、页面检查、演示稿、验证和回滚方式。
+- 创建 docs/implementation/m6_evaluation_lab_acceptance.md，记录数据来源、脱敏规则、页面检查、演示稿、验证、review 模型与结论和回滚方式。
 - 仅在全部验证通过后创建独立 commit，不推送。完成后停止，等待用户决定是否执行 M7。
 ```
 

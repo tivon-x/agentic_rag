@@ -15,7 +15,8 @@
 | M3 / M3.1 / M3.2 | 已完成 | 固定策略已收口，`v1_flat_rerank` 是冻结 B1；复杂固定候选未获晋级。 |
 | M4.1 / M4.1.1 / M4.1.2 | 已完成，未通过 | bounded Adaptive 在两次复验均未证明净收益，默认固定为 `ANSWER_STRATEGY=fixed`。详见 `docs/implementation/m4_1_1_retrieval_quality_acceptance.md` 与 `docs/implementation/m4_1_2_adaptive_eval_acceptance.md`。 |
 | M4.2 | 终止，不执行 | 它依赖 M4.1 质量通过。不得为未通过的 Adaptive 增加持久 run、checkpoint、worker 或用户入口。 |
-| 下一步 | 待用户逐项授权 | M5 Chat 证据卡片与会话回看，随后是 M6 评测实验室和 M7 项目设计与面试指南。 |
+| M5 | 待用户授权 | 证据导向的固定 RAG Web 应用：全站视觉重构、Chat 会话回看和结构化证据轨。 |
+| 后续 | 待用户逐项授权 | M6 评测实验室，随后是 M7 项目设计与面试指南。 |
 
 ## 1. 决策摘要
 
@@ -24,7 +25,7 @@ V2 不再按一次性重写推进。当前路线分为产品主线、实验展�
 | 层级 | 范围 | 进入条件 | 是否属于首次审批 |
 |---|---|---|---|
 | 已完成基础 | 可靠索引、论文目录、页码证据、Search、固定 B1 检索、可复现评测 | 已完成 | 是 |
-| 产品主线 | Chat 的结构化证据卡片与会话回看 | 用户单独批准 M5 | 否 |
+| 产品主线 | 证据导向的固定 RAG Web 应用：全站视觉、Chat 会话回看和结构化证据轨 | 用户单独批准 M5 | 否 |
 | 实验展示 | 只读评测实验室、对比报告和坏例 | M5 完成且用户单独批准 M6 | 否 |
 | 项目指南 | 设计决策、技术背景、实验结论和面试问答 | M6 完成且用户单独批准 M7 | 否 |
 
@@ -965,19 +966,22 @@ checkpoint 时使用保存输入幂等重启；assistant message、claims、evid
 数据库 migration 保持 forward-only，新表可以保留不用。checkpoint 数据库可删除，
 不影响已完成答案和 evidence。
 
-### M5：Chat 证据卡片与会话回看（待授权）
+### M5：证据导向的固定 RAG Web 应用（待授权）
 
 **进入条件**
 
-用户单独批准。M5 不依赖 M3、M4 的评测结果，也不改动检索策略。
+用户单独批准后执行。M5 不依赖 M3、M4 的评测结果，也不改动检索策略。
+
+详细实施手册：`docs/research/m5_fixed_product_implementation_plan.md`。
 
 **改造**
 
-- Chat API 将每轮 assistant answer 对应的 evidence 作为结构化数据返回并保存到会话历史，不再只临时发送 `citations_markdown`。
-- Chat 前端将 evidence 绑定到对应 assistant answer，显示论文、章节、页码和 quote 卡片，并点击跳转到 `/papers/{paper_id}?page={page}`。
-- 刷新、重新进入会话或连续提问后，每一轮回答都保留自己的证据卡片。无 evidence 时显示明确状态，不伪造引用。
-- 主要修改 `api/models/chat.py`、`api/routers/chat.py`、`web/src/lib/types.ts`、`web/src/app/chat/page.tsx`、`web/src/components/CitationAccordion.tsx` 和相应测试。
-- 不改 B1、检索器、graph、索引、数据库 schema、SSE 连接模型或普通用户设置。
+- 全站采用 `DESIGN.md` 定义的中文、桌面优先“纸刊学术编辑部”视觉：暖白纸面、黑色排版、细分隔线和墨蓝证据标记。该方向参考 VoltAgent/awesome-design-md 的 WIRED-inspired 设计语言，但不复制其品牌。
+- 改造首页、论文库、检索、阅读和 Chat 的布局、排版、表单、状态与导航，使证据从搜索结果到 PDF 阅读保持一致的阅读路径。
+- Chat API 将每轮 assistant answer 对应的 evidence 作为结构化数据返回并保存到会话历史，不再只临时发送 `citations_markdown`。刷新、重新进入会话或连续提问后，每轮回答仍保留自己的证据。
+- Chat 的 evidence rail 显示论文、章节、页码和 quote，并跳转到 `/papers/{paper_id}?page={page}`；无 evidence 时明确说明，不伪造引用。
+- 不改 B1、检索器、graph、索引、数据库 schema、模型调用、SSE 连接模型或普通用户的检索策略配置。实验结论只留给 M6 展示。
+- `DESIGN.md` 已在 M5 开始前确定。实施时用 UI skill 落实其视觉和交互规则，不重新选择视觉方向。
 
 **验收命令**
 
@@ -988,9 +992,13 @@ npm --prefix web run lint
 npm --prefix web run build
 ```
 
+**代码审查**
+
+实现和全量验证通过后，调用独立 review subagent，首选模型 `gpt-5.6-luna`、reasoning effort=`max`。审查 API 兼容、会话持久化、证据完整性、可访问性、性能和回归风险。reviewer 只报告问题，不直接改代码；实现者必须修复所有可修复问题后重跑受影响验证。仅不成立或超出 M5 范围的问题可不修复，且必须在验收报告说明判断依据，同时记录模型、发现和结论。
+
 **回滚**
 
-M5 的改动不得改变 B1 检索结果、引用内容或 active index。回滚为保留原 answer 文本，忽略新增 evidence 字段；fixed chat、Search 和 Library 保持可用。
+M5 的改动不得改变 B1 检索结果、引用内容或 active index。回滚为保留原 answer 文本、忽略新增 evidence 字段并恢复先前样式；fixed chat、Search、Library 和 PDF 阅读保持可用。
 
 ### M6：评测实验室（待授权）
 
@@ -998,11 +1006,14 @@ M5 的改动不得改变 B1 检索结果、引用内容或 active index。回滚
 
 M5 验收完成且用户单独批准。M6 只展示真实、已冻结的实验结果，不把实验候选开放给普通用户配置。
 
+详细实施手册：`docs/research/m6_evaluation_lab_implementation_plan.md`。
+
 **改造**
 
 - 新增只读“评测实验室”或开发者模式，展示 B1、S1 与 Adaptive 的配置摘要、冻结数据集版本、逐题胜平负、指标、延迟和坏例。
 - 实验室只读取已提交的报告和清洗后的 trace 摘要，不触发实时模型调用、不修改 active index，也不提供参数调节与“切换为更强策略”的承诺。
 - 实验室只承担实验展示，项目设计说明和面试材料由 M7 独立完成。
+- 页面使用 UI skill，并遵循既有 `DESIGN.md` 的证据导向视觉系统，不做成独立的后台或数据看板模板。
 
 **验收命令**
 
@@ -1012,6 +1023,10 @@ uv run --extra dev ruff check .
 npm --prefix web run lint
 npm --prefix web run build
 ```
+
+**代码审查**
+
+实现和全量验证通过后，调用独立 review subagent，首选模型 `gpt-5.6-luna`、reasoning effort=`max`。审查只读数据边界、指标与原始报告的一致性、脱敏、前端性能、可访问性和回归风险。reviewer 只报告问题，不直接改代码；实现者必须修复所有可修复问题后重跑受影响验证。仅不成立或超出 M6 范围的问题可不修复，且必须在验收报告说明判断依据，同时记录模型、发现和结论。
 
 **人工检查**
 
