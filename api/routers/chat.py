@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from datetime import UTC, datetime
 from pathlib import PurePosixPath
 from typing import Any
@@ -15,6 +16,7 @@ from api.db.database import (
     create_chat_session,
     get_chat_session,
     get_chat_session_messages,
+    list_chat_sessions,
     upsert_chat_session_messages,
 )
 from api.dependencies import get_settings
@@ -23,7 +25,9 @@ from api.models.chat import (
     ChatMessage,
     ChatRequest,
     ChatResponse,
+    ChatSessionListResponse,
     ChatSessionResponse,
+    ChatSessionSummary,
 )
 from api.services.graph_cache import get_cached_graph
 from core.factory import build_retriever
@@ -33,6 +37,39 @@ from core.settings import AppSettings
 
 router = APIRouter(tags=["chat"])
 logger = logging.getLogger(__name__)
+
+
+@router.get(
+    "/chat",
+    response_model=ChatSessionListResponse,
+    response_model_exclude_none=True,
+)
+async def list_chat_session_summaries(
+    limit: int = Query(default=30, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    settings: AppSettings = Depends(get_settings),
+) -> ChatSessionListResponse:
+    sessions, total = await list_chat_sessions(
+        settings,
+        limit=limit,
+        offset=offset,
+    )
+    items = [
+        ChatSessionSummary(
+            session_id=session["session_id"],
+            title=_session_title(session.get("messages")),
+            message_count=int(session.get("message_count", 0)),
+            created_at=_parse_timestamp(session["created_at"]),
+            updated_at=_parse_timestamp(session["updated_at"]),
+        )
+        for session in sessions
+    ]
+    return ChatSessionListResponse(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.post(
@@ -475,6 +512,25 @@ def _source_label(value: object) -> str:
     if not source:
         return "未知来源"
     return PurePosixPath(source.replace("\\", "/")).name or "未知来源"
+
+
+def _session_title(messages: object, *, limit: int = 60) -> str:
+    if not isinstance(messages, list):
+        return "未命名会话"
+    for message in messages:
+        if not isinstance(message, dict) or message.get("role") != "user":
+            continue
+        content = message.get("content")
+        if not isinstance(content, str):
+            continue
+        normalized = re.sub(r"\s+", " ", content).strip()
+        if normalized:
+            return normalized[:limit]
+    return "未命名会话"
+
+
+def _parse_timestamp(value: str) -> datetime:
+    return datetime.fromisoformat(value)
 
 
 def _json_payload(payload: dict[str, Any]) -> str:

@@ -1,5 +1,6 @@
 import type {
   ChatResponse,
+  ChatSessionListResponse,
   ChatSessionResponse,
   CorpusProfile,
   FileUploadResponse,
@@ -55,6 +56,20 @@ export async function fetchChatSession(
     cache: "no-store",
   });
   return handleJson<ChatSessionResponse>(response);
+}
+
+export async function fetchChatSessions(input?: {
+  limit?: number;
+  offset?: number;
+}): Promise<ChatSessionListResponse> {
+  const params = new URLSearchParams({
+    limit: String(input?.limit ?? 50),
+    offset: String(input?.offset ?? 0),
+  });
+  const response = await fetch(`${API_PREFIX}/chat?${params.toString()}`, {
+    cache: "no-store",
+  });
+  return handleJson<ChatSessionListResponse>(response);
 }
 
 export async function uploadKnowledgeFiles(input: {

@@ -31,6 +31,21 @@ export type ChatSessionResponse = {
   messages: ChatMessage[];
 };
 
+export type ChatSessionSummary = {
+  session_id: string;
+  title: string;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ChatSessionListResponse = {
+  items: ChatSessionSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 export type CorpusProfile = {
   name: string;
   summary: string;

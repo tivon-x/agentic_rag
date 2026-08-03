@@ -52,6 +52,25 @@ class ChatSessionResponse(BaseModel):
     messages: list[ChatMessage] = Field(default_factory=list)
 
 
+class ChatSessionSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str
+    title: str
+    message_count: int = Field(ge=0)
+    created_at: datetime
+    updated_at: datetime
+
+
+class ChatSessionListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[ChatSessionSummary] = Field(default_factory=list)
+    total: int = Field(ge=0)
+    limit: int = Field(ge=1, le=100)
+    offset: int = Field(ge=0)
+
+
 class StreamToken(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

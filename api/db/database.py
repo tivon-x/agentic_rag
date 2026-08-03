@@ -111,6 +111,42 @@ async def get_chat_session(
     }
 
 
+async def list_chat_sessions(
+    settings: AppSettings,
+    *,
+    limit: int,
+    offset: int,
+) -> tuple[list[dict[str, Any]], int]:
+    """Return chat sessions ordered by most recently updated first."""
+    async with get_db(settings) as db:
+        count_cursor = await db.execute("SELECT COUNT(*) AS total FROM chat_sessions")
+        count_row = await count_cursor.fetchone()
+        cursor = await db.execute(
+            """
+            SELECT id, created_at, updated_at, messages
+            FROM chat_sessions
+            ORDER BY updated_at DESC, id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (limit, offset),
+        )
+        rows = await cursor.fetchall()
+
+    sessions: list[dict[str, Any]] = []
+    for row in rows:
+        messages = _json_dict_or_list(row["messages"], default=[])
+        sessions.append(
+            {
+                "session_id": str(row["id"]),
+                "created_at": str(row["created_at"]),
+                "updated_at": str(row["updated_at"]),
+                "messages": messages if isinstance(messages, list) else [],
+                "message_count": _message_count(messages),
+            }
+        )
+    return sessions, int(count_row["total"] if count_row is not None else 0)
+
+
 async def upsert_chat_session_messages(
     settings: AppSettings,
     *,
@@ -727,6 +763,20 @@ def _json_dict_or_list(value: Any, *, default: Any) -> Any:
         return json.loads(str(value))
     except (json.JSONDecodeError, TypeError):
         return default
+
+
+def _message_count(messages: Any) -> int:
+    if not isinstance(messages, list):
+        return 0
+    roles = {"user", "assistant", "system"}
+    return sum(
+        1
+        for item in messages
+        if isinstance(item, dict)
+        and item.get("role") in roles
+        and isinstance(item.get("content"), str)
+        and bool(item["content"].strip())
+    )
 
 
 def _parse_timestamp(value: str) -> datetime:
