@@ -195,7 +195,7 @@ async def stream_chat_response(
                         {
                             "type": "error",
                             "session_id": session_id,
-                            "error": "回答保存失败，请重试。",
+                            "error": "回答保存失败，回答没有保存，请重试。",
                         }
                     ),
                 }
@@ -242,6 +242,21 @@ async def stream_chat_response(
             if final_messages
             else ""
         )
+        if _is_failed_graph_answer(
+            result if isinstance(result, dict) else None,
+            answer,
+        ):
+            yield {
+                "event": "stream-error",
+                "data": _json_payload(
+                    {
+                        "type": "error",
+                        "session_id": session_id,
+                        "error": "回答生成失败，回答没有保存，请重试。",
+                    }
+                ),
+            }
+            return
         if not answer:
             yield {
                 "event": "stream-error",
@@ -249,7 +264,7 @@ async def stream_chat_response(
                     {
                         "type": "error",
                         "session_id": session_id,
-                        "error": "The answer graph returned no final answer.",
+                        "error": "回答生成失败，回答没有保存，请重试。",
                     }
                 ),
             }
@@ -269,7 +284,7 @@ async def stream_chat_response(
                     {
                         "type": "error",
                         "session_id": session_id,
-                        "error": "回答保存失败，请重试。",
+                        "error": "回答保存失败，回答没有保存，请重试。",
                     }
                 ),
             }
@@ -347,7 +362,125 @@ def _extract_chat_evidence(result: dict[str, Any] | None) -> list[ChatEvidence]:
         grounded = grounded.model_dump()
     if not isinstance(grounded, dict):
         return []
-    return _normalize_evidence_list(grounded.get("evidence", []))
+    model_evidence = grounded.get("evidence", [])
+    retrieval_evidence = _retrieval_evidence(result)
+    has_retrieval_source = isinstance(result.get("evidenceGroups"), list) or isinstance(
+        result.get("retrievalEvidence"), list
+    )
+    if not has_retrieval_source:
+        # Keep old graph/session payloads readable when no retrieval artifact was
+        # persisted. New retrieval answers use the canonical path below.
+        return _normalize_evidence_list(model_evidence, trust_paper_id=False)
+
+    if not retrieval_evidence:
+        return []
+
+    if not isinstance(model_evidence, list) or not model_evidence:
+        return retrieval_evidence
+
+    canonical_by_node = {item.node_id: item for item in retrieval_evidence}
+    canonical_by_quote = {item.quote: item for item in retrieval_evidence}
+    normalized: list[ChatEvidence] = []
+    for raw_item in model_evidence:
+        if hasattr(raw_item, "model_dump"):
+            raw_item = raw_item.model_dump()
+        if not isinstance(raw_item, dict):
+            continue
+        node_id = _optional_text(
+            raw_item.get("node_id")
+            or raw_item.get("passage_id")
+            or raw_item.get("id")
+        )
+        quote = _truncate_quote(
+            _optional_text(raw_item.get("quote") or raw_item.get("quote_text"))
+        )
+        canonical = (
+            canonical_by_node.get(node_id)
+            if node_id
+            else canonical_by_quote.get(quote)
+        )
+        if canonical is None and quote:
+            canonical = canonical_by_quote.get(quote)
+        if canonical is None:
+            # Do not persist evidence (and especially paper IDs) invented by the
+            # answer model when it cannot be tied back to retrieved metadata.
+            continue
+        normalized.append(canonical)
+    return _dedupe_evidence(normalized)
+
+
+def _retrieval_evidence(result: dict[str, Any]) -> list[ChatEvidence]:
+    """Return source-owned evidence, never fields invented by the answer model."""
+    raw_items: list[object] = []
+    groups = result.get("evidenceGroups", [])
+    if isinstance(groups, list):
+        for group in groups:
+            if hasattr(group, "model_dump"):
+                group = group.model_dump()
+            if isinstance(group, dict):
+                raw_items.extend(_evidence_values(group.get("evidence")))
+
+    artifacts = result.get("retrievalEvidence", [])
+    if isinstance(artifacts, list):
+        for artifact in artifacts:
+            if hasattr(artifact, "model_dump"):
+                artifact = artifact.model_dump()
+            if isinstance(artifact, dict):
+                raw_items.extend(_evidence_values(artifact.get("evidence")))
+
+    return _merge_canonical_evidence(_normalize_evidence_list(raw_items))
+
+
+def _evidence_values(value: object) -> list[object]:
+    if not isinstance(value, list):
+        return []
+    return value
+
+
+def _merge_canonical_evidence(items: list[ChatEvidence]) -> list[ChatEvidence]:
+    """Merge duplicate retrieval records without discarding a catalog ID."""
+    merged: dict[str, ChatEvidence] = {}
+    for item in items:
+        existing = merged.get(item.node_id)
+        if existing is None:
+            merged[item.node_id] = item
+            continue
+        updates: dict[str, Any] = {}
+        for field in (
+            "paper_id",
+            "paper_title",
+            "page",
+            "score",
+            "relevance",
+        ):
+            if getattr(existing, field) is None and getattr(item, field) is not None:
+                updates[field] = getattr(item, field)
+        if updates:
+            merged[item.node_id] = existing.model_copy(update=updates)
+    return list(merged.values())
+
+
+def _is_failed_graph_answer(
+    result: dict[str, Any] | None,
+    answer: object,
+) -> bool:
+    if not isinstance(result, dict):
+        return False
+    if result.get("answerGenerationFailed") is True:
+        return True
+
+    normalized_answer = str(answer).strip()
+    if normalized_answer == "No answers were generated.":
+        return True
+
+    if result.get("routingDecision") != "retrieve":
+        return False
+    evidence_groups = result.get("evidenceGroups")
+    return (
+        isinstance(evidence_groups, list)
+        and not evidence_groups
+        and not _extract_chat_evidence(result)
+    )
 
 
 def _documents_to_chat_evidence(documents: list[Any]) -> list[ChatEvidence]:
@@ -377,7 +510,11 @@ def _documents_to_chat_evidence(documents: list[Any]) -> list[ChatEvidence]:
     return _dedupe_evidence(normalized)
 
 
-def _normalize_evidence_list(raw_items: object) -> list[ChatEvidence]:
+def _normalize_evidence_list(
+    raw_items: object,
+    *,
+    trust_paper_id: bool = True,
+) -> list[ChatEvidence]:
     if not isinstance(raw_items, list):
         return []
     normalized: list[ChatEvidence] = []
@@ -386,13 +523,17 @@ def _normalize_evidence_list(raw_items: object) -> list[ChatEvidence]:
             item = item.model_dump()
         if not isinstance(item, dict):
             continue
-        evidence = _normalize_evidence_item(item)
+        evidence = _normalize_evidence_item(item, trust_paper_id=trust_paper_id)
         if evidence is not None:
             normalized.append(evidence)
     return _dedupe_evidence(normalized)
 
 
-def _normalize_evidence_item(item: dict[str, Any]) -> ChatEvidence | None:
+def _normalize_evidence_item(
+    item: dict[str, Any],
+    *,
+    trust_paper_id: bool = True,
+) -> ChatEvidence | None:
     node_id = _optional_text(
         item.get("node_id") or item.get("passage_id") or item.get("id")
     )
@@ -417,7 +558,7 @@ def _normalize_evidence_item(item: dict[str, Any]) -> ChatEvidence | None:
         else None
     )
     relevance = _optional_text(item.get("relevance"))
-    paper_id = _optional_text(item.get("paper_id"))
+    paper_id = _optional_text(item.get("paper_id")) if trust_paper_id else None
     paper_title = _optional_text(item.get("paper_title"))
 
     return ChatEvidence(

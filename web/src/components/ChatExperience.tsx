@@ -16,6 +16,11 @@ import {
   evidencePageLabel,
   evidenceSectionLabel,
 } from "@/lib/evidence";
+import { appendRecoveryHint, toUserError } from "@/lib/errors";
+import {
+  normalizeInlineMath,
+  parseAssistantDisplayContent,
+} from "@/lib/assistant-display";
 import type {
   ChatEvidence,
   ChatMessage,
@@ -24,6 +29,145 @@ import type {
 } from "@/lib/types";
 
 const EMPTY_TITLE = "未命名会话";
+
+type ModalOverlay = "sessions" | "evidence" | null;
+
+type ElementReference = {
+  readonly current: HTMLElement | null;
+};
+
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'area[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  'summary',
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
+function getFocusableElements(container: HTMLElement) {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (element) => {
+      const style = window.getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden";
+    },
+  );
+}
+
+function useModalFocus({
+  activeOverlay,
+  shellRef,
+  sessionDialogRef,
+  evidenceDialogRef,
+  sessionTriggerRef,
+  onClose,
+}: {
+  activeOverlay: ModalOverlay;
+  shellRef: ElementReference;
+  sessionDialogRef: ElementReference;
+  evidenceDialogRef: ElementReference;
+  sessionTriggerRef: ElementReference;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const dialog =
+      activeOverlay === "sessions"
+        ? sessionDialogRef.current
+        : activeOverlay === "evidence"
+          ? evidenceDialogRef.current
+          : null;
+    const shell = shellRef.current;
+    if (!dialog || !shell || window.getComputedStyle(dialog).display === "none") {
+      return;
+    }
+    const activeDialog = dialog;
+
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const restoreTarget =
+      activeOverlay === "sessions" ? sessionTriggerRef.current : previousActiveElement;
+    const backdrop = shell.querySelector<HTMLElement>("[data-overlay-backdrop]");
+    const backgroundElements = Array.from(shell.children)
+      .map((child) => child as HTMLElement)
+      .filter((child) => child !== dialog && child !== backdrop);
+    const previouslyInert = backgroundElements.map((element) => ({
+      element,
+      hadInertAttribute: element.hasAttribute("inert"),
+    }));
+    previouslyInert.forEach(({ element }) => element.setAttribute("inert", ""));
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    const focusFirst = () => {
+      const firstFocusable = getFocusableElements(activeDialog)[0] ?? activeDialog;
+      firstFocusable.focus({ preventScroll: true });
+    };
+    const focusFrame = requestAnimationFrame(focusFirst);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const focusableElements = getFocusableElements(activeDialog);
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        activeDialog.focus({ preventScroll: true });
+        return;
+      }
+
+      const activeElement = document.activeElement;
+      const activeIndex = focusableElements.indexOf(activeElement as HTMLElement);
+      if (event.shiftKey) {
+        if (activeIndex <= 0) {
+          event.preventDefault();
+          focusableElements[focusableElements.length - 1].focus({ preventScroll: true });
+        }
+      } else if (activeIndex < 0 || activeIndex === focusableElements.length - 1) {
+        event.preventDefault();
+        focusableElements[0].focus({ preventScroll: true });
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleKeyDown, true);
+      previouslyInert.forEach(({ element, hadInertAttribute }) => {
+        if (!hadInertAttribute) {
+          element.removeAttribute("inert");
+        }
+      });
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousDocumentOverflow;
+
+      const target =
+        restoreTarget && restoreTarget.isConnected ? restoreTarget : previousActiveElement;
+      if (target?.isConnected) {
+        target.focus({ preventScroll: true });
+      }
+    };
+  }, [
+    activeOverlay,
+    evidenceDialogRef,
+    onClose,
+    sessionDialogRef,
+    sessionTriggerRef,
+    shellRef,
+  ]);
+}
 
 export default function ChatExperience() {
   const router = useRouter();
@@ -37,37 +181,51 @@ export default function ChatExperience() {
   const [listError, setListError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [canRetry, setCanRetry] = useState(false);
+  const [isLongWait, setIsLongWait] = useState(false);
   const [activeAnswer, setActiveAnswer] = useState<number | null>(null);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isEvidenceModal, setIsEvidenceModal] = useState(false);
   const pendingEvidence = useRef<ChatEvidence[]>([]);
   const pendingUserMessage = useRef("");
   const persistedUser = useRef(false);
   const composing = useRef(false);
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const sessionTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const sessionDialogRef = useRef<HTMLElement | null>(null);
+  const evidenceDialogRef = useRef<HTMLDivElement | null>(null);
   const threadRef = useRef<HTMLElement | null>(null);
   const stickToBottom = useRef(true);
 
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
-    const update = () => {
-      setIsMobile(media.matches);
-    };
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
+  const scrollToBottom = useCallback((force = false) => {
+    const element = threadRef.current;
+    if (!element || (!force && !stickToBottom.current)) {
+      return;
+    }
+    element.scrollTop = element.scrollHeight;
   }, []);
 
   useEffect(() => {
-    function closePanels(event: KeyboardEvent) {
-      if (event.key !== "Escape") {
-        return;
-      }
-      setSessionsOpen(false);
-      setEvidenceOpen(false);
-    }
-    window.addEventListener("keydown", closePanels);
-    return () => window.removeEventListener("keydown", closePanels);
+    const mobileMedia = window.matchMedia("(max-width: 767px)");
+    const evidenceMedia = window.matchMedia("(min-width: 768px) and (max-width: 1279px)");
+    const update = () => {
+      setIsMobile(mobileMedia.matches);
+      setIsEvidenceModal(evidenceMedia.matches);
+    };
+    const frame = requestAnimationFrame(update);
+    mobileMedia.addEventListener("change", update);
+    evidenceMedia.addEventListener("change", update);
+    return () => {
+      cancelAnimationFrame(frame);
+      mobileMedia.removeEventListener("change", update);
+      evidenceMedia.removeEventListener("change", update);
+    };
+  }, []);
+
+  const closeOverlay = useCallback(() => {
+    setSessionsOpen(false);
+    setEvidenceOpen(false);
   }, []);
 
   const loadSessions = useCallback(async () => {
@@ -76,26 +234,33 @@ export default function ChatExperience() {
       setSessions(response.items);
       setListError("");
     } catch (caught) {
-      setListError(resolveError(caught, "会话列表加载失败"));
+      setListError(toUserError(caught, "会话列表加载失败"));
     }
   }, []);
 
   useEffect(() => {
-    void loadSessions();
+    const timer = window.setTimeout(() => void loadSessions(), 0);
+    return () => window.clearTimeout(timer);
   }, [loadSessions]);
 
   useEffect(() => {
     let cancelled = false;
     if (!requestedSession) {
-      setSessionId(null);
-      setMessages([]);
-      setActiveAnswer(null);
-      setError("");
+      const timer = window.setTimeout(() => {
+        setSessionId(null);
+        setMessages([]);
+        setActiveAnswer(null);
+        setError("");
+      }, 0);
       return () => {
         cancelled = true;
+        window.clearTimeout(timer);
       };
     }
-    setSessionId(requestedSession);
+    const sessionTimer = window.setTimeout(
+      () => setSessionId(requestedSession),
+      0,
+    );
     void fetchChatSession(requestedSession)
       .then((payload) => {
         if (cancelled) {
@@ -112,13 +277,14 @@ export default function ChatExperience() {
       .catch((caught) => {
         if (!cancelled) {
           setMessages([]);
-          setError(resolveError(caught, "会话加载失败"));
+           setError(toUserError(caught, "会话加载失败"));
         }
       });
     return () => {
       cancelled = true;
+      window.clearTimeout(sessionTimer);
     };
-  }, [requestedSession]);
+  }, [requestedSession, scrollToBottom]);
 
   const stream = useSSEStream({
     onEvidence(payload: StreamToken) {
@@ -130,34 +296,52 @@ export default function ChatExperience() {
     },
     onFinal(payload: StreamToken) {
       const content = payload.content?.trim() ?? "";
-      if (content) {
-        setMessages((current) => {
-          const next = [
-            ...current,
-            {
-              role: "assistant" as const,
-              content,
-              evidence: payload.evidence ?? pendingEvidence.current,
-            },
-          ];
-          setActiveAnswer(next.length - 1);
-          return next;
-        });
+      if (!content) {
+        pendingEvidence.current = [];
+        setError(
+          appendRecoveryHint(
+            "回答生成失败，回答没有保存",
+            "已保留本轮提问，可以重试。",
+          ),
+        );
+        setCanRetry(true);
+        setIsSubmitting(false);
+        setIsLongWait(false);
+        return;
       }
+      setMessages((current) => {
+        const next = [
+          ...current,
+          {
+            role: "assistant" as const,
+            content,
+            evidence: payload.evidence ?? pendingEvidence.current,
+          },
+        ];
+        setActiveAnswer(next.length - 1);
+        return next;
+      });
       pendingEvidence.current = [];
       pendingUserMessage.current = "";
       persistedUser.current = false;
       setCanRetry(false);
       setIsSubmitting(false);
+      setIsLongWait(false);
       stickToBottom.current = true;
       requestAnimationFrame(() => scrollToBottom(true));
       void loadSessions();
     },
     onError(message: string) {
       pendingEvidence.current = [];
-      setError(`${message}。已保留本轮提问，可以重试。`);
+      setError(
+        appendRecoveryHint(
+          toUserError(message, "回答失败"),
+          "已保留本轮提问，可以重试。",
+        ),
+      );
       setCanRetry(true);
       setIsSubmitting(false);
+      setIsLongWait(false);
     },
   });
 
@@ -174,6 +358,7 @@ export default function ChatExperience() {
     setError("");
     setInput("");
     setIsSubmitting(true);
+    setIsLongWait(false);
     pendingEvidence.current = [];
     pendingUserMessage.current = userMessage;
     persistedUser.current = false;
@@ -204,8 +389,11 @@ export default function ChatExperience() {
       setCanRetry(false);
       removeOptimisticUser(userMessage);
       pendingUserMessage.current = "";
-      setError(`${resolveError(caught, "提问提交失败")}，请重试。`);
+      setError(
+        appendRecoveryHint(toUserError(caught, "提问提交失败"), "请重试。"),
+      );
       setIsSubmitting(false);
+      setIsLongWait(false);
     }
   }
 
@@ -225,16 +413,9 @@ export default function ChatExperience() {
     setError("");
     setCanRetry(false);
     setIsSubmitting(true);
+    setIsLongWait(false);
     pendingUserMessage.current = "";
     stream.openStream(sessionId);
-  }
-
-  function scrollToBottom(force = false) {
-    const element = threadRef.current;
-    if (!element || (!force && !stickToBottom.current)) {
-      return;
-    }
-    element.scrollTop = element.scrollHeight;
   }
 
   function handleThreadScroll() {
@@ -265,6 +446,7 @@ export default function ChatExperience() {
     setSessionsOpen(false);
     setEvidenceOpen(false);
     setError("");
+    setIsLongWait(false);
     router.push(`/chat?session=${encodeURIComponent(nextSessionId)}`);
   }
 
@@ -280,6 +462,7 @@ export default function ChatExperience() {
     persistedUser.current = false;
     setCanRetry(false);
     setIsSubmitting(false);
+    setIsLongWait(false);
     setSessionsOpen(false);
     setEvidenceOpen(false);
     router.push("/chat");
@@ -300,15 +483,39 @@ export default function ChatExperience() {
   const hasSelectedEvidence =
     !isMobile && evidenceOpen && selectedEvidence.length > 0;
   const isBusy = stream.isStreaming || isSubmitting;
+  const activeOverlay =
+    sessionsOpen && isMobile
+      ? "sessions"
+      : evidenceOpen && isEvidenceModal
+        ? "evidence"
+        : null;
+
+  useEffect(() => {
+    if (!isBusy) {
+      return;
+    }
+    const timer = window.setTimeout(() => setIsLongWait(true), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [isBusy]);
+
+  useModalFocus({
+    activeOverlay,
+    shellRef,
+    sessionDialogRef,
+    evidenceDialogRef,
+    sessionTriggerRef,
+    onClose: closeOverlay,
+  });
 
   return (
-    <div className="chat-shell">
+    <div ref={shellRef} className="chat-shell">
       <header className="chat-topbar">
         <button
           type="button"
           className="chat-mobile-trigger"
+          ref={sessionTriggerRef}
           aria-expanded={sessionsOpen}
-          aria-controls="chat-session-drawer"
+          aria-controls={isMobile && sessionsOpen ? "chat-session-drawer" : undefined}
           onClick={() => setSessionsOpen((value) => !value)}
         >
           会话
@@ -324,6 +531,9 @@ export default function ChatExperience() {
               type="button"
               className="chat-evidence-trigger"
               aria-expanded={evidenceOpen}
+              aria-controls={
+                isEvidenceModal && evidenceOpen ? "chat-evidence-overlay" : undefined
+              }
               onClick={() => setEvidenceOpen((value) => !value)}
             >
               证据 {selectedEvidence.length}
@@ -413,6 +623,11 @@ export default function ChatExperience() {
                 {isBusy ? "回答中" : "发送"}
               </button>
             </div>
+            {isBusy && isLongWait ? (
+              <p className="chat-wait-status" role="status" aria-live="polite">
+                正在检索论文并整理证据，可能需要 1 至 2 分钟。
+              </p>
+            ) : null}
             <p className="chat-composer-meta">
               {sessionId ? `会话 ${sessionId.slice(0, 12)}` : "新会话尚未创建"}
             </p>
@@ -434,12 +649,15 @@ export default function ChatExperience() {
         <>
           <div
             className="chat-mobile-drawer-backdrop is-open"
+            data-overlay-backdrop="true"
             aria-hidden="true"
-            onClick={() => setSessionsOpen(false)}
+            onClick={closeOverlay}
           />
           <aside
             id="chat-session-drawer"
             className="chat-session-drawer is-open"
+            ref={sessionDialogRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-label="会话列表"
@@ -450,26 +668,37 @@ export default function ChatExperience() {
               listError={listError}
               onSelect={selectSession}
               onCreate={createNewSession}
-              onClose={() => setSessionsOpen(false)}
+              onClose={closeOverlay}
             />
           </aside>
         </>
       ) : null}
-      {!isMobile && evidenceOpen && selectedEvidence.length > 0 ? (
-        <div
-          className="chat-evidence-overlay is-open"
-          role="dialog"
-          aria-modal="true"
-          aria-label="当前回答证据"
-        >
-          <EvidencePanel
-            answer={selectedAnswer}
-            answerNumber={
-              messageRows.find((row) => row.index === activeAnswer)?.answerNumber ?? 0
-            }
-            onClose={() => setEvidenceOpen(false)}
+      {isEvidenceModal && evidenceOpen && selectedEvidence.length > 0 ? (
+        <>
+          <div
+            className="chat-evidence-overlay-backdrop is-open"
+            data-overlay-backdrop="true"
+            aria-hidden="true"
+            onClick={closeOverlay}
           />
-        </div>
+          <div
+            className="chat-evidence-overlay is-open"
+            id="chat-evidence-overlay"
+            ref={evidenceDialogRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-label="当前回答证据"
+          >
+            <EvidencePanel
+              answer={selectedAnswer}
+              answerNumber={
+                messageRows.find((row) => row.index === activeAnswer)?.answerNumber ?? 0
+              }
+              onClose={closeOverlay}
+            />
+          </div>
+        </>
       ) : null}
     </div>
   );
@@ -559,6 +788,13 @@ function MessageRow({
   }
   const isUser = message.role === "user";
   const evidenceCount = message.evidence?.length ?? 0;
+  const display = isUser ? null : parseAssistantDisplayContent(message.content);
+  const hasSupplementary = Boolean(
+    display &&
+      (display.reasoningSummary ||
+        display.limitations ||
+        display.confidence !== null),
+  );
   return (
     <article className={isUser ? "chat-message chat-message-user" : "chat-message"}>
       <div className="chat-message-meta">
@@ -580,28 +816,34 @@ function MessageRow({
         <p className="chat-user-copy">{message.content}</p>
       ) : (
         <div className="chat-markdown">
-          <ReactMarkdown
-            skipHtml
-            components={{
-              a: ({ href, children, ...props }) => {
-                const external = href?.startsWith("http://") || href?.startsWith("https://");
-                return (
-                  <a
-                    {...props}
-                    href={href}
-                    target={external ? "_blank" : undefined}
-                    rel={external ? "noreferrer" : undefined}
-                  >
-                    {children}
-                  </a>
-                );
-              },
-            }}
-          >
-            {formatAssistantDisplayContent(message.content, evidenceCount > 0)}
-          </ReactMarkdown>
+          <MarkdownContent content={display?.answer ?? ""} />
         </div>
       )}
+      {!isUser && display && hasSupplementary ? (
+        <details className="chat-answer-details">
+          <summary>查看回答说明</summary>
+          <div className="chat-answer-details-body">
+            {display.reasoningSummary ? (
+              <section>
+                <h3>回答依据</h3>
+                <MarkdownContent content={display.reasoningSummary} />
+              </section>
+            ) : null}
+            {display.confidence !== null ? (
+              <p>
+                <strong>置信度：</strong>
+                {display.confidence}%
+              </p>
+            ) : null}
+            {display.limitations ? (
+              <section>
+                <h3>局限性</h3>
+                <MarkdownContent content={display.limitations} />
+              </section>
+            ) : null}
+          </div>
+        </details>
+      ) : null}
       {!isUser && evidenceCount > 0 ? (
         <div className="chat-mobile-evidence">
           <p className="chat-mobile-evidence-label">本条回答的 {evidenceCount} 条证据</p>
@@ -617,6 +859,31 @@ function MessageRow({
         </div>
       ) : null}
     </article>
+  );
+}
+
+function MarkdownContent({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      skipHtml
+      components={{
+        a: ({ href, children, ...props }) => {
+          const external = href?.startsWith("http://") || href?.startsWith("https://");
+          return (
+            <a
+              {...props}
+              href={href}
+              target={external ? "_blank" : undefined}
+              rel={external ? "noreferrer" : undefined}
+            >
+              {children}
+            </a>
+          );
+        },
+      }}
+    >
+      {normalizeInlineMath(content)}
+    </ReactMarkdown>
   );
 }
 
@@ -734,19 +1001,19 @@ function MobileEvidenceItem({ item, number }: { item: ChatEvidence; number: numb
           >
             打开论文原页 ↗
           </a>
-        ) : null}
+        ) : (
+          <span className="chat-evidence-unavailable">
+            该来源暂无论文目录链接
+          </span>
+        )}
       </details>
     </li>
   );
 }
 
 export function formatAssistantDisplayContent(content: string, hasEvidence: boolean) {
-  if (!hasEvidence) {
-    return content;
-  }
-  const marker = "\n## Evidence\n";
-  const markerIndex = content.lastIndexOf(marker);
-  return markerIndex >= 0 ? content.slice(0, markerIndex).trimEnd() : content;
+  void hasEvidence;
+  return parseAssistantDisplayContent(content).answer;
 }
 
 function findLastAnswer(messages: ChatMessage[]) {
@@ -767,8 +1034,4 @@ function formatSessionDate(value: string) {
     month: "numeric",
     day: "numeric",
   }).format(date);
-}
-
-function resolveError(caught: unknown, fallback: string) {
-  return caught instanceof Error && caught.message ? caught.message : fallback;
 }

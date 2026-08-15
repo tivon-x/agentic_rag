@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage
+from langchain_core.documents import Document
 
 from api.db.database import create_chat_session
 from api.main import create_app
 from api.services.index_worker import IndexWorker
-from api.routers.chat import _normalize_evidence_item
+from api.routers.chat import _extract_chat_evidence, _normalize_evidence_item
 from core.settings import load_settings
 
 
@@ -46,7 +47,9 @@ def test_graph_evidence_is_persisted_per_answer_and_survives_reload(
                         {
                             "doc_id": f"doc-{FakeGraph.calls}",
                             "node_id": f"node-{FakeGraph.calls}",
-                            "paper_id": paper_id,
+                            # The answer model may omit or rewrite catalog IDs;
+                            # the router must use the retrieval-owned artifact.
+                            "paper_id": f"model-invented-{FakeGraph.calls}",
                             "paper_title": f"Paper {FakeGraph.calls}",
                             "source": f"C:\\library\\{paper_id}.pdf",
                             "section_path": ["3 Methods", "3.1 Setup"],
@@ -57,6 +60,24 @@ def test_graph_evidence_is_persisted_per_answer_and_survives_reload(
                         }
                     ]
                 },
+                "evidenceGroups": [
+                    {
+                        "subquery": f"question {FakeGraph.calls}",
+                        "evidence": [
+                            {
+                                "doc_id": f"doc-{FakeGraph.calls}",
+                                "node_id": f"node-{FakeGraph.calls}",
+                                "paper_id": paper_id,
+                                "paper_title": f"Paper {FakeGraph.calls}",
+                                "source": f"C:\\library\\{paper_id}.pdf",
+                                "section_path": ["3 Methods", "3.1 Setup"],
+                                "page": FakeGraph.calls + 2,
+                                "quote": f"Source quote {FakeGraph.calls}.",
+                                "score": 0.8,
+                            }
+                        ],
+                    }
+                ],
             }
 
     monkeypatch.setattr(IndexWorker, "start", no_start)
@@ -98,7 +119,7 @@ def test_graph_evidence_is_persisted_per_answer_and_survives_reload(
     assert "C:\\library" not in first_stream.text
 
 
-def test_old_session_and_no_evidence_are_explicitly_supported(
+def test_old_session_is_readable_and_empty_retrieval_is_not_persisted(
     monkeypatch,
     tmp_path,
 ) -> None:
@@ -112,6 +133,8 @@ def test_old_session_and_no_evidence_are_explicitly_supported(
             return {
                 "messages": [*input_state["messages"], AIMessage(content="No evidence answer")],
                 "groundedAnswer": {"evidence": []},
+                "routingDecision": "retrieve",
+                "evidenceGroups": [],
             }
 
     monkeypatch.setattr(IndexWorker, "start", no_start)
@@ -141,8 +164,195 @@ def test_old_session_and_no_evidence_are_explicitly_supported(
     assert old.status_code == 200
     assert old.json()["messages"] == [{"role": "user", "content": "旧问题"}]
     assert stream.status_code == 200
-    assert '"evidence": []' in stream.text
-    assert saved.json()["messages"][-1]["evidence"] == []
+    assert "event: stream-error" in stream.text
+    assert "event: answer.final" not in stream.text
+    assert saved.json()["messages"] == [
+        {"role": "user", "content": "new question"}
+    ]
+
+
+def test_retrieval_failure_streams_recovery_and_does_not_persist_answer(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    settings = _settings(monkeypatch, tmp_path)
+
+    async def no_start(self: IndexWorker) -> None:
+        return None
+
+    class BrokenRetriever:
+        def invoke(self, question: str):
+            raise RuntimeError("retrieval backend unavailable")
+
+    monkeypatch.setattr(IndexWorker, "start", no_start)
+    monkeypatch.setattr("api.routers.chat.get_cached_graph", lambda _: None)
+    monkeypatch.setattr("api.routers.chat.build_retriever", lambda _: BrokenRetriever())
+
+    with TestClient(create_app(settings)) as client:
+        created = client.post("/api/chat", json={"message": "retrieval failure"})
+        session_id = created.json()["session_id"]
+        stream = client.get(f"/api/chat/stream?session_id={session_id}")
+        saved = client.get(f"/api/chat/{session_id}")
+
+    assert stream.status_code == 200
+    stream_body = stream.content.decode("utf-8")
+    assert "event: stream-error" in stream_body
+    assert "检索失败，回答没有保存，请重试。" in stream_body
+    assert "event: answer.final" not in stream_body
+    assert saved.json()["messages"] == [
+        {"role": "user", "content": "retrieval failure"}
+    ]
+
+
+def test_answer_save_failure_streams_recovery_and_does_not_report_success(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    settings = _settings(monkeypatch, tmp_path)
+
+    async def no_start(self: IndexWorker) -> None:
+        return None
+
+    class AnswerGraph:
+        def invoke(self, input_state, config=None):
+            return {
+                "messages": [
+                    *input_state["messages"],
+                    AIMessage(content="A valid answer"),
+                ],
+                "groundedAnswer": {"evidence": []},
+                "evidenceGroups": [],
+            }
+
+    async def fail_save(*args, **kwargs) -> bool:
+        return False
+
+    monkeypatch.setattr(IndexWorker, "start", no_start)
+    monkeypatch.setattr("api.routers.chat.get_cached_graph", lambda _: AnswerGraph())
+    monkeypatch.setattr("api.routers.chat._save_history", fail_save)
+
+    with TestClient(create_app(settings)) as client:
+        created = client.post("/api/chat", json={"message": "save failure"})
+        session_id = created.json()["session_id"]
+        stream = client.get(f"/api/chat/stream?session_id={session_id}")
+
+    assert stream.status_code == 200
+    stream_body = stream.content.decode("utf-8")
+    assert "event: stream-error" in stream_body
+    assert "回答保存失败，回答没有保存，请重试。" in stream_body
+    assert "event: answer.final" not in stream_body
+
+
+def test_missing_catalog_paper_id_is_not_invented_or_persisted(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    settings = _settings(monkeypatch, tmp_path)
+
+    async def no_start(self: IndexWorker) -> None:
+        return None
+
+    class NoCatalogGraph:
+        def invoke(self, input_state, config=None):
+            return {
+                "messages": [
+                    *input_state["messages"],
+                    AIMessage(content="Answer without a catalog record"),
+                ],
+                "groundedAnswer": {
+                    "evidence": [
+                        {
+                            "node_id": "node-no-catalog",
+                            "paper_id": "model-invented-id",
+                            "source": "unmanaged-paper.pdf",
+                            "page": 4,
+                            "quote": "Quote from a source outside the catalog.",
+                        }
+                    ]
+                },
+                "evidenceGroups": [
+                    {
+                        "evidence": [
+                            {
+                                "node_id": "node-no-catalog",
+                                "paper_id": None,
+                                "source": "unmanaged-paper.pdf",
+                                "page": 4,
+                                "quote": "Quote from a source outside the catalog.",
+                            }
+                        ]
+                    }
+                ],
+            }
+
+    monkeypatch.setattr(IndexWorker, "start", no_start)
+    monkeypatch.setattr(
+        "api.routers.chat.get_cached_graph", lambda _: NoCatalogGraph()
+    )
+
+    with TestClient(create_app(settings)) as client:
+        created = client.post("/api/chat", json={"message": "uncataloged question"})
+        session_id = created.json()["session_id"]
+        stream = client.get(f"/api/chat/stream?session_id={session_id}")
+        saved = client.get(f"/api/chat/{session_id}")
+
+    assert stream.status_code == 200
+    assert '"paper_id": null' in stream.text
+    assert "model-invented-id" not in stream.text
+    evidence = saved.json()["messages"][1]["evidence"][0]
+    assert evidence.get("paper_id") is None
+
+    import asyncio
+
+    from api.db.database import get_chat_session_messages
+
+    persisted = asyncio.run(
+        get_chat_session_messages(settings, session_id=session_id)
+    )
+    assert persisted is not None
+    assert persisted[1]["evidence"][0]["paper_id"] is None
+
+
+def test_catalog_document_metadata_reaches_chat_evidence() -> None:
+    from api.routers.chat import _documents_to_chat_evidence
+
+    document = Document(
+        page_content="catalog quote",
+        metadata={
+            "node_id": "catalog-node",
+            "paper_id": "catalog-paper-id",
+            "paper_title": "Catalog Paper",
+            "source": "catalog-paper.pdf",
+            "page": 2,
+            "quote_text": "catalog quote",
+        },
+    )
+
+    evidence = _documents_to_chat_evidence([document])
+
+    assert evidence[0].paper_id == "catalog-paper-id"
+    assert evidence[0].paper_title == "Catalog Paper"
+    assert evidence[0].page == 2
+
+
+def test_model_only_evidence_cannot_supply_a_paper_id() -> None:
+    evidence = _extract_chat_evidence(
+        {
+            "groundedAnswer": {
+                "evidence": [
+                    {
+                        "node_id": "model-node",
+                        "paper_id": "hallucinated-paper-id",
+                        "source": "unmanaged.pdf",
+                        "quote": "model quote",
+                    }
+                ]
+            }
+        }
+    )
+
+    assert len(evidence) == 1
+    assert evidence[0].paper_id is None
 
 
 def test_evidence_normalization_requires_source_faithful_quote_and_stable_node() -> None:

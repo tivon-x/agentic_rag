@@ -735,9 +735,10 @@ summary:focus-visible {
   line-height: 1.65;
 }
 
-.chat-composer-row textarea:focus {
+.chat-composer-row textarea:focus-visible {
   border-color: var(--ink-blue);
-  outline: 0;
+  outline: 2px solid var(--ink-blue);
+  outline-offset: 3px;
 }
 
 .chat-composer-row button {
@@ -778,6 +779,51 @@ summary:focus-visible {
   color: inherit;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.chat-wait-status {
+  margin-top: 0.45rem;
+  color: var(--signal-amber);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.chat-answer-details {
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.6rem;
+  color: var(--muted-ink);
+  font-size: 0.78rem;
+}
+
+.chat-answer-details summary {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  color: var(--ink-blue);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.chat-answer-details-body {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.6rem;
+  border-left: 2px solid var(--line);
+  padding-left: 0.8rem;
+}
+
+.chat-answer-details-body h3 {
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.chat-answer-details-body .chat-markdown {
+  margin-top: 0.25rem;
+  color: inherit;
+  font-size: 0.78rem;
+  line-height: 1.7;
 }
 
 .chat-evidence-desktop {
@@ -924,8 +970,18 @@ summary:focus-visible {
 .chat-mobile-evidence,
 .chat-session-drawer,
 .chat-evidence-overlay,
-.chat-mobile-drawer-backdrop {
+.chat-mobile-drawer-backdrop,
+.chat-evidence-overlay-backdrop {
   display: none;
+}
+
+.chat-session-drawer,
+.chat-evidence-overlay {
+  overscroll-behavior: contain;
+}
+
+.chat-mobile-drawer-backdrop {
+  touch-action: none;
 }
 
 .chat-loading {
@@ -965,6 +1021,14 @@ summary:focus-visible {
     padding: 1.2rem;
   }
 
+  .chat-evidence-overlay-backdrop {
+    position: fixed;
+    inset: 4.15rem 0 0;
+    z-index: 25;
+    display: block;
+    background: rgb(24 23 21 / 35%);
+  }
+
   .chat-evidence-overlay.is-open {
     transform: translateX(0);
   }
@@ -975,6 +1039,12 @@ summary:focus-visible {
 }
 
 @media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+  textarea:not([aria-hidden="true"]),
+  select:not([aria-hidden="true"]) {
+    font-size: 1rem;
+  }
+
   .chat-topbar {
     min-height: 3.8rem;
     padding: 0 0.8rem;
@@ -1049,7 +1119,7 @@ summary:focus-visible {
 
   .chat-composer-row textarea {
     min-height: 2.8rem;
-    font-size: 0.82rem;
+    font-size: 1rem;
   }
 
   .chat-mobile-evidence {

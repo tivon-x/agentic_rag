@@ -1,21 +1,78 @@
 from __future__ import annotations
 
-from typing import Any, TypeAlias
+from typing import Any, Literal, TypeAlias
+from urllib.parse import urlparse
 
 from langchain_openai import ChatOpenAI
 
 ChatModel: TypeAlias = ChatOpenAI
+_STRICT_UNSET = object()
+
+
+class _DashScopeQwenChatOpenAI(ChatOpenAI):
+    """ChatOpenAI adapter for DashScope Qwen structured outputs.
+
+    DashScope's thinking mode rejects structured-output tool calls unless
+    thinking is disabled. Function calling keeps the Pydantic schema in the
+    request while ``enable_thinking=False`` keeps the provider compatible.
+    """
+
+    def with_structured_output(
+        self,
+        schema: Any = None,
+        *,
+        method: Literal["function_calling", "json_mode", "json_schema"] = (
+            "function_calling"
+        ),
+        include_raw: bool = False,
+        strict: bool | None | object = _STRICT_UNSET,
+        tools: list | None = None,
+        **kwargs: Any,
+    ):
+        raw_extra_body = kwargs.pop("extra_body", None)
+        extra_body = dict(raw_extra_body or {})
+        extra_body["enable_thinking"] = False
+        strict_value = (
+            True
+            if strict is _STRICT_UNSET and method == "function_calling"
+            else None
+            if strict is _STRICT_UNSET
+            else strict
+        )
+        return super().with_structured_output(
+            schema,
+            method=method,
+            include_raw=include_raw,
+            strict=strict_value,
+            tools=tools,
+            extra_body=extra_body,
+            **kwargs,
+        )
 
 _LLM_ROUTER_CONFIG: dict[str, Any] | None = None
 _LLM_CACHE: dict[str, ChatModel] = {}
 
 
 def _build_chat_model(model: str, api_key: str, api_base: str, model_config: dict) -> ChatModel:
-    return ChatOpenAI(
+    model_type = (
+        _DashScopeQwenChatOpenAI
+        if _is_dashscope_qwen_model(model, api_base)
+        else ChatOpenAI
+    )
+    return model_type(
         model=model,
         api_key=api_key,
         base_url=api_base,
         **model_config,
+    )
+
+
+def _is_dashscope_qwen_model(model: str, api_base: str) -> bool:
+    model_name = model.strip().lower()
+    hostname = (urlparse(api_base).hostname or "").lower()
+    return model_name.startswith("qwen") and (
+        hostname.endswith(".maas.aliyuncs.com")
+        or hostname == "dashscope.aliyuncs.com"
     )
 
 

@@ -1,5 +1,6 @@
 from typing import Literal
 
+from langchain_core.messages import HumanMessage
 from langgraph.types import Send
 
 from .states import GraphState
@@ -27,7 +28,7 @@ def route_after_rewrite(state: GraphState) -> list[Send]:
                 "question": query,
                 "question_index": idx,
                 "query_plan": state.get("queryPlan", {}),
-                "messages": [],
+                "messages": [HumanMessage(content=query)],
             },
         )
         for idx, query in enumerate(state.get("rewrittenQuestions", []))

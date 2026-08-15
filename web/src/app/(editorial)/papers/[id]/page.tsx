@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchPaper, updatePaperMetadata } from "@/lib/api";
+import { toUserError } from "@/lib/errors";
 import type { MetadataEvidence, PaperDetail } from "@/lib/types";
 
 type MetadataForm = {
@@ -43,9 +44,11 @@ export default function PaperDetailPage() {
   useEffect(() => {
     const rawPage = new URLSearchParams(window.location.search).get("page");
     const requested = Number(rawPage);
-    if (Number.isInteger(requested) && requested > 0) {
-      setPage(requested);
+    if (!Number.isInteger(requested) || requested <= 0) {
+      return;
     }
+    const timer = window.setTimeout(() => setPage(requested), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -59,7 +62,7 @@ export default function PaperDetailPage() {
       })
       .catch((caught) => {
         if (!cancelled) {
-          setError(resolveError(caught, "论文详情加载失败"));
+          setError(toUserError(caught, "论文详情加载失败"));
         }
       });
     return () => {
@@ -105,7 +108,7 @@ export default function PaperDetailPage() {
           : "元数据已保存。",
       );
     } catch (caught) {
-      setError(resolveError(caught, "元数据保存失败"));
+      setError(toUserError(caught, "元数据保存失败"));
     } finally {
       setIsSaving(false);
     }
@@ -140,8 +143,11 @@ export default function PaperDetailPage() {
 
   const pageCount = Math.max(paper.paper_version?.page_count ?? 1, 1);
   const pdfSrc = `${paper.file_url}#page=${page}&view=FitH`;
-  const degradedReason =
+  const rawDegradedReason =
     paper.fallback_reason || paper.parse_error || paper.paper_version?.fallback_reason;
+  const degradedReason = rawDegradedReason
+    ? toUserError(rawDegradedReason, "论文解析未完全成功，部分内容可能不可用")
+    : "";
 
   return (
     <main
@@ -515,8 +521,4 @@ function statusLabel(status: PaperDetail["parse_status"]) {
 
 function formatBytes(value: number) {
   return `${(value / 1024 / 1024).toFixed(2)} MB`;
-}
-
-function resolveError(caught: unknown, fallback: string) {
-  return caught instanceof Error && caught.message ? caught.message : fallback;
 }

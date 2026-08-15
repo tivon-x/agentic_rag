@@ -12,6 +12,7 @@ import {
   fetchPapers,
   uploadKnowledgeFiles,
 } from "@/lib/api";
+import { toUserError } from "@/lib/errors";
 import type {
   IndexingJobResponse,
   PaperSummary,
@@ -56,7 +57,7 @@ export default function LibraryPage() {
       setPapers(data.items);
       setError("");
     } catch (caught) {
-      setError(resolveError(caught, "论文目录加载失败"));
+      setError(toUserError(caught, "论文目录加载失败"));
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +89,7 @@ export default function LibraryPage() {
             void loadPapers();
           }
         })
-        .catch((caught) => setError(resolveError(caught, "任务状态获取失败")));
+        .catch((caught) => setError(toUserError(caught, "任务状态获取失败")));
     }, 1800);
     return () => window.clearInterval(timer);
   }, [jobs, loadPapers]);
@@ -124,7 +125,7 @@ export default function LibraryPage() {
       setNotice("文件已进入解析队列。解析和索引状态会在这里自动更新。");
       await loadPapers();
     } catch (caught) {
-      setError(resolveError(caught, "上传失败"));
+      setError(toUserError(caught, "上传失败"));
     } finally {
       setIsUploading(false);
     }
@@ -178,7 +179,7 @@ export default function LibraryPage() {
                   </div>
                   {job.error_message ? (
                     <p className="mt-2 text-xs leading-6 text-[var(--signal-red)]">
-                      {job.error_message}
+                      {toUserError(job.error_message, "后台处理失败，请稍后重试")}
                     </p>
                   ) : null}
                 </div>
@@ -266,7 +267,10 @@ function Metric({ label, value }: { label: string; value: number }) {
 
 function PaperRow({ paper, index }: { paper: PaperSummary; index: number }) {
   const confidence = paper.metadata.title?.confidence;
-  const reason = paper.fallback_reason || paper.parse_error;
+  const rawReason = paper.fallback_reason || paper.parse_error;
+  const reason = rawReason
+    ? toUserError(rawReason, "论文解析未完全成功，部分内容可能不可用")
+    : "";
   return (
     <li className="grid gap-4 bg-[var(--panel)] px-4 py-6 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:px-5 sm:py-7">
       <span className="font-mono text-xs text-[var(--muted-ink)]">
@@ -349,8 +353,4 @@ function formatConfidence(value: number | undefined) {
 
 function formatAuthors(authors: string[]) {
   return authors.length ? authors.join("、") : "作者未知";
-}
-
-function resolveError(caught: unknown, fallback: string) {
-  return caught instanceof Error && caught.message ? caught.message : fallback;
 }

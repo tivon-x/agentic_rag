@@ -33,6 +33,7 @@ class GraphState(MessagesState):
     packedContexts: Annotated[list[dict], accumulate_or_reset]
     evidenceGroups: Annotated[list[dict], accumulate_or_reset]
     groundedAnswer: dict
+    answerGenerationFailed: bool
 
 
 class ResearchSearchState(AgentState):

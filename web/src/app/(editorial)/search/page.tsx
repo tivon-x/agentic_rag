@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { searchLibrary } from "@/lib/api";
+import { toUserError } from "@/lib/errors";
 import type { SearchResponse, SearchResult } from "@/lib/types";
 
 export default function SearchPage() {
@@ -28,7 +29,7 @@ export default function SearchPage() {
       setResponse(await searchLibrary({ query: normalized }));
     } catch (caught) {
       setResponse(null);
-      setError(resolveError(caught, "搜索失败"));
+      setError(toUserError(caught, "搜索失败"));
     } finally {
       setIsSearching(false);
     }
@@ -86,7 +87,8 @@ export default function SearchPage() {
           </div>
           {response.degraded_reason ? (
             <p className="border-t border-[var(--signal-amber)] bg-[#fbf4e8] px-4 py-3 text-sm text-[var(--signal-amber)]">
-              当前使用 BM25 降级检索：{response.degraded_reason}
+              当前使用 BM25 降级检索：
+              {toUserError(response.degraded_reason, "部分检索能力暂不可用")}
             </p>
           ) : null}
           {response.results.length ? (
@@ -234,8 +236,4 @@ function ScorePanel({ result }: { result: SearchResult }) {
 
 function formatScore(value: number | null) {
   return value === null ? "N/A" : value.toFixed(4);
-}
-
-function resolveError(caught: unknown, fallback: string) {
-  return caught instanceof Error && caught.message ? caught.message : fallback;
 }

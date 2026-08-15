@@ -1,4 +1,5 @@
 import importlib
+import json
 
 from langchain_core.messages import HumanMessage
 
@@ -77,6 +78,126 @@ def test_aggregate_answers_renders_grounded_payload(monkeypatch):
     assert "Confidence" in content
     assert "tasks.md" in content
     assert result["groundedAnswer"]["confidence"] == 0.88
+
+
+def test_aggregate_answers_marks_empty_evidence_as_generation_failure() -> None:
+    result = aggregate_answers({"evidenceGroups": []})
+
+    assert result["answerGenerationFailed"] is True
+    assert result["messages"][0].content == "No answers were generated."
+
+
+def test_aggregate_payload_excludes_raw_retrieval_artifacts_and_is_bounded(
+    monkeypatch,
+) -> None:
+    from agent.schemas import GroundedAnswer
+
+    captured: dict[str, object] = {}
+    response = GroundedAnswer(
+        answer="The source explains the result.",
+        reasoning_summary="One citation directly supports the answer.",
+        evidence=[
+            {
+                "doc_id": "doc-1",
+                "node_id": "node-1",
+                "source": "paper.pdf",
+                "quote": "The source explains the result.",
+            }
+        ],
+        confidence=0.8,
+        limitations="The answer is limited to the retrieved source.",
+    )
+
+    class CapturingStructuredLLM:
+        def with_config(self, **_kwargs):
+            return self
+
+        def with_structured_output(self, _schema, **kwargs):
+            captured["structured_kwargs"] = kwargs
+            return self
+
+        def invoke(self, messages):
+            captured["payload"] = str(messages[-1].content)
+            return response
+
+    monkeypatch.setattr(
+        aggregate_answers_module,
+        "get_llm_by_type",
+        lambda _task: CapturingStructuredLLM(),
+    )
+    huge_passages = "raw passage " * 200_000
+    result = aggregate_answers(
+        {
+            "originalQuery": "Why did the result change?",
+            "queryPlan": {"intent": "fact", "subqueries": ["result change"]},
+            "packedContexts": [{"subquery": "result change", "passage_count": 1}],
+            "evidenceGroups": [
+                {
+                    "subquery": "result change",
+                    "intent": "fact",
+                    "packed_context": {"passage_count": 1},
+                    "evidence": response.model_dump()["evidence"],
+                    "debug": {"raw": "debug details"},
+                }
+            ],
+            "retrievalEvidence": [
+                {
+                    "subquery": "result change",
+                    "passages": [{"content": huge_passages}],
+                    "debug": {"raw": huge_passages},
+                }
+            ],
+        }
+    )
+
+    payload = json.loads(str(captured["payload"]))
+    assert result["groundedAnswer"]["answer"] == "The source explains the result."
+    assert "retrieval_evidence" not in payload
+    assert "passages" not in str(payload)
+    assert "debug" not in str(payload)
+    assert len(str(captured["payload"])) <= aggregate_answers_module.MAX_AGGREGATE_INPUT_CHARS
+
+
+def test_aggregate_structured_failure_is_not_reported_as_success(
+    monkeypatch,
+    caplog,
+) -> None:
+    class FailingStructuredLLM:
+        def with_config(self, **_kwargs):
+            return self
+
+        def with_structured_output(self, _schema, **_kwargs):
+            return self
+
+        def invoke(self, _messages):
+            raise RuntimeError("provider rejected structured output")
+
+    monkeypatch.setattr(
+        aggregate_answers_module,
+        "get_llm_by_type",
+        lambda _task: FailingStructuredLLM(),
+    )
+    with caplog.at_level("ERROR"):
+        result = aggregate_answers(
+            {
+                "originalQuery": "Why did the result change?",
+                "evidenceGroups": [
+                    {
+                        "subquery": "result change",
+                        "evidence": [
+                            {
+                                "doc_id": "doc-1",
+                                "node_id": "node-1",
+                                "quote": "The source explains the result.",
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
+    assert result["answerGenerationFailed"] is True
+    assert "provider rejected structured output" in caplog.text
 
 
 def test_out_of_scope_answer_renders_structured_response(monkeypatch):
