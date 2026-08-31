@@ -57,6 +57,8 @@ data/
 !/artifacts/evals/kite/b3/
 /artifacts/evals/kite/b3/*
 !/artifacts/evals/kite/b3/report.json
+!/artifacts/evals/kite/nonformal/
+!/artifacts/evals/kite/nonformal/*
 
 # IDE
 .vscode/

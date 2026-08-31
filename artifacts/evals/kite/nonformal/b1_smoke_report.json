@@ -1,0 +1,387 @@
+{
+  "benchmark": {
+    "corpus_file_count": 134,
+    "corpus_file_sha256": "f33a3154a0a65d76dbfd10e599a7c5d640ac025ebadb76d80e2a5536c57240c8",
+    "name": "kite-ai-papers",
+    "query_sha256": "6f242828e2e96b34e152af16afabf981f938eec5f3d11522c205ef635cae57d3",
+    "upstream_commit": "85e71ad63db9ea410eccbb0158f94e7d72462b99"
+  },
+  "cases": [
+    {
+      "answer": "The authors chose a matrixed, leveled ontology for the Levels of AGI framework to facilitate nuanced discussions regarding both the breadth (generality) and depth (performance) of AI capabilities. This design was directly influenced by two of their six proposed principles: Principle 2 (Generality and Performance) and Principle 6 (Focus on the Path to AGI). By structuring the framework as a matrix combining generality (Narrow vs. General) with five levels of performance (Emerging, Competent, Expert, Virtuoso, and Superhuman), the authors aimed to provide a common language for comparing models, tracking progress along the path to AGI rather than treating it as a single endpoint, and enabling more precise risk assessments associated with different capability and autonomy levels.",
+      "case_id": "ai-papers-001",
+      "context": {
+        "message_count": 46,
+        "packed_context_count": 23,
+        "passage_count": 184,
+        "total_tokens": 19485
+      },
+      "error": null,
+      "evidence": [
+        {
+          "doc_id": "uncategorized/LevelsOfAGI.pdf",
+          "node_id": "7431396f61371469eb0a1b25e7dd3876627628004c1fcd302c72e322f00b1658",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "Two of our six proposed principles for defining AGI (Principle 2: Generality _and_ Performance; Principle 6: Focus on the Path to AGI) influenced our choice of a matrixed, leveled ontology for facilitating nuanced discussions of the breadth and depth of AI capabilities.",
+          "relevance": "Directly states the principles that drove the design decision for the matrixed, leveled ontology.",
+          "score": null,
+          "section_path": [],
+          "source": "uncategorized/LevelsOfAGI.pdf"
+        },
+        {
+          "doc_id": "uncategorized/LevelsOfAGI.pdf",
+          "node_id": "57402222869aac4def09f050d28c80ba5e1132798eae1a02208aa58e24450c2b",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "With these principles in mind, we introduced our Levels of AGI ontology, which offers a more nuanced way to define our progress toward AGI by considering generality (either Narrow or General) in tandem with five levels of performance (Emerging, Competent, Expert, Virtuoso, and Superhuman).",
+          "relevance": "Describes the specific structure of the ontology (matrix of generality and performance levels) resulting from the design decisions.",
+          "score": null,
+          "section_path": [],
+          "source": "uncategorized/LevelsOfAGI.pdf"
+        },
+        {
+          "doc_id": "uncategorized/LevelsOfAGI.pdf",
+          "node_id": "9c1180dc8694d2226d89c7f1336da666a0f8978e3e2ea543a2aa6f4022fdc996",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "We propose a framework for classifying the capabilities and behavior of Artificial General Intelligence (AGI) models and their precursors. This framework introduces levels of AGI performance, generality, and autonomy. It is our hope that this framework will be useful in an analogous way to the levels of autonomous driving, by providing a common language to compare models, as…",
+          "relevance": "Explains the broader goal of the framework: providing a common language for comparison, similar to autonomous driving levels.",
+          "score": null,
+          "section_path": [],
+          "source": "uncategorized/LevelsOfAGI.pdf"
+        },
+        {
+          "doc_id": "uncategorized/LevelsOfAGI.pdf",
+          "node_id": "c5c24ef3bb38fe57b4e957fb7afdcd46ca4fa988cda35d04af0e2d72fa1ef423",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "**6.** **Focus on the Path to AGI, not a Single Endpoint.** Much as the adoption of a standard set of Levels of Driving Automation (SAE International, 2021) allowed for clear discussions of policy and progress relating to autonomous vehicles, we posit there is value in defining “Levels of AGI.”",
+          "relevance": "Supports the rationale for using levels to focus on the path to AGI rather than a single endpoint, influencing the leveled structure.",
+          "score": null,
+          "section_path": [],
+          "source": "uncategorized/LevelsOfAGI.pdf"
+        },
+        {
+          "doc_id": "uncategorized/LevelsOfAGI.pdf",
+          "node_id": "9875181846bdf03031adf721e62e36c5af489603c270990d399ab57d57804ac0",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "Table 2 illustrates the interplay between AGI Level, Autonomy Level, and risk. Advances in model performance and generality unlock additional interaction paradigm choices (including potentially fully autonomous AI). These interaction paradigms in turn introduce new classes of risk. The interplay of model capabilities and interaction design will enable more nuanced risk assessments and responsible…",
+          "relevance": "Highlights another benefit of the framework: enabling nuanced risk assessments by linking capability levels to autonomy and risk.",
+          "score": null,
+          "section_path": [],
+          "source": "uncategorized/LevelsOfAGI.pdf"
+        }
+      ],
+      "judge_attempts": 1,
+      "judge_score": 10,
+      "latency_ms": 155827.0687,
+      "query": "Why did the authors of the Levels of AGI paper decide on the specific matrixed, leveled ontology of AGI they did?",
+      "reference_answer": "The authors decided on this specific matrixed, leveled ontology of AGI to focus on performance and generality as the two dimensions that are core to AGI. This approach aligns with Principle 2 ('Focus on Generality and Performance') and Principle 6 ('Focus on the Path to AGI, not a Single Endpoint').",
+      "rubric": "The model should at least mention that the authors decided on this specific matrixed, leveled ontology of AGI to focus on performance and generality as the two dimensions that are core to AGI. If it also mentions that this approach aligns with Principle 2 ('Focus on Generality and Performance') and Principle 6 ('Focus on the Path to AGI, not a Single Endpoint') then that's a bonus."
+    },
+    {
+      "answer": "AlphaCodium is a code-oriented flow that improves code generation by iteratively running and fixing generated code against input-output tests. It operates in two main phases:\n\n1. **Pre-processing Phase**: A linear flow where the system reasons about the problem in natural language. This phase includes steps like \"problem reflection,\" where insights are gained and accumulated to assist with more difficult subsequent stages. The output of early steps (e.g., problem reflection) is used as prompt input for later steps.\n\n2. **Code Iterations Phase**: An iterative process where AlphaCodium generates, runs, and fixes solution code against both public and AI-generated tests. This phase addresses the \"blind spots\" of relying solely on public tests by incorporating AI-generated tests, which are easier to generate than correct code solutions because they require understanding and logical reasoning rather than a full solution.\n\nThe flow utilizes specific design concepts such as YAML structured output, bullet point analysis, modular code generation, and test anchors to enhance performance.",
+      "case_id": "ai-papers-005",
+      "context": {
+        "message_count": 59,
+        "packed_context_count": 30,
+        "passage_count": 240,
+        "total_tokens": 30712
+      },
+      "error": null,
+      "evidence": [
+        {
+          "doc_id": "uncategorized/AlphaCodium.pdf",
+          "node_id": "359aeaad2e8bf8c06953ece38cffe0a2c7bb9eb8763a8c1fb76c230d1ab9942d",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "In this paper, we introduced AlphaCodium, a codeoriented flow that iteratively runs and fixes a generated code\nagainst input-output tests. The flow is divided into two main\nphases: a pre-processing phase, where AlphaCodium reasons about the problem in natural language, and a code iterations phase, in which AlphaCodium iterates on public and\nAI-generated tests.",
+          "relevance": "Defines the two main phases of AlphaCodium.",
+          "score": null,
+          "section_path": [],
+          "source": "uncategorized/AlphaCodium.pdf"
+        },
+        {
+          "doc_id": "uncategorized/AlphaCodium.pdf",
+          "node_id": "c76cec07d4e96bd586a689313c18b9ecb4a95f795c47c5d3f7f0c95f515b300a",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "- The _pre-processing_ phase represents a linear flow\nwhere AlphaCodium reasons about the problem, in\nnatural language,",
+          "relevance": "Describes the nature of the pre-processing phase.",
+          "score": null,
+          "section_path": [],
+          "source": "uncategorized/AlphaCodium.pdf"
+        },
+        {
+          "doc_id": "uncategorized/AlphaCodium.pdf",
+          "node_id": "f1ee3dbe795c51e188b2a605bc964723b7ae69a8f4c5ae5e94140fdef0f924c7",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "- The _code_ _iterations_ phase includes iterative stages\nwhere AlphaCodium generates, runs, and fixes a solution code against certain tests.",
+          "relevance": "Describes the activities in the code iterations phase.",
+          "score": null,
+          "section_path": [],
+          "source": "uncategorized/AlphaCodium.pdf"
+        },
+        {
+          "doc_id": "uncategorized/AlphaCodium.pdf",
+          "node_id": "e226ccdc84a62586c2b1295d6282d0ae7c31343bb7f14402fa58f84846f0b24b",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "Firstly, the flow relies on knowledge accumulation - trying to progress from easy to hard, gaining knowledge and\ninsight along the way to help with the more difficult stages.\nFor example, the output of the first step, _problem reflection_,\ncan be utilized as prompt input to more difficult steps like\n_…",
+          "relevance": "Explains the knowledge accumulation strategy and mentions 'problem reflection' as a step.",
+          "score": null,
+          "section_path": [],
+          "source": "uncategorized/AlphaCodium.pdf"
+        },
+        {
+          "doc_id": "uncategorized/AlphaCodium.pdf",
+          "node_id": "3853b365b061115d9a76b4f3fec1fe4656c257fc45bba1507675c51af93ed6ad",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "A key observation when designing AlphaCodium flow is\nthat generating additional useful tests is easier than generating a correct code solution. Adding specific tests requires\nmainly understanding the problem, some insight, and basic\nbrute-force or logical reasoning. There is no need to fully\n“solve” the problem when generating additional tests.",
+          "relevance": "Justifies the use of AI-generated tests in the iteration phase.",
+          "score": null,
+          "section_path": [],
+          "source": "uncategorized/AlphaCodium.pdf"
+        }
+      ],
+      "judge_attempts": 1,
+      "judge_score": 3,
+      "latency_ms": 142992.0203,
+      "query": "At a high level, how does AlphaCodium work? What are the flow stages exactly?",
+      "reference_answer": "AlphaCodium is a new approach to code generation designed to improve the performance of large language models (LLMs) on code problems, particularly in the context of competitive programming. It operates through an iterative process that involves reasoning about the problem in natural language and then generating, running, and fixing solution code against a set of tests. The process is divided into two main phases: a pre-processing phase and a code iterations phase.\n\nThe flow stages of AlphaCodium are as follows:\n\n1. **Problem Reflection**: Describe the problem in bullet points, addressing the problem's goal, inputs, outputs, rules, constraints, and other relevant details from the problem description.\n\n2. **Public Tests Reasoning**: Explain why each test input leads to its corresponding output.\n\n3. **Generate Possible Solutions**: Generate a list of 2-3 possible solutions to the problem, described in natural language.\n\n4. **Rank Solutions**: Rank the possible solutions based on correctness, simplicity, and robustness, choosing the \"best solution\" rather than necessarily the most efficient one.\n\n5. **Generate Additional AI Tests**: Create an additional 6-8 diverse input-output tests for the problem that cover cases and aspects not addressed by the original public tests.\n\n6. **Initial Code Solution**: Generate an initial code solution that is reasonably close to the correct code. Run this code on selected public and AI tests, iterating until the tests pass or a try-limit is reached. The first code that passes the tests or the code with the closest output will be used as the base code for the next steps.\n\n7. **Iterate on Public Tests**: Start from the base code and iteratively run it on the public tests. If the code fails on a specific test, attempt to fix it based on the error message.\n\n8. **Iterate on AI-generated Tests**: Continue the run-fix iterations on the AI-generated tests, using \"test anchors\" to ensure that any code fixes do not break previously passed tests.",
+      "rubric": ""
+    },
+    {
+      "answer": "MINILMv2 introduces a layer selection strategy that involves distilling knowledge from an **upper middle layer** of the teacher model, which was found to achieve better performance, particularly for large-size teachers. This contrasts with the original MINILM, which primarily utilized deep self-attention distillation from the **last Transformer layer** of the teacher. Additionally, MINILMv2 generalizes the distillation method by using multi-head self-attention relations (scaled dot-products of query, key, and value vectors), which eliminates the restriction that the student must have the same number of attention heads as the teacher, offering more flexibility compared to the original approach.",
+      "case_id": "ai-papers-010",
+      "context": {
+        "message_count": 31,
+        "packed_context_count": 11,
+        "passage_count": 88,
+        "total_tokens": 9978
+      },
+      "error": null,
+      "evidence": [
+        {
+          "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
+          "node_id": "0f0afabf6d4e39d47c89d652b6b67a95065c858edefc2b30bcbd3a21e9292863",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "- We conduct extensive distillation experiments on different large-size teachers and find that using knowledge of a teacher’s upper middle layer achieves better performance.",
+          "relevance": "Directly states the novel layer selection strategy in MiniLMv2.",
+          "score": null,
+          "section_path": [],
+          "source": "knowledge-retrieval/MiniLMv2.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
+          "node_id": "c2c3945c1eeafa1847fc3471a16825f7252d106778a358a02446b0cbacbab32a",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "Moreover, we show that transferring the self-attention knowledge of an upper middle layer achieves better performance for large-siz…",
+          "relevance": "Confirms the upper middle layer strategy is specifically beneficial for large teachers.",
+          "score": null,
+          "section_path": [],
+          "source": "knowledge-retrieval/MiniLMv2.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/MiniLM.pdf",
+          "node_id": "890ef59b7bf171a58f5e0944b47f7936cad5be4f6a8d93518a08a38ef9028d3d",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "edge of the teacher’s last Transformer layer, we compare our method with layer-to-layer distillation.",
+          "relevance": "Identifies the layer used in the original MiniLM (last layer) for contrast.",
+          "score": null,
+          "section_path": [],
+          "source": "knowledge-retrieval/MiniLM.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
+          "node_id": "c22d467309a411ac7d5d60f8ea88d37086fc94e4ed64c43af4377b12165ce5dc",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "the restriction on the number of attention heads of students, which is required to be the same as its teacher. ... we generalize deep self-attention distillation in MINILM and introduce multi-head self-attention relations...",
+          "relevance": "Explains the methodological generalization that accompanies the new strategy, removing head count restrictions.",
+          "score": null,
+          "section_path": [],
+          "source": "knowledge-retrieval/MiniLMv2.pdf"
+        }
+      ],
+      "judge_attempts": 1,
+      "judge_score": 5,
+      "latency_ms": 114611.9287,
+      "query": "The MINILMv2 paper describes a novel approach for layer selection when distilling from large teacher models. Explain this approach and contrast it with the layer selection strategy used in the original MINILM.",
+      "reference_answer": "For large-size teachers (24+ layers, 1024 hidden size), MINILMv2 found that transferring knowledge from an upper middle layer tends to perform better than using the last layer as in MINILM. Specifically, for BERT_LARGE and BERT_LARGE-WWM, using the 21st layer worked best. For RoBERTa_LARGE and XLM-R_LARGE, the 19th layer achieved better performance. For base-size teachers, using the last layer still performed best.",
+      "rubric": "A complete answer should: 1) Explain that MINILMv2 uses an upper middle layer for large teachers, 2) Contrast this with MINILM's use of the last layer, 3) Provide specific examples of optimal layers for different large models, 4) Note that the last layer is still best for base-size teachers."
+    },
+    {
+      "answer": "The mMARCO study created the multilingual training set by first translating the original MS MARCO dataset into 13 different languages. From these translations, a multilingual training split was constructed using an equal proportion of samples from each of 9 selected languages (including English). The dataset consists of triples, where each triple contains a query, a relevant passage, and a non-relevant passage, all in the same language. These triples are used to fine-tune reranking models.",
+      "case_id": "ai-papers-015",
+      "context": {
+        "message_count": 26,
+        "packed_context_count": 11,
+        "passage_count": 88,
+        "total_tokens": 10985
+      },
+      "error": null,
+      "evidence": [
+        {
+          "doc_id": "knowledge-retrieval/mMARCO.pdf",
+          "node_id": "0a50cf6b6acebb7b37158dec6460bccd50f2d257cd9afdfb0a0a9e35cebde78d",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "After translating the dataset to all target languages, we created a multilingual training set split\nusing an equal proportion of samples from each\nlanguage. The original MS MARCO training set\nconsists of 39 million triples. Each triple is formed\nby a query followed by a relevant and non-relevant\npassage. These triples are used to finetune a reranking model.",
+          "relevance": "Describes the creation of the multilingual training split and the structure of the data triples.",
+          "score": null,
+          "section_path": [],
+          "source": "knowledge-retrieval/mMARCO.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/mMARCO.pdf",
+          "node_id": "4841c21a9adea6a3f2119eefb16447daa14896f6baac6bf2d277c75ba60022a3",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "Although we translated MS MARCO\ninto 13 different languages, the multilingual training set was created using 9 languages, including\nEnglish.",
+          "relevance": "Specifies the number of languages used for translation versus those included in the actual training set.",
+          "score": null,
+          "section_path": [],
+          "source": "knowledge-retrieval/mMARCO.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/mMARCO.pdf",
+          "node_id": "28418002efc902cbbdd6a1d2a409fd9eaa1facd2074d30781f165e98014f05e2",
+          "page": null,
+          "paper_id": null,
+          "paper_title": null,
+          "quote": "Our contributions are translating the MS\nMARCO (both training and evaluation sets) to 13\ndifferent languages such as Portuguese, Spanish,\nGerman, and Chinese.",
+          "relevance": "Confirms the translation scope and lists example target languages.",
+          "score": null,
+          "section_path": [],
+          "source": "knowledge-retrieval/mMARCO.pdf"
+        }
+      ],
+      "judge_attempts": 1,
+      "judge_score": 10,
+      "latency_ms": 114558.7247,
+      "query": "Describe the process used in the mMARCO study to create the multilingual training set for fine-tuning models, as outlined in the paper.",
+      "reference_answer": "The paper describes creating the multilingual training set by first translating the entire MS MARCO dataset into multiple target languages. Then, they construct a set of multilingual triples by selecting the same queries and passages as in the original dataset, but randomly replacing them with their translations. They ensure that the query and its respective positive and negative passages are always in the same language within a triple. While they translated MS MARCO into 13 languages, the multilingual training set was created using 9 languages, including English.",
+      "rubric": "A complete answer should cover the translation of MS MARCO, the creation of multilingual triples, the consistency of language within triples, and the use of 9 out of 13 translated languages for the training set."
+    }
+  ],
+  "embedding": {
+    "batch_size": 20,
+    "check_embedding_ctx_length": false,
+    "dimension": 1024,
+    "input_mode": "raw",
+    "max_input_chars": 6000,
+    "model": "qwen3.7-text-embedding",
+    "provider": "openai"
+  },
+  "formal_run": false,
+  "generation": {
+    "model": "qwen3.7-plus",
+    "strategy": "fixed",
+    "task_models": {}
+  },
+  "judge": {
+    "model": "qwen3.7-plus",
+    "prompt_version": "kite-official-compatible-v1",
+    "task_type": "kite_judge",
+    "temperature": 0
+  },
+  "metrics": {
+    "case_count": 4,
+    "failed_case_ids": [],
+    "judge_retry_count": 0,
+    "mean_context_tokens": 17790.0,
+    "mean_evidence_count": 4.25,
+    "mean_score": 7,
+    "p50_latency_ms": 128801.9745,
+    "p95_latency_ms": 153901.8114,
+    "valid_count": 4
+  },
+  "pipeline": {
+    "config": {
+      "boost_policy": "current",
+      "context_token_budget": 8000,
+      "dense_rrf_weight": 1.0,
+      "dense_top_k": 40,
+      "dense_use_metadata_prefix": null,
+      "final_top_k": 8,
+      "fusion_method": "minmax",
+      "fusion_rank_weight": 0.5,
+      "max_context_passages": 12,
+      "metadata_prefix_fields": [
+        "title",
+        "authors",
+        "year",
+        "section",
+        "block"
+      ],
+      "name": "v1_flat_rerank",
+      "neighbor_window": 0,
+      "rerank_input": "retrieval",
+      "rerank_merge_mode": "replace",
+      "rerank_rank_weight": 0.5,
+      "rerank_top_n": 30,
+      "reranker_model": "ms-marco-TinyBERT-L-2-v2",
+      "rrf_k": 60,
+      "sparse_rrf_weight": 1.0,
+      "sparse_top_k": 40,
+      "sparse_use_metadata_prefix": null,
+      "tokenizer": "whitespace_v1",
+      "use_dense": true,
+      "use_metadata_prefix": false,
+      "use_rerank": true,
+      "use_sparse": true
+    },
+    "config_hash": "ee7c1306250ba487ee2ca54de776fc70cb584c3bb02d4aca38cf7028e4956c17",
+    "key": "b1"
+  },
+  "provenance": {
+    "code": {
+      "commit": "b3e4c79b43113950c34ff60362192f82261c83d0",
+      "config_path": "evals/configs/kite_b1_smoke.yaml",
+      "dirty": true,
+      "working_tree_patch_sha256": "5b15b52543b9552bf0452dab624620a5cef17d75585d119952c2316db94334db"
+    },
+    "config_path": "evals/configs/kite_b1_smoke.yaml",
+    "config_sha256": "1ef52dd5fd2eae63e132c9b6267ac2fc94e97bbe8d7ba6bf2393f5d3a2c95d60",
+    "index_manifest_sha256": "c0553ead562d608f10711bf1127bde2bd7032a7d609515ab04366518ea23b0d2",
+    "index_path": "artifacts/evals/kite/indexes/b1",
+    "manifest_path": "artifacts/evals/kite/manifest.json",
+    "manifest_sha256": "716539e41b03e94b6a98546e20ff7283a7ee4a421ae1d57a515df2b4c40ca415",
+    "parser_artifact_path": "artifacts/evals/kite/parser_artifact.json",
+    "parser_artifact_sha256": "c6477f7f2044140739d1786ab06aa72295ef47e7fb991ce51c4c10fec0c4c7bc"
+  },
+  "runtime": {
+    "case_ids": [
+      "ai-papers-001",
+      "ai-papers-005",
+      "ai-papers-010",
+      "ai-papers-015"
+    ],
+    "concurrency": 1
+  },
+  "schema_version": 1
+}

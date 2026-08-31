@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "benchmark_name": "kite-ai-papers",
+  "upstream_repository": "https://github.com/D-Star-AI/KITE",
+  "upstream_commit": "85e71ad63db9ea410eccbb0158f94e7d72462b99",
+  "query_sha256": "6f242828e2e96b34e152af16afabf981f938eec5f3d11522c205ef635cae57d3",
+  "corpus_file_count": 134,
+  "corpus_file_sha256": "f33a3154a0a65d76dbfd10e599a7c5d640ac025ebadb76d80e2a5536c57240c8",
+  "generation_model": "qwen3.7-plus",
+  "judge_model": "qwen3.7-plus",
+  "judge_prompt_version": "kite-official-compatible-v1",
+  "pipelines": {
+    "b0": {
+      "mean_score": 3.8667,
+      "valid_count": 15,
+      "case_count": 15,
+      "p95_latency_ms": 402185.6011,
+      "mean_context_tokens": 16474.2667,
+      "report": "b0/report.json"
+    },
+    "b1": {
+      "mean_score": 6.1333,
+      "valid_count": 15,
+      "case_count": 15,
+      "p95_latency_ms": 166207.5666,
+      "mean_context_tokens": 16599.6,
+      "report": "b1/report.json"
+    },
+    "b2": {
+      "mean_score": 6.8667,
+      "valid_count": 15,
+      "case_count": 15,
+      "p95_latency_ms": 170017.9374,
+      "mean_context_tokens": 16935.5333,
+      "report": "b2/report.json"
+    },
+    "b3": {
+      "mean_score": 6.5333,
+      "valid_count": 15,
+      "case_count": 15,
+      "p95_latency_ms": 177816.5361,
+      "mean_context_tokens": 17810.4,
+      "report": "b3/report.json"
+    }
+  },
+  "pairwise_vs_b1": {
+    "b0": {
+      "candidate_wins": 1,
+      "ties": 3,
+      "candidate_losses": 11,
+      "win_case_ids": [
+        "ai-papers-004"
+      ],
+      "tie_case_ids": [
+        "ai-papers-001",
+        "ai-papers-002",
+        "ai-papers-013"
+      ],
+      "loss_case_ids": [
+        "ai-papers-003",
+        "ai-papers-005",
+        "ai-papers-006",
+        "ai-papers-007",
+        "ai-papers-008",
+        "ai-papers-009",
+        "ai-papers-010",
+        "ai-papers-011",
+        "ai-papers-012",
+        "ai-papers-014",
+        "ai-papers-015"
+      ]
+    },
+    "b2": {
+      "candidate_wins": 5,
+      "ties": 8,
+      "candidate_losses": 2,
+      "win_case_ids": [
+        "ai-papers-004",
+        "ai-papers-008",
+        "ai-papers-009",
+        "ai-papers-011",
+        "ai-papers-012"
+      ],
+      "tie_case_ids": [
+        "ai-papers-001",
+        "ai-papers-002",
+        "ai-papers-005",
+        "ai-papers-006",
+        "ai-papers-010",
+        "ai-papers-013",
+        "ai-papers-014",
+        "ai-papers-015"
+      ],
+      "loss_case_ids": [
+        "ai-papers-003",
+        "ai-papers-007"
+      ]
+    },
+    "b3": {
+      "candidate_wins": 7,
+      "ties": 5,
+      "candidate_losses": 3,
+      "win_case_ids": [
+        "ai-papers-002",
+        "ai-papers-004",
+        "ai-papers-009",
+        "ai-papers-011",
+        "ai-papers-012",
+        "ai-papers-013",
+        "ai-papers-014"
+      ],
+      "tie_case_ids": [
+        "ai-papers-001",
+        "ai-papers-005",
+        "ai-papers-006",
+        "ai-papers-008",
+        "ai-papers-015"
+      ],
+      "loss_case_ids": [
+        "ai-papers-003",
+        "ai-papers-007",
+        "ai-papers-010"
+      ]
+    }
+  },
+  "promotion_candidates": [
+    "b2"
+  ],
+  "promotion_gate": {
+    "minimum_score_delta": 0.5,
+    "minimum_wins": 4,
+    "maximum_losses": 2,
+    "max_p95_multiplier": 1.5,
+    "max_context_multiplier": 1.5,
+    "evidence_contract_checked": true
+  },
+  "production_decision": {
+    "default_pipeline": "b1",
+    "default_name": "v1_flat_rerank",
+    "auto_switch": false,
+    "rationale": "KITE is evidence for a decision; it does not mutate the product default."
+  }
+}
