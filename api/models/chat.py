@@ -6,6 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+MAX_CHAT_CONTENT_CHARS = 20_000
+MAX_CHAT_SESSION_MESSAGES = 200
+MAX_CHAT_HISTORY_CHARS = 1_000_000
+
+
 class ChatEvidence(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -24,14 +29,14 @@ class ChatMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     role: Literal["user", "assistant", "system"] = "user"
-    content: str = Field(min_length=1)
+    content: str = Field(min_length=1, max_length=MAX_CHAT_CONTENT_CHARS)
     evidence: list[ChatEvidence] | None = None
 
 
 class ChatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    message: str = Field(min_length=1)
+    message: str = Field(min_length=1, max_length=MAX_CHAT_CONTENT_CHARS)
     session_id: str | None = None
 
 

@@ -26,6 +26,7 @@ from indexing.index_versions import (
     active_pointer_path,
     create_index_version,
     embedding_contract,
+    prune_index_versions,
     reconcile_active_pointer,
     retrieval_contract,
     resolve_indexer_config,
@@ -212,6 +213,28 @@ def test_activate_version_updates_database_and_supports_rollback(
         )
     assert active_rows == [(first_id,)]
     assert state["version_id"] == first_id
+
+
+def test_index_version_retention_keeps_active_and_recent_ready_versions(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    settings = replace(
+        _settings(tmp_path, monkeypatch, offline=False),
+        index_version_retention=2,
+    )
+    ids = [f"{index:x}" * 32 for index in range(1, 4)]
+    for version_id in ids:
+        _write_dummy_version(settings, version_id)
+        activate_index_version(settings, version_id)
+
+    prune_index_versions(settings, keep=settings.index_version_retention)
+    remaining = {
+        path.name
+        for path in settings.index_root.iterdir()
+        if path.is_dir() and len(path.name) == 32
+    }
+    assert remaining == {ids[-2], ids[-1]}
 
 
 def _write_dummy_version(settings, version_id: str) -> None:

@@ -46,6 +46,7 @@ def test_chat_stream_emits_only_progress_evidence_and_one_final_answer(
         created = client.post("/api/chat", json={"message": "question"})
         session_id = created.json()["session_id"]
         streamed = client.get(f"/api/chat/stream?session_id={session_id}")
+        duplicate = client.get(f"/api/chat/stream?session_id={session_id}")
 
     assert streamed.status_code == 200
     assert "event: progress" in streamed.text
@@ -56,3 +57,4 @@ def test_chat_stream_emits_only_progress_evidence_and_one_final_answer(
     assert "SECRET_ROUTING_TOKEN" not in streamed.text
     assert "SECRET_PLANNING_TOKEN" not in streamed.text
     assert streamed.text.count("verified final answer") == 1
+    assert duplicate.status_code == 409

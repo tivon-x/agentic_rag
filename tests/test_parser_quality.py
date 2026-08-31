@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
 from evals.parser_eval import evaluate_page_evidence
+from indexing.paper_ingestion import _parse_text_source
 from indexing.parsers.paper_parser import (
     MetadataField,
     PaperMetadata,
@@ -36,6 +39,14 @@ def _paper(pages: list[ParsedPage], page_count: int) -> ParsedPaper:
         pages=pages,
         sections=[],
     )
+
+
+def test_empty_text_source_fails_before_catalog_materialization(tmp_path) -> None:
+    source = tmp_path / "empty.md"
+    source.write_text("\n  \n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Text source is empty"):
+        _parse_text_source(str(source))
 
 
 def test_quality_gate_rejects_missing_pages_and_low_character_recall() -> None:

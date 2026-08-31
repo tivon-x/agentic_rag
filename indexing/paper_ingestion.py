@@ -251,6 +251,8 @@ def _text_character_count(parsed: ParsedPaper) -> int:
 def _parse_text_source(file_path: str) -> ParsedPaper:
     path = Path(file_path)
     text = path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text:
+        raise ValueError("Text source is empty; upload a non-empty .txt or .md file.")
     page = ParsedPage(page_number=1, text=text, source_text=text)
     title = path.stem
     def unknown() -> MetadataField:

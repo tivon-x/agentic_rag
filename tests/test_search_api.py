@@ -4,9 +4,11 @@ import time
 
 import pymupdf
 from fastapi.testclient import TestClient
+from langchain_core.documents import Document
 
 from api.main import app
 from api.services.graph_cache import invalidate_graph_cache
+from indexing.retrieval_pipeline import RetrievalCandidate
 
 
 def _configure(monkeypatch, tmp_path) -> None:
@@ -86,3 +88,73 @@ def test_search_returns_paper_page_quote_and_score_stages(
     }
     assert result["pdf_url"].endswith("#page=1")
     assert result["paper_url"].endswith("?page=1")
+
+
+def test_scoped_search_filters_before_applying_limit(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
+    invalidate_graph_cache()
+    target_candidates = [
+        RetrievalCandidate(
+            document=Document(
+                page_content=f"target quote {index}",
+                metadata={
+                    "paper_id": "target-paper",
+                    "passage_id": f"target-{index}",
+                    "section_id": "section",
+                    "section_title": "Section",
+                    "page_start": index + 1,
+                    "page_end": index + 1,
+                    "quote_text": f"target quote {index}",
+                    "source": "target.txt",
+                },
+            ),
+            score=float(index),
+            source_scores={"bm25": float(index)},
+        )
+        for index in range(2)
+    ]
+    distractors = [
+        RetrievalCandidate(
+            document=Document(
+                page_content=f"distractor quote {index}",
+                metadata={
+                    "paper_id": f"other-paper-{index}",
+                    "passage_id": f"other-{index}",
+                    "section_id": "section",
+                    "section_title": "Section",
+                    "page_start": 1,
+                    "page_end": 1,
+                    "quote_text": f"distractor quote {index}",
+                    "source": "other.txt",
+                },
+            ),
+            score=float(100 - index),
+            source_scores={"bm25": float(100 - index)},
+        )
+        for index in range(6)
+    ]
+
+    class FakeRetriever:
+        def search_scored(self, query: str, *, limit: int | None = None):
+            del query
+            candidates = [*distractors, *target_candidates]
+            return (candidates if limit is None else candidates[:limit], {})
+
+    monkeypatch.setattr("api.routers.search.get_active_version_id", lambda _: "v1")
+    monkeypatch.setattr(
+        "api.routers.search.build_retriever",
+        lambda _: FakeRetriever(),
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/search",
+            params={"q": "target", "paper_id": "target-paper", "limit": 2},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["passage_id"] for item in payload["results"]] == [
+        "target-0",
+        "target-1",
+    ]

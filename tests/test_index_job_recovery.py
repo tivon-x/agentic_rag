@@ -10,6 +10,7 @@ from api.db.database import (
     claim_next_indexing_job,
     create_indexing_job,
     fail_or_retry_indexing_job,
+    get_db,
     get_indexing_job,
     list_index_job_items,
     recover_expired_indexing_jobs,
@@ -255,3 +256,55 @@ def test_legacy_worker_rejects_mutable_index_writes(
 
     asyncio.run(scenario())
     assert not (settings.faiss_dir / "index.faiss").exists()
+
+
+def test_empty_text_upload_marks_new_paper_failed(tmp_path, monkeypatch) -> None:
+    settings = _settings(tmp_path, monkeypatch)
+    source = settings.upload_root / "jobs" / "empty-job" / "empty.txt"
+    source.parent.mkdir(parents=True)
+    source.write_text("\n  \n", encoding="utf-8")
+    paper_id = "e" * 64
+
+    async def scenario() -> tuple[str, str, str | None]:
+        await create_indexing_job(
+            settings,
+            job_id="empty-job",
+            status="queued",
+            created_at="2026-08-31T00:00:00+00:00",
+            items=[
+                {
+                    "filename": source.name,
+                    "source_path": str(source),
+                    "paper_id": paper_id,
+                    "content_hash": paper_id,
+                    "size_bytes": 0,
+                    "source_type": "text/plain",
+                }
+            ],
+        )
+        worker = IndexWorker(settings)
+        assert await acquire_index_worker_lease(
+            settings,
+            worker_id=worker.worker_id,
+        )
+        claimed = await claim_next_indexing_job(
+            settings,
+            worker_id=worker.worker_id,
+        )
+        assert claimed is not None
+        await worker._run_job(claimed.id, claimed.request or {})
+        record = await get_indexing_job(settings, job_id=claimed.id)
+        assert record is not None
+        async with get_db(settings) as db:
+            cursor = await db.execute(
+                "SELECT parse_status, parse_error FROM papers WHERE id = ?",
+                (paper_id,),
+            )
+            paper = await cursor.fetchone()
+        assert paper is not None
+        return record.status, paper["parse_status"], paper["parse_error"]
+
+    _, parse_status, parse_error = asyncio.run(scenario())
+    assert parse_status == "failed"
+    assert parse_error is not None
+    assert "Text source is empty" in parse_error

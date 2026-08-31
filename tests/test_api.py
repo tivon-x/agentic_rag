@@ -8,6 +8,7 @@ from api.db.database import create_indexing_job
 from api.main import app
 from api.services.graph_cache import invalidate_graph_cache
 from core.settings import load_settings
+from main import build_parser, cmd_api
 
 
 def _configure_tmp_paths(monkeypatch, tmp_path):
@@ -39,6 +40,35 @@ def test_health_endpoint_returns_ok(monkeypatch, tmp_path):
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_api_cli_refuses_non_loopback_host(monkeypatch):
+    called = False
+
+    def fake_run(*args, **kwargs):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr("uvicorn.run", fake_run)
+    args = build_parser().parse_args(["api", "--host", "0.0.0.0"])
+
+    assert cmd_api(args) == 2
+    assert called is False
+
+
+def test_api_cli_allows_loopback_host(monkeypatch):
+    called = False
+
+    def fake_run(*args, **kwargs):
+        nonlocal called
+        called = True
+        assert kwargs["host"] == "127.0.0.1"
+
+    monkeypatch.setattr("uvicorn.run", fake_run)
+    args = build_parser().parse_args(["api", "--host", "127.0.0.1"])
+
+    assert cmd_api(args) == 0
+    assert called is True
 
 
 def test_corpus_profile_roundtrip(monkeypatch, tmp_path):

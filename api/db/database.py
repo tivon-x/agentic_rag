@@ -10,6 +10,11 @@ import aiosqlite
 
 from api.db.migrations import migrate_database
 from api.db.models import ChatSessionRecord, IndexingJobRecord
+from api.models.chat import (
+    MAX_CHAT_CONTENT_CHARS,
+    MAX_CHAT_HISTORY_CHARS,
+    MAX_CHAT_SESSION_MESSAGES,
+)
 from core.settings import AppSettings
 
 
@@ -18,6 +23,14 @@ _INITIALIZED_DB_PATHS: set[Path] = set()
 
 class IdempotencyConflictError(ValueError):
     """Raised when an idempotency key is reused for a different request."""
+
+
+class IndexingQueueFullError(ValueError):
+    """Raised when the persisted indexing queue has reached its limit."""
+
+
+class ChatHistoryLimitError(ValueError):
+    """Raised when a session would exceed its persisted history budget."""
 
 
 def _db_path(settings: AppSettings) -> Path:
@@ -49,7 +62,12 @@ async def create_chat_session(
     messages: list[dict[str, Any]] | None = None,
     created_at: str,
 ) -> ChatSessionRecord:
-    payload = json.dumps(messages or [], ensure_ascii=False)
+    stored_messages = messages or []
+    if _chat_history_exceeds_limits(stored_messages):
+        raise ChatHistoryLimitError(
+            "Chat session history has reached its size limit."
+        )
+    payload = json.dumps(stored_messages, ensure_ascii=False)
     async with get_db(settings) as db:
         await db.execute(
             """
@@ -82,6 +100,70 @@ async def get_chat_session_messages(
         return None
     data = _json_dict_or_list(row["messages"], default=[])
     return data if isinstance(data, list) else []
+
+
+async def append_chat_session_message(
+    settings: AppSettings,
+    *,
+    session_id: str,
+    message: dict[str, Any],
+    created_at: str,
+    expected_messages: list[dict[str, Any]] | None = None,
+) -> bool:
+    """Append one message atomically, optionally requiring an unchanged history."""
+    async with get_db(settings) as db:
+        await db.execute("BEGIN IMMEDIATE")
+        cursor = await db.execute(
+            "SELECT created_at, messages FROM chat_sessions WHERE id = ?",
+            (session_id,),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            if expected_messages is not None:
+                await db.rollback()
+                return False
+            if _chat_history_exceeds_limits([message]):
+                await db.rollback()
+                raise ChatHistoryLimitError(
+                    "Chat session history has reached its size limit."
+                )
+            payload = json.dumps([message], ensure_ascii=False)
+            await db.execute(
+                """
+                INSERT INTO chat_sessions (id, created_at, updated_at, messages)
+                VALUES (?, ?, ?, ?)
+                """,
+                (session_id, created_at, created_at, payload),
+            )
+        else:
+            current = _json_dict_or_list(row["messages"], default=[])
+            current_messages = current if isinstance(current, list) else []
+            if (
+                expected_messages is not None
+                and current_messages != expected_messages
+            ):
+                await db.rollback()
+                return False
+            current_messages.append(message)
+            if _chat_history_exceeds_limits(current_messages):
+                await db.rollback()
+                raise ChatHistoryLimitError(
+                    "Chat session history has reached its size limit."
+                )
+            await db.execute(
+                """
+                UPDATE chat_sessions
+                SET updated_at = ?, messages = ?
+                WHERE id = ?
+                """,
+                (
+                    created_at,
+                    json.dumps(current_messages, ensure_ascii=False),
+                    session_id,
+                ),
+            )
+        await db.commit()
+    return True
 
 
 async def get_chat_session(
@@ -154,6 +236,10 @@ async def upsert_chat_session_messages(
     messages: list[dict[str, Any]],
     updated_at: str,
 ) -> None:
+    if _chat_history_exceeds_limits(messages):
+        raise ChatHistoryLimitError(
+            "Chat session history has reached its size limit."
+        )
     payload = json.dumps(messages, ensure_ascii=False)
     async with get_db(settings) as db:
         await db.execute(
@@ -233,6 +319,7 @@ async def create_indexing_job_idempotent(
     response: list[dict[str, Any]],
     created_at: str,
     active_version_before: str | None = None,
+    max_pending_jobs: int | None = None,
 ) -> tuple[bool, list[dict[str, Any]]]:
     """Create one job or return the response stored for an identical request."""
     async with get_db(settings) as db:
@@ -255,6 +342,22 @@ async def create_indexing_job_idempotent(
             stored = _json_dict_or_list(existing["response_json"], default=[])
             await db.rollback()
             return False, stored if isinstance(stored, list) else []
+
+        if max_pending_jobs is not None:
+            pending_cursor = await db.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM indexing_jobs
+                WHERE status IN ('queued', 'running')
+                """
+            )
+            pending_row = await pending_cursor.fetchone()
+            pending_count = int(pending_row["count"]) if pending_row else 0
+            if pending_count >= max_pending_jobs:
+                await db.rollback()
+                raise IndexingQueueFullError(
+                    "Indexing queue is full; wait for an existing job to finish."
+                )
 
         await db.execute(
             """
@@ -776,6 +879,32 @@ def _message_count(messages: Any) -> int:
         and item.get("role") in roles
         and isinstance(item.get("content"), str)
         and bool(item["content"].strip())
+    )
+
+
+def _chat_history_chars(messages: list[dict[str, Any]]) -> int:
+    return sum(
+        len(content)
+        for item in messages
+        if isinstance(item, dict)
+        and isinstance(content := item.get("content"), str)
+    )
+
+
+def _chat_history_has_oversized_content(messages: list[dict[str, Any]]) -> bool:
+    return any(
+        isinstance(item, dict)
+        and isinstance(content := item.get("content"), str)
+        and len(content) > MAX_CHAT_CONTENT_CHARS
+        for item in messages
+    )
+
+
+def _chat_history_exceeds_limits(messages: list[dict[str, Any]]) -> bool:
+    return (
+        len(messages) > MAX_CHAT_SESSION_MESSAGES
+        or _chat_history_chars(messages) > MAX_CHAT_HISTORY_CHARS
+        or _chat_history_has_oversized_content(messages)
     )
 
 

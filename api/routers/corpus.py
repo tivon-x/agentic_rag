@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 
 from api.dependencies import get_settings
 from api.models.corpus import CorpusProfile
+from api.services.graph_cache import invalidate_graph_cache
 from core.corpus_profile import load_corpus_profile, normalize_corpus_profile, save_corpus_profile
 from core.settings import AppSettings
 
@@ -36,4 +37,5 @@ async def update_corpus_profile(
         preferred_answer_style=normalized["preferred_answer_style"],
         primary_entities=normalized["primary_entities"],
     )
+    invalidate_graph_cache()
     return CorpusProfile.model_validate(load_corpus_profile(settings.index_dir))

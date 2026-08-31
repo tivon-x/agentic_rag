@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import ipaddress
 import logging
 from pathlib import Path
 from typing import cast
@@ -114,13 +115,35 @@ def cmd_ui(_: argparse.Namespace) -> int:
 def cmd_api(args: argparse.Namespace) -> int:
     import uvicorn
 
+    host = str(args.host).strip()
+    if not _is_loopback_host(host):
+        logger.error(
+            "Refusing to expose the API on non-loopback host %r; "
+            "M8 deployment is not enabled.",
+            host,
+        )
+        return 2
+
     uvicorn.run(
         "api.main:app",
-        host=args.host,
+        host=host,
         port=args.port,
         reload=args.reload,
     )
     return 0
+
+
+def _is_loopback_host(host: str) -> bool:
+    if host.lower() == "localhost":
+        return True
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return address.is_loopback or bool(
+        getattr(address, "ipv4_mapped", None)
+        and address.ipv4_mapped.is_loopback
+    )
 
 
 def cmd_eval(args: argparse.Namespace) -> int:

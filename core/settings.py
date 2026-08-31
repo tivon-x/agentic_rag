@@ -143,7 +143,12 @@ class AppSettings:
     index_worker_heartbeat_seconds: int = 15
     index_worker_poll_seconds: float = 0.25
     index_worker_max_attempts: int = 3
+    index_worker_max_queue: int = 100
+    index_version_retention: int = 3
     upload_max_bytes: int = 50 * 1024 * 1024
+    upload_max_files: int = 20
+    upload_max_total_bytes: int = 200 * 1024 * 1024
+    upload_max_storage_bytes: int = 5 * 1024 * 1024 * 1024
     paper_parser: str = "pymupdf4llm"
     parser_timeout_seconds: int = 180
     long_document_timeout_seconds: int = 600
@@ -179,8 +184,26 @@ class AppSettings:
             raise ValueError("INDEX_WORKER_POLL_SECONDS must be positive.")
         if self.index_worker_max_attempts <= 0:
             raise ValueError("INDEX_WORKER_MAX_ATTEMPTS must be positive.")
+        if self.index_worker_max_queue <= 0:
+            raise ValueError("INDEX_WORKER_MAX_QUEUE must be positive.")
+        if self.index_version_retention <= 0:
+            raise ValueError("INDEX_VERSION_RETENTION must be positive.")
         if self.upload_max_bytes <= 0:
             raise ValueError("UPLOAD_MAX_BYTES must be positive.")
+        if self.upload_max_files <= 0:
+            raise ValueError("UPLOAD_MAX_FILES must be positive.")
+        if self.upload_max_total_bytes <= 0:
+            raise ValueError("UPLOAD_MAX_TOTAL_BYTES must be positive.")
+        if self.upload_max_total_bytes < self.upload_max_bytes:
+            raise ValueError(
+                "UPLOAD_MAX_TOTAL_BYTES must be greater than or equal to "
+                "UPLOAD_MAX_BYTES."
+            )
+        if self.upload_max_storage_bytes < self.upload_max_total_bytes:
+            raise ValueError(
+                "UPLOAD_MAX_STORAGE_BYTES must be greater than or equal to "
+                "UPLOAD_MAX_TOTAL_BYTES."
+            )
         if self.paper_parser not in {"pymupdf4llm", "legacy"}:
             raise ValueError("PAPER_PARSER must be pymupdf4llm or legacy.")
         if self.answer_strategy not in {"fixed", "adaptive"}:
@@ -498,11 +521,35 @@ def load_settings(
     index_worker_max_attempts = (
         max_attempts_value if max_attempts_value is not None else 3
     )
+    max_queue_value = get_env_int("INDEX_WORKER_MAX_QUEUE")
+    index_worker_max_queue = (
+        max_queue_value if max_queue_value is not None else 100
+    )
+    version_retention_value = get_env_int("INDEX_VERSION_RETENTION")
+    index_version_retention = (
+        version_retention_value if version_retention_value is not None else 3
+    )
     upload_max_bytes_value = get_env_int("UPLOAD_MAX_BYTES")
     upload_max_bytes = (
         upload_max_bytes_value
         if upload_max_bytes_value is not None
         else 50 * 1024 * 1024
+    )
+    upload_max_files_value = get_env_int("UPLOAD_MAX_FILES")
+    upload_max_files = (
+        upload_max_files_value if upload_max_files_value is not None else 20
+    )
+    upload_max_total_bytes_value = get_env_int("UPLOAD_MAX_TOTAL_BYTES")
+    upload_max_total_bytes = (
+        upload_max_total_bytes_value
+        if upload_max_total_bytes_value is not None
+        else 200 * 1024 * 1024
+    )
+    upload_max_storage_bytes_value = get_env_int("UPLOAD_MAX_STORAGE_BYTES")
+    upload_max_storage_bytes = (
+        upload_max_storage_bytes_value
+        if upload_max_storage_bytes_value is not None
+        else 5 * 1024 * 1024 * 1024
     )
     paper_parser = (
         get_env("PAPER_PARSER", default="pymupdf4llm") or "pymupdf4llm"
@@ -578,7 +625,12 @@ def load_settings(
             else 0.25
         ),
         index_worker_max_attempts=index_worker_max_attempts,
+        index_worker_max_queue=index_worker_max_queue,
+        index_version_retention=index_version_retention,
         upload_max_bytes=upload_max_bytes,
+        upload_max_files=upload_max_files,
+        upload_max_total_bytes=upload_max_total_bytes,
+        upload_max_storage_bytes=upload_max_storage_bytes,
         paper_parser=paper_parser,
         parser_timeout_seconds=parser_timeout_seconds,
         long_document_timeout_seconds=long_document_timeout_seconds,

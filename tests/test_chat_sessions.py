@@ -1,9 +1,23 @@
 import asyncio
 
+import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
-from api.db.database import create_chat_session, get_db
+from api.db.database import (
+    ChatHistoryLimitError,
+    append_chat_session_message,
+    create_chat_session,
+    get_chat_session_messages,
+    get_db,
+)
 from api.main import app
+from api.models.chat import (
+    MAX_CHAT_CONTENT_CHARS,
+    MAX_CHAT_SESSION_MESSAGES,
+    ChatMessage,
+    ChatRequest,
+)
 from api.services.graph_cache import invalidate_graph_cache
 from core.settings import load_settings
 from tests.test_api import _configure_tmp_paths
@@ -114,3 +128,110 @@ def test_post_chat_remains_compatible(monkeypatch, tmp_path):
     assert payload["session_id"]
     assert listed.json()["items"][0]["session_id"] == payload["session_id"]
     assert listed.json()["items"][0]["message_count"] == 1
+
+
+def test_chat_message_appends_are_atomic_and_stale_stream_saves_are_rejected(
+    monkeypatch,
+    tmp_path,
+):
+    settings = _settings(monkeypatch, tmp_path)
+
+    async def scenario():
+        await append_chat_session_message(
+            settings,
+            session_id="concurrent",
+            message={"role": "user", "content": "first"},
+            created_at="2026-08-31T00:00:00+00:00",
+        )
+        await asyncio.gather(
+            append_chat_session_message(
+                settings,
+                session_id="concurrent",
+                message={"role": "user", "content": "second"},
+                created_at="2026-08-31T00:00:01+00:00",
+            ),
+            append_chat_session_message(
+                settings,
+                session_id="concurrent",
+                message={"role": "user", "content": "third"},
+                created_at="2026-08-31T00:00:02+00:00",
+            ),
+        )
+
+        expected = await get_chat_session_messages(
+            settings,
+            session_id="concurrent",
+        )
+        assert expected is not None
+        outcomes = await asyncio.gather(
+            append_chat_session_message(
+                settings,
+                session_id="concurrent",
+                message={"role": "assistant", "content": "answer-a"},
+                created_at="2026-08-31T00:00:03+00:00",
+                expected_messages=expected,
+            ),
+            append_chat_session_message(
+                settings,
+                session_id="concurrent",
+                message={"role": "assistant", "content": "answer-b"},
+                created_at="2026-08-31T00:00:04+00:00",
+                expected_messages=expected,
+            ),
+        )
+        messages = await get_chat_session_messages(
+            settings,
+            session_id="concurrent",
+        )
+        return outcomes, messages
+
+    outcomes, messages = asyncio.run(scenario())
+    assert sorted(outcomes) == [False, True]
+    assert messages is not None
+    assert {message["content"] for message in messages[:3]} == {
+        "first",
+        "second",
+        "third",
+    }
+    assert len(messages) == 4
+    assert messages[-1]["role"] == "assistant"
+
+
+def test_chat_content_limits_reject_oversized_payloads(monkeypatch, tmp_path):
+    _settings(monkeypatch, tmp_path)
+
+    oversized = "x" * (MAX_CHAT_CONTENT_CHARS + 1)
+    with pytest.raises(ValidationError):
+        ChatRequest(message=oversized)
+    with pytest.raises(ValidationError):
+        ChatMessage(content=oversized)
+
+    with TestClient(app) as client:
+        response = client.post("/api/chat", json={"message": oversized})
+
+    assert response.status_code == 422
+
+
+def test_chat_history_limit_rejects_unbounded_session_growth(monkeypatch, tmp_path):
+    settings = _settings(monkeypatch, tmp_path)
+
+    async def scenario():
+        await create_chat_session(
+            settings,
+            session_id="bounded",
+            messages=[{"role": "user", "content": "question"}]
+            * MAX_CHAT_SESSION_MESSAGES,
+            created_at="2026-08-31T00:00:00+00:00",
+        )
+        with pytest.raises(ChatHistoryLimitError):
+            await append_chat_session_message(
+                settings,
+                session_id="bounded",
+                message={"role": "user", "content": "one too many"},
+                created_at="2026-08-31T00:00:01+00:00",
+            )
+        return await get_chat_session_messages(settings, session_id="bounded")
+
+    messages = asyncio.run(scenario())
+    assert messages is not None
+    assert len(messages) == MAX_CHAT_SESSION_MESSAGES

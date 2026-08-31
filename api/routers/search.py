@@ -35,17 +35,18 @@ async def search_library(
     if version_id is None:
         raise HTTPException(status_code=409, detail="No active index is available.")
     degraded_reason: str | None = None
+    candidate_limit = None if paper_id else limit * 3
     try:
         retriever = build_retriever(settings)
     except ValueError as exc:
         if "API key" not in str(exc):
             raise
-        candidates = _bm25_candidates(settings, query, limit=limit * 3)
+        candidates = _bm25_candidates(settings, query, limit=candidate_limit)
         degraded_reason = "dense_embedding_unavailable_bm25_only"
     else:
         if retriever is None:
             raise HTTPException(status_code=409, detail="No active index is available.")
-        candidates, _ = retriever.search_scored(query, limit=limit * 3)
+        candidates, _ = retriever.search_scored(query, limit=candidate_limit)
 
     results: list[SearchResult] = []
     for rank, candidate in enumerate(candidates, start=1):
@@ -120,14 +121,17 @@ def _bm25_candidates(
     settings: AppSettings,
     query: str,
     *,
-    limit: int,
+    limit: int | None,
 ) -> list[RetrievalCandidate]:
     config, _ = resolve_indexer_config(settings)
     path = Path(config["bm25_path"])
     if not path.exists():
         return []
     bundle = load_bm25_bundle(path)
-    rows = bundle.topk_with_scores(query, k=limit)
+    rows = bundle.topk_with_scores(
+        query,
+        k=len(bundle.documents) if limit is None else limit,
+    )
     scores = [float(score) for _, score in rows]
     minimum = min(scores) if scores else 0.0
     maximum = max(scores) if scores else 0.0

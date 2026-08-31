@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from langchain_core.documents import Document
 
-from api.db.database import get_db
+from api.db.database import IndexingQueueFullError, get_db
 from core.settings import AppSettings
 from indexing.parsers.paper_parser import ParsedPaper
 from indexing.passages import build_catalog_records, build_retrieval_prefix
@@ -440,6 +440,20 @@ async def update_paper_metadata(
             await db.executemany(
                 "UPDATE passages SET retrieval_text = ? WHERE id = ?",
                 refreshed,
+            )
+
+        pending_cursor = await db.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM indexing_jobs
+            WHERE status IN ('queued', 'running')
+            """
+        )
+        pending_row = await pending_cursor.fetchone()
+        if pending_row and int(pending_row["count"]) >= settings.index_worker_max_queue:
+            await db.rollback()
+            raise IndexingQueueFullError(
+                "Indexing queue is full; wait for an existing job to finish."
             )
 
         await db.execute(

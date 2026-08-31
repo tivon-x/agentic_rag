@@ -16,6 +16,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 
+from api.db.database import IndexingQueueFullError
 from api.db.papers import (
     PaperVersionConflictError,
     get_paper,
@@ -92,6 +93,8 @@ async def patch_paper(
         )
     except PaperVersionConflictError as exc:
         raise HTTPException(status_code=412, detail=str(exc)) from exc
+    except IndexingQueueFullError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if paper is None:

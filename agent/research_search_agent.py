@@ -141,104 +141,110 @@ class EvidenceCaptureMiddleware(AgentMiddleware):
 class FallbackMiddleware(AgentMiddleware):
     """Guardrails for iteration/tool-call limits with a fallback final answer."""
 
+    state_schema = ResearchSearchState
+
     def __init__(self, model: BaseChatModel, max_iterations: int, max_tool_calls: int):
         self.max_iterations = max_iterations
         self.max_tool_calls = max_tool_calls
-
-        self.iteration_count = 0
-        self.tool_call_count = 0
-
         self.model = model
 
-    def wrap_model_call(
-        self, request: ModelRequest, handler: Callable[[ModelRequest], ModelResponse]
-    ) -> ModelResponse:
-        self.iteration_count += 1
-        return handler(request)
-
-    async def awrap_model_call(
-        self,
-        request: ModelRequest,
-        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
-    ) -> ModelResponse:
-        self.iteration_count += 1
-        return await handler(request)
-
-    def wrap_tool_call(
-        self,
-        request: ToolCallRequest,
-        handler: Callable[[ToolCallRequest], ToolMessage | Command[Any]],
-    ) -> ToolMessage | Command[Any]:
-        self.tool_call_count += 1
-        return handler(request)
-
-    async def awrap_tool_call(
-        self,
-        request: ToolCallRequest,
-        handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command[Any]]],
-    ) -> ToolMessage | Command[Any]:
-        self.tool_call_count += 1
-        return await handler(request)
-
-    @hook_config(can_jump_to=["end"])
-    def after_agent(
-        self, state: AgentState[Any], runtime: Runtime[None]
-    ) -> dict[str, Any] | None:
-        if (
-            self.iteration_count >= self.max_iterations
-            or self.tool_call_count > self.max_tool_calls
-        ):
-            messages = state.get("messages", [])
-            formatted_messages = get_buffer_string(messages)
-            user_query = state.get("question")
-
-            prompt_content = (
-                "The agent has reached its iteration or tool call limit and cannot continue.\n\n"
-                f"User Query: {user_query}\n\n"
-                f"Conversation History:\n{formatted_messages}\n\n"
-                "INSTRUCTION:\nProvide the best possible answer using only the data above."
-            )
-
-            response = self.model.invoke(
-                [
-                    SystemMessage(content=get_fallback_response_prompt()),
-                    HumanMessage(content=prompt_content),
-                ]
-            )
-
-            return {"messages": [response]}
-
+    @staticmethod
+    def _last_ai_message(state: AgentState[Any]) -> AIMessage | None:
+        for message in reversed(state.get("messages", [])):
+            if isinstance(message, AIMessage):
+                return message
         return None
 
+    @staticmethod
+    def _current_count(state: AgentState[Any], key: str) -> int:
+        return int(state.get(key, 0) or 0)
+
+    def _fallback_prompt(self, state: AgentState[Any]) -> list[SystemMessage | HumanMessage]:
+        messages = state.get("messages", [])
+        formatted_messages = get_buffer_string(messages)
+        user_query = state.get("question")
+        prompt_content = (
+            "The agent has reached its iteration or tool call limit and cannot continue.\n\n"
+            f"User Query: {user_query}\n\n"
+            f"Conversation History:\n{formatted_messages}\n\n"
+            "INSTRUCTION:\nProvide the best possible answer using only the data above."
+        )
+        return [
+            SystemMessage(content=get_fallback_response_prompt()),
+            HumanMessage(content=prompt_content),
+        ]
+
     @hook_config(can_jump_to=["end"])
-    async def aafter_agent(
-        self, state: AgentState[Any], runtime: Runtime[None]
+    def before_model(
+        self, state: ResearchSearchState, runtime: Runtime[None]
     ) -> dict[str, Any] | None:
-        if (
-            self.iteration_count >= self.max_iterations
-            or self.tool_call_count > self.max_tool_calls
+        if self._current_count(state, "iteration_count") < self.max_iterations:
+            return None
+        return {
+            "jump_to": "end",
+            "messages": [self.model.invoke(self._fallback_prompt(state))],
+        }
+
+    @hook_config(can_jump_to=["end"])
+    def after_model(
+        self, state: ResearchSearchState, runtime: Runtime[None]
+    ) -> dict[str, Any] | None:
+        last_ai_message = self._last_ai_message(state)
+        tool_calls = list(last_ai_message.tool_calls) if last_ai_message else []
+        next_iteration_count = self._current_count(state, "iteration_count") + 1
+        next_tool_call_count = self._current_count(state, "tool_call_count") + len(tool_calls)
+        updates: dict[str, Any] = {"iteration_count": 1}
+
+        if tool_calls and (
+            next_iteration_count >= self.max_iterations
+            or next_tool_call_count > self.max_tool_calls
         ):
-            messages = state.get("messages", [])
-            formatted_messages = get_buffer_string(messages)
-            user_query = state.get("question")
-
-            prompt_content = (
-                "The agent has reached its iteration or tool call limit and cannot continue.\n\n"
-                f"User Query: {user_query}\n\n"
-                f"Conversation History:\n{formatted_messages}\n\n"
-                "INSTRUCTION:\nProvide the best possible answer using only the data above."
+            updates.update(
+                {
+                    "jump_to": "end",
+                    "messages": [self.model.invoke(self._fallback_prompt(state))],
+                }
             )
+            return updates
 
-            response = await self.model.ainvoke(
-                [
-                    SystemMessage(content=get_fallback_response_prompt()),
-                    HumanMessage(content=prompt_content),
-                ]
+        updates["tool_call_count"] = len(tool_calls)
+        return updates
+
+    @hook_config(can_jump_to=["end"])
+    async def abefore_model(
+        self, state: ResearchSearchState, runtime: Runtime[None]
+    ) -> dict[str, Any] | None:
+        if self._current_count(state, "iteration_count") < self.max_iterations:
+            return None
+        return {
+            "jump_to": "end",
+            "messages": [await self.model.ainvoke(self._fallback_prompt(state))],
+        }
+
+    @hook_config(can_jump_to=["end"])
+    async def aafter_model(
+        self, state: ResearchSearchState, runtime: Runtime[None]
+    ) -> dict[str, Any] | None:
+        last_ai_message = self._last_ai_message(state)
+        tool_calls = list(last_ai_message.tool_calls) if last_ai_message else []
+        next_iteration_count = self._current_count(state, "iteration_count") + 1
+        next_tool_call_count = self._current_count(state, "tool_call_count") + len(tool_calls)
+        updates: dict[str, Any] = {"iteration_count": 1}
+
+        if tool_calls and (
+            next_iteration_count >= self.max_iterations
+            or next_tool_call_count > self.max_tool_calls
+        ):
+            updates.update(
+                {
+                    "jump_to": "end",
+                    "messages": [await self.model.ainvoke(self._fallback_prompt(state))],
+                }
             )
+            return updates
 
-            return {"messages": [response]}
-
-        return None
+        updates["tool_call_count"] = len(tool_calls)
+        return updates
 
 
 @after_agent

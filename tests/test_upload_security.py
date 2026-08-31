@@ -12,13 +12,26 @@ from api.services.index_worker import IndexWorker
 from core.settings import load_settings
 
 
-def _settings(tmp_path, monkeypatch, *, max_bytes: int = 1024):
+def _settings(
+    tmp_path,
+    monkeypatch,
+    *,
+    max_bytes: int = 1024,
+    max_files: int = 20,
+    max_total_bytes: int = 200 * 1024 * 1024,
+    max_storage_bytes: int = 5 * 1024 * 1024 * 1024,
+    max_queue: int = 100,
+):
     data_dir = tmp_path / "data"
     monkeypatch.setenv("DATA_DIR", str(data_dir))
     monkeypatch.setenv("APP_DB_PATH", str(data_dir / "api" / "sessions.db"))
     monkeypatch.setenv("UPLOAD_ROOT", str(data_dir / "uploads"))
     monkeypatch.setenv("INDEX_ROOT", str(data_dir / "indexes"))
     monkeypatch.setenv("UPLOAD_MAX_BYTES", str(max_bytes))
+    monkeypatch.setenv("UPLOAD_MAX_FILES", str(max_files))
+    monkeypatch.setenv("UPLOAD_MAX_TOTAL_BYTES", str(max_total_bytes))
+    monkeypatch.setenv("UPLOAD_MAX_STORAGE_BYTES", str(max_storage_bytes))
+    monkeypatch.setenv("INDEX_WORKER_MAX_QUEUE", str(max_queue))
     monkeypatch.setenv("OFFLINE_MODE", "1")
     monkeypatch.setenv("EMBEDDING_DIMENSION", "8")
     return load_settings(base_dir=tmp_path, env_file=tmp_path / "missing.env")
@@ -63,6 +76,92 @@ def test_upload_enforces_size_limit(tmp_path, monkeypatch) -> None:
 
     assert response.status_code == 413
     assert list(settings.upload_root.rglob("paper.txt")) == []
+
+
+def test_upload_enforces_file_count_limit(tmp_path, monkeypatch) -> None:
+    settings = _settings(tmp_path, monkeypatch, max_files=1)
+    _disable_worker(monkeypatch)
+
+    with TestClient(create_app(settings)) as client:
+        response = client.post(
+            "/api/index/files",
+            files=[
+                ("files", ("paper-a.txt", b"a", "text/plain")),
+                ("files", ("paper-b.txt", b"b", "text/plain")),
+            ],
+            headers={"Idempotency-Key": "too-many-files"},
+        )
+
+    assert response.status_code == 413
+    assert list(settings.upload_root.rglob("paper-*.txt")) == []
+
+
+def test_upload_enforces_total_size_limit(tmp_path, monkeypatch) -> None:
+    settings = _settings(
+        tmp_path,
+        monkeypatch,
+        max_bytes=10,
+        max_total_bytes=10,
+    )
+    _disable_worker(monkeypatch)
+
+    with TestClient(create_app(settings)) as client:
+        response = client.post(
+            "/api/index/files",
+            files=[
+                ("files", ("paper-a.txt", b"123456", "text/plain")),
+                ("files", ("paper-b.txt", b"123456", "text/plain")),
+            ],
+            headers={"Idempotency-Key": "too-large-total"},
+        )
+
+    assert response.status_code == 413
+    assert list(settings.upload_root.rglob("paper-*.txt")) == []
+
+
+def test_upload_rejects_when_indexing_queue_is_full(tmp_path, monkeypatch) -> None:
+    settings = _settings(tmp_path, monkeypatch, max_queue=1)
+    _disable_worker(monkeypatch)
+
+    with TestClient(create_app(settings)) as client:
+        first = client.post(
+            "/api/index/files",
+            files={"files": ("first.txt", b"first", "text/plain")},
+            headers={"Idempotency-Key": "queue-first"},
+        )
+        second = client.post(
+            "/api/index/files",
+            files={"files": ("second.txt", b"second", "text/plain")},
+            headers={"Idempotency-Key": "queue-second"},
+        )
+
+    assert first.status_code == 200
+    assert second.status_code == 429
+    assert list(settings.upload_root.rglob("second.txt")) == []
+
+
+def test_upload_enforces_storage_quota(tmp_path, monkeypatch) -> None:
+    settings = _settings(
+        tmp_path,
+        monkeypatch,
+        max_bytes=10,
+        max_total_bytes=10,
+        max_storage_bytes=10,
+    )
+    existing = settings.upload_root / "jobs" / "existing" / "paper.txt"
+    existing.parent.mkdir(parents=True)
+    existing.write_bytes(b"1234567890")
+    _disable_worker(monkeypatch)
+
+    with TestClient(create_app(settings)) as client:
+        response = client.post(
+            "/api/index/files",
+            files={"files": ("new.txt", b"new", "text/plain")},
+            headers={"Idempotency-Key": "storage-full"},
+        )
+
+    assert response.status_code == 413
+    assert not list(settings.upload_root.rglob("new.txt"))
 
 
 def test_upload_requires_idempotency_key(tmp_path, monkeypatch) -> None:

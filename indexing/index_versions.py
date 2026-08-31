@@ -246,6 +246,10 @@ def create_index_version(
         return chosen_id, final_dir
     except Exception as exc:
         _preserve_failed_version(root, staging_dir, chosen_id, exc)
+        try:
+            prune_index_versions(settings, keep=settings.index_version_retention)
+        except (OSError, IndexCompatibilityError):
+            logger.warning("Could not prune old index versions.", exc_info=True)
         raise
 
 
@@ -283,7 +287,66 @@ def activate_index_version(
             "could not be replaced; startup reconciliation will retry.",
             exc_info=True,
         )
+    try:
+        prune_index_versions(settings, keep=settings.index_version_retention)
+    except (OSError, IndexCompatibilityError):
+        logger.warning("Could not prune old index versions.", exc_info=True)
     return pointer
+
+
+def prune_index_versions(settings: AppSettings, *, keep: int) -> list[Path]:
+    """Keep the active and newest ready versions, plus recent failures."""
+    if keep <= 0:
+        raise ValueError("Index version retention must be positive.")
+    root = _index_root(settings)
+    if not root.exists():
+        return []
+
+    active_id = get_active_version_id(settings)
+    ready: list[tuple[tuple[int, str, str], Path]] = []
+    for path in root.iterdir():
+        if (
+            not path.is_dir()
+            or not _VERSION_ID_RE.fullmatch(path.name)
+            or path.name == active_id
+        ):
+            continue
+        try:
+            manifest = load_manifest(path)
+        except IndexCompatibilityError:
+            continue
+        if manifest.get("status") != "ready":
+            continue
+        created_at = str(manifest.get("created_at") or "")
+        sort_key = (
+            (1, created_at, path.name)
+            if created_at
+            else (0, f"{path.stat().st_mtime_ns:020d}", path.name)
+        )
+        ready.append((sort_key, path))
+
+    ready.sort(key=lambda item: item[0], reverse=True)
+    ready_to_keep = max(0, keep - (1 if active_id else 0))
+    removed: list[Path] = []
+    for _, path in ready[ready_to_keep:]:
+        shutil.rmtree(path)
+        removed.append(path)
+
+    failed_root = root / "failed"
+    if failed_root.is_dir():
+        failed = sorted(
+            (
+                path
+                for path in failed_root.iterdir()
+                if path.is_dir() and _VERSION_ID_RE.fullmatch(path.name)
+            ),
+            key=lambda path: path.stat().st_mtime_ns,
+            reverse=True,
+        )
+        for path in failed[keep:]:
+            shutil.rmtree(path)
+            removed.append(path)
+    return removed
 
 
 def reconcile_active_pointer(settings: AppSettings) -> Path | None:

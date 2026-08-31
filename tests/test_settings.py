@@ -33,6 +33,8 @@ SETTINGS_ENV_VARS = {
     "INDEX_WORKER_HEARTBEAT_SECONDS",
     "INDEX_WORKER_LEASE_SECONDS",
     "INDEX_WORKER_MAX_ATTEMPTS",
+    "INDEX_WORKER_MAX_QUEUE",
+    "INDEX_VERSION_RETENTION",
     "INDEX_WORKER_POLL_SECONDS",
     "INDEX_WRITE_MODE",
     "LLM_MODEL",
@@ -64,6 +66,9 @@ SETTINGS_ENV_VARS = {
     "RETRIEVER_K",
     "UPLOAD_ROOT",
     "UPLOAD_MAX_BYTES",
+    "UPLOAD_MAX_FILES",
+    "UPLOAD_MAX_TOTAL_BYTES",
+    "UPLOAD_MAX_STORAGE_BYTES",
 }
 
 
@@ -125,6 +130,36 @@ def test_load_settings_defaults(tmp_path, monkeypatch):
     assert settings.offline_mode is False
     assert settings.index_write_mode == "versioned"
     assert settings.answer_strategy == "fixed"
+    assert settings.index_worker_max_queue == 100
+    assert settings.index_version_retention == 3
+    assert settings.upload_max_bytes == 50 * 1024 * 1024
+    assert settings.upload_max_files == 20
+    assert settings.upload_max_total_bytes == 200 * 1024 * 1024
+    assert settings.upload_max_storage_bytes == 5 * 1024 * 1024 * 1024
+
+
+@pytest.mark.parametrize(
+    ("variable", "value", "message"),
+    [
+        ("UPLOAD_MAX_FILES", "0", "UPLOAD_MAX_FILES"),
+        ("UPLOAD_MAX_TOTAL_BYTES", "0", "UPLOAD_MAX_TOTAL_BYTES"),
+        ("UPLOAD_MAX_TOTAL_BYTES", "1", "greater than or equal"),
+        ("UPLOAD_MAX_STORAGE_BYTES", "1", "greater than or equal"),
+        ("INDEX_WORKER_MAX_QUEUE", "0", "INDEX_WORKER_MAX_QUEUE"),
+        ("INDEX_VERSION_RETENTION", "0", "INDEX_VERSION_RETENTION"),
+    ],
+)
+def test_load_settings_rejects_invalid_upload_limits(
+    tmp_path,
+    monkeypatch,
+    variable,
+    value,
+    message,
+):
+    monkeypatch.setenv(variable, value)
+
+    with pytest.raises(ValueError, match=message):
+        load_settings(base_dir=tmp_path, env_file=tmp_path / "missing.env")
 
 
 def test_answer_strategy_rejects_unknown_value(tmp_path):

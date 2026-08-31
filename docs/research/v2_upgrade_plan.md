@@ -26,6 +26,7 @@ acceptance_evidence:
   - docs/implementation/m6c_kite_pipeline_acceptance.md
   - docs/implementation/m6d_evaluation_presentation_acceptance.md
   - docs/implementation/m7_project_design_and_interview_guide_acceptance.md
+  - docs/implementation/premerge_hardening_acceptance.md
 ---
 
 # Agentic RAG V2 升级方案

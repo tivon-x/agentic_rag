@@ -13,11 +13,11 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from sse_starlette.sse import EventSourceResponse
 
 from api.db.database import (
-    create_chat_session,
+    ChatHistoryLimitError,
+    append_chat_session_message,
     get_chat_session,
     get_chat_session_messages,
     list_chat_sessions,
-    upsert_chat_session_messages,
 )
 from api.dependencies import get_settings
 from api.models.chat import (
@@ -37,6 +37,7 @@ from core.settings import AppSettings
 
 router = APIRouter(tags=["chat"])
 logger = logging.getLogger(__name__)
+_ACTIVE_STREAM_SESSIONS: set[str] = set()
 
 
 @router.get(
@@ -84,23 +85,15 @@ async def create_or_append_chat_message(
     now = datetime.now(UTC)
     session_id = payload.session_id or str(uuid4())
     user_message = ChatMessage(role="user", content=payload.message.strip())
-    messages = await get_chat_session_messages(settings, session_id=session_id)
-
-    if messages is None:
-        await create_chat_session(
+    try:
+        await append_chat_session_message(
             settings,
             session_id=session_id,
-            messages=[user_message.model_dump(exclude_none=True)],
+            message=user_message.model_dump(exclude_none=True),
             created_at=now.isoformat(),
         )
-    else:
-        messages.append(user_message.model_dump(exclude_none=True))
-        await upsert_chat_session_messages(
-            settings,
-            session_id=session_id,
-            messages=messages,
-            updated_at=now.isoformat(),
-        )
+    except ChatHistoryLimitError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
 
     return ChatResponse(session_id=session_id, created_at=now, message=user_message)
 
@@ -113,11 +106,27 @@ async def stream_chat_response(
     messages = await get_chat_session_messages(settings, session_id=session_id)
     if not messages:
         raise HTTPException(status_code=404, detail="Chat session not found.")
+    last_message = messages[-1]
+    if not isinstance(last_message, dict) or (
+        str(last_message.get("role", "user")).strip().lower() != "user"
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Chat session already has an answer for its latest message.",
+        )
+    if session_id in _ACTIVE_STREAM_SESSIONS:
+        raise HTTPException(
+            status_code=409,
+            detail="Chat session already has an answer generation in progress.",
+        )
+    # ponytail: process-local guard; the database compare-and-swap below covers
+    # duplicate completions across processes without adding a service lock.
+    _ACTIVE_STREAM_SESSIONS.add(session_id)
 
     async def event_generator():
         history = list(messages)
         model_messages = _to_langchain_messages(history)
-        request_id = f"{session_id}:{len(history)}"
+        request_id = f"{session_id}:{uuid4().hex}"
         yield {
             "event": "progress",
             "data": _json_payload(
@@ -311,7 +320,14 @@ async def stream_chat_response(
             ),
         }
 
-    return EventSourceResponse(event_generator())
+    async def guarded_event_generator():
+        try:
+            async for event in event_generator():
+                yield event
+        finally:
+            _ACTIVE_STREAM_SESSIONS.discard(session_id)
+
+    return EventSourceResponse(guarded_event_generator())
 
 
 @router.get(
@@ -621,17 +637,19 @@ async def _save_history(
     session_id: str,
     history: list[dict[str, Any]],
 ) -> bool:
+    if not history:
+        return False
     try:
-        await upsert_chat_session_messages(
+        return await append_chat_session_message(
             settings,
             session_id=session_id,
-            messages=history,
-            updated_at=datetime.now(UTC).isoformat(),
+            message=history[-1],
+            created_at=datetime.now(UTC).isoformat(),
+            expected_messages=history[:-1],
         )
     except Exception:
         logger.exception("Failed to persist chat session %s", session_id)
         return False
-    return True
 
 
 def _optional_text(value: object) -> str | None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import os
@@ -21,6 +22,7 @@ from fastapi import (
 
 from api.db.database import (
     IdempotencyConflictError,
+    IndexingQueueFullError,
     create_indexing_job_idempotent,
     get_indexing_job,
     retry_failed_indexing_job,
@@ -44,6 +46,7 @@ WINDOWS_RESERVED_NAMES = {
 }
 
 router = APIRouter(tags=["indexing"])
+_UPLOAD_QUOTA_LOCK = asyncio.Lock()
 
 
 @router.get("/indexing-jobs/{job_id}", response_model=IndexingJobResponse)
@@ -108,11 +111,16 @@ async def upload_and_index_files(
     final_job_dir: Path | None = None
 
     try:
-        uploads = await _save_validated_uploads(
-            files,
-            staging_dir=staging_dir,
-            max_bytes=settings.upload_max_bytes,
-        )
+        async with _UPLOAD_QUOTA_LOCK:
+            uploads = await _save_validated_uploads(
+                files,
+                upload_root=upload_root,
+                staging_dir=staging_dir,
+                max_bytes=settings.upload_max_bytes,
+                max_files=settings.upload_max_files,
+                max_total_bytes=settings.upload_max_total_bytes,
+                max_storage_bytes=settings.upload_max_storage_bytes,
+            )
         request_hash = _upload_request_hash(index_mode, uploads)
         job_id = uuid4().hex
         final_job_dir = (upload_root / "jobs" / job_id).resolve()
@@ -164,6 +172,7 @@ async def upload_and_index_files(
             response=response,
             created_at=datetime.now(UTC).isoformat(),
             active_version_before=get_active_version_id(settings),
+            max_pending_jobs=settings.index_worker_max_queue,
         )
         if not created:
             _remove_upload_dir(upload_root, final_job_dir)
@@ -177,6 +186,10 @@ async def upload_and_index_files(
         if final_job_dir is not None:
             _remove_upload_dir(upload_root, final_job_dir)
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except IndexingQueueFullError as exc:
+        if final_job_dir is not None:
+            _remove_upload_dir(upload_root, final_job_dir)
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
     except HTTPException:
         if final_job_dir is not None:
             _remove_upload_dir(upload_root, final_job_dir)
@@ -195,11 +208,28 @@ async def upload_and_index_files(
 async def _save_validated_uploads(
     files: list[UploadFile],
     *,
+    upload_root: Path,
     staging_dir: Path,
     max_bytes: int,
+    max_files: int,
+    max_total_bytes: int,
+    max_storage_bytes: int,
 ) -> list[dict[str, str | int]]:
+    if len(files) > max_files:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Upload contains too many files; maximum is {max_files}.",
+        )
+
     uploads: list[dict[str, str | int]] = []
     seen_names: set[str] = set()
+    total_size = 0
+    existing_size = _upload_storage_bytes(upload_root)
+    if existing_size >= max_storage_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail="Upload storage quota is full; remove older papers first.",
+        )
     for upload in files:
         filename = _validated_filename(upload.filename)
         if filename in seen_names:
@@ -227,6 +257,17 @@ async def _save_validated_uploads(
                         status_code=413,
                         detail=f"File exceeds UPLOAD_MAX_BYTES: {filename}",
                     )
+                total_size += len(chunk)
+                if total_size > max_total_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail="Upload exceeds UPLOAD_MAX_TOTAL_BYTES.",
+                    )
+                if existing_size + total_size > max_storage_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail="Upload storage quota would be exceeded.",
+                    )
                 digest.update(chunk)
                 target.write(chunk)
         uploads.append(
@@ -238,6 +279,14 @@ async def _save_validated_uploads(
             }
         )
     return uploads
+
+
+def _upload_storage_bytes(root: Path) -> int:
+    return sum(
+        path.stat().st_size
+        for path in root.rglob("*")
+        if path.is_file()
+    )
 
 
 def _validated_filename(filename: str | None) -> str:
