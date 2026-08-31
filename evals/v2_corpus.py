@@ -27,13 +27,10 @@ def build_parser_artifact(
     corpus_dir: Path,
     output_path: Path,
     parser_gold_path: Path,
+    recursive: bool = False,
 ) -> tuple[dict[str, Any], str]:
     """Parse the frozen corpus once and persist deterministic passage records."""
-    files = sorted(
-        path
-        for path in corpus_dir.iterdir()
-        if path.is_file() and path.suffix.casefold() in SUPPORTED_SUFFIXES
-    )
+    files = _supported_files(corpus_dir, recursive=recursive)
     if not files:
         raise ValueError(f"No supported evaluation files found in {corpus_dir}.")
 
@@ -59,7 +56,10 @@ def build_parser_artifact(
             raise ValueError(f"Parser produced no passages for {path.name}.")
         file_sha256 = sha256_file(path)
         corpus_manifest.append(
-            {"file_name": path.name, "sha256": file_sha256}
+            {
+                "file_name": _relative_name(path, corpus_dir, recursive),
+                "sha256": file_sha256,
+            }
         )
         papers.append(
             {
@@ -108,6 +108,7 @@ def load_parser_artifact(
     *,
     expected_sha256: str | None = None,
     corpus_dir: Path | None = None,
+    recursive: bool = False,
 ) -> tuple[dict[str, Any], str]:
     artifact_sha256 = sha256_file(path)
     if expected_sha256 and artifact_sha256 != expected_sha256.casefold():
@@ -119,7 +120,7 @@ def load_parser_artifact(
     if payload.get("schema_version") != ARTIFACT_SCHEMA_VERSION:
         raise ValueError("Unsupported parser artifact schema.")
     if corpus_dir is not None:
-        _validate_corpus_manifest(payload, corpus_dir)
+        _validate_corpus_manifest(payload, corpus_dir, recursive=recursive)
     return payload, artifact_sha256
 
 
@@ -190,21 +191,42 @@ def sha256_file(path: Path) -> str:
 def _validate_corpus_manifest(
     artifact: dict[str, Any],
     corpus_dir: Path,
+    *,
+    recursive: bool = False,
 ) -> None:
     expected = {
         str(row["file_name"]): str(row["sha256"])
         for row in artifact.get("corpus_manifest", [])
     }
-    actual_paths = sorted(
-        path
-        for path in corpus_dir.iterdir()
-        if path.is_file() and path.suffix.casefold() in SUPPORTED_SUFFIXES
-    )
-    actual = {path.name: sha256_file(path) for path in actual_paths}
+    actual_paths = _supported_files(corpus_dir, recursive=recursive)
+    actual = {
+        _relative_name(path, corpus_dir, recursive): sha256_file(path)
+        for path in actual_paths
+    }
     if actual != expected:
         raise ValueError(
             "Evaluation corpus differs from the frozen parser artifact."
         )
+
+
+def _supported_files(corpus_dir: Path, *, recursive: bool) -> list[Path]:
+    iterator = corpus_dir.rglob("*") if recursive else corpus_dir.iterdir()
+    return sorted(
+        (
+            path
+            for path in iterator
+            if path.is_file() and path.suffix.casefold() in SUPPORTED_SUFFIXES
+        ),
+        key=lambda path: _relative_name(path, corpus_dir, recursive),
+    )
+
+
+def _relative_name(path: Path, corpus_dir: Path, recursive: bool) -> str:
+    return (
+        path.relative_to(corpus_dir).as_posix()
+        if recursive
+        else path.name
+    )
 
 
 def main() -> None:

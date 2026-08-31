@@ -1,0 +1,350 @@
+{
+  "schema_version": 1,
+  "milestone": "M3.2",
+  "selected_pipeline_name": "v1_flat_rerank",
+  "pipeline_config": {
+    "name": "v1_flat_rerank",
+    "use_metadata_prefix": false,
+    "tokenizer": "whitespace_v1",
+    "use_sparse": true,
+    "use_dense": true,
+    "fusion_method": "minmax",
+    "use_rerank": true,
+    "neighbor_window": 0,
+    "sparse_top_k": 40,
+    "dense_top_k": 40,
+    "rrf_k": 60,
+    "rerank_top_n": 30,
+    "final_top_k": 8,
+    "max_context_passages": 12,
+    "context_token_budget": 8000,
+    "metadata_prefix_fields": [
+      "title",
+      "authors",
+      "year",
+      "section",
+      "block"
+    ],
+    "dense_use_metadata_prefix": null,
+    "sparse_use_metadata_prefix": null,
+    "rerank_input": "retrieval",
+    "reranker_model": "ms-marco-TinyBERT-L-2-v2",
+    "rerank_merge_mode": "replace",
+    "fusion_rank_weight": 0.5,
+    "rerank_rank_weight": 0.5,
+    "dense_rrf_weight": 1.0,
+    "sparse_rrf_weight": 1.0,
+    "boost_policy": "current"
+  },
+  "pipeline_config_hash": "ee7c1306250ba487ee2ca54de776fc70cb584c3bb02d4aca38cf7028e4956c17",
+  "index_contract": {
+    "dense": {
+      "retrieval_schema": "quote-only-v1",
+      "metadata_prefix_fields": []
+    },
+    "sparse": {
+      "retrieval_schema": "quote-only-v1",
+      "tokenizer": "whitespace_v1",
+      "metadata_prefix_fields": []
+    }
+  },
+  "index_manifest_sha256": "84f0b676cb8765e9f4bdb3a419ab7894b13825575d43c7037183ef88ba750b31",
+  "parser_artifact_sha256": "98e8adf680c578c21d2fffe5b97f3f85d24b768b827fe81aa8ddfc280af242d9",
+  "embedding": {
+    "provider": "openai",
+    "model": "qwen3.7-text-embedding",
+    "dimension": 1024,
+    "batch_size": 20,
+    "input_mode": "raw",
+    "check_embedding_ctx_length": false,
+    "max_input_chars": 6000
+  },
+  "old_dev_dataset_sha256": "e1da7d23d352cd17a1601f56280a5c9820ff81002a36dc5ad786cb3a8f90c936",
+  "holdout_dataset_sha256": "47e2a70de438468150e22ca07c5f57aaf8630d601b3b645ffcf7a2d3f0dfea78",
+  "code": {
+    "commit": "d4251726509fb33b22a90184a86d3b8b4f62ab2e",
+    "dirty": true,
+    "working_tree_patch_sha256": "bb4e6b69349a65a5f6b56a5a28aa341a9fc5ff61aa73bad5b0ca632b5ee75a24",
+    "working_tree_patch_path": "C:\\Users\\27564\\Documents\\code\\ai\\rag\\agentic_rag\\artifacts\\evals\\v2_m3_2\\working_tree.patch"
+  },
+  "active_index_version": {
+    "active_json": null,
+    "sqlite_app_state_exists": false,
+    "sqlite_active_index_version": null
+  },
+  "quality_metrics": {
+    "holdout": {
+      "recall_at_5": 0.802083,
+      "recall_at_10": 0.875,
+      "mrr_at_10": 0.680258,
+      "ndcg_at_10": 0.71013,
+      "paper_recall_at_10": 0.989583,
+      "section_recall_at_10": 0.9375,
+      "context_passage_recall": 0.875,
+      "case_count": 48,
+      "recall_at_10_hit_count": 39,
+      "p50_latency_ms": 317.7927,
+      "p95_latency_ms": 389.0657
+    },
+    "old_dev": {
+      "recall_at_5": 0.520833,
+      "recall_at_10": 0.614583,
+      "mrr_at_10": 0.356622,
+      "ndcg_at_10": 0.405581,
+      "paper_recall_at_10": 0.979167,
+      "section_recall_at_10": 0.8125,
+      "context_passage_recall": 0.583333,
+      "case_count": 48,
+      "recall_at_10_hit_count": 27,
+      "p50_latency_ms": 311.4101,
+      "p95_latency_ms": 424.5483
+    }
+  },
+  "latency_metrics": {
+    "holdout": {
+      "warmup_query": "holdout-number-06-deepspeech-oov",
+      "warmup_latency_ms": 623.8393,
+      "warmup_excluded": true,
+      "repeat_count": 5,
+      "random_seed": 31,
+      "fixed_case_order": [
+        "holdout-number-06-deepspeech-oov",
+        "holdout-term-05-sortagrad",
+        "holdout-cross-11-pointer-training-validity",
+        "holdout-term-06-ntm-addressing",
+        "holdout-number-03-resnet-1202",
+        "holdout-term-02-gpipe-bubble",
+        "holdout-number-04-nmt-rnnencdec",
+        "holdout-number-09-vlae-flow-steps",
+        "holdout-number-01-transformer-beam",
+        "holdout-number-10-scaling-batch",
+        "holdout-method-08-sortagrad-order",
+        "holdout-cross-01-transformer-regularization",
+        "holdout-method-04-mpnn-set2set",
+        "holdout-cross-09-transformer-nmt-decoding",
+        "holdout-method-06-pointer-training",
+        "holdout-method-09-row-convolution-placement",
+        "holdout-cross-05-sortagrad-depth-result",
+        "holdout-term-12-autoregressive-flow-prior",
+        "holdout-method-12-transformer-decoding",
+        "holdout-method-11-scaling-training",
+        "holdout-method-10-vlae-flow-implementation",
+        "holdout-number-08-gpipe-speedup",
+        "holdout-term-11-row-convolution",
+        "holdout-method-01-transformer-warmup",
+        "holdout-cross-12-deepspeech-streaming",
+        "holdout-cross-04-mpnn-readout-ablation",
+        "holdout-number-12-pointer-training-budget",
+        "holdout-method-07-alexnet-weight-decay",
+        "holdout-term-07-bits-back",
+        "holdout-method-02-gpipe-interface",
+        "holdout-method-05-ntm-location-shift",
+        "holdout-number-05-deepspeech-depth",
+        "holdout-cross-03-resnet-shortcut-propagation",
+        "holdout-cross-02-gpipe-interface-bubble",
+        "holdout-term-04-mpnn-readout",
+        "holdout-cross-07-vlae-coding-prior",
+        "holdout-cross-08-alexnet-pooling-optimization",
+        "holdout-cross-06-ntm-addressing-modes",
+        "holdout-method-03-resnet-shortcut-options",
+        "holdout-number-11-label-smoothing-value",
+        "holdout-cross-10-scaling-schedule",
+        "holdout-term-09-identity-shortcut",
+        "holdout-term-03-overlapping-pooling",
+        "holdout-term-10-rmc-memory-slots",
+        "holdout-number-02-alexnet-2010-errors",
+        "holdout-term-08-light-cone-complexity",
+        "holdout-number-07-mpnn-input-information",
+        "holdout-term-01-label-smoothing"
+      ],
+      "sample_count": 240,
+      "first_round": {
+        "p50_latency_ms": 320.1293,
+        "p95_latency_ms": 367.4393
+      },
+      "warm_rounds": {
+        "p50_latency_ms": 316.4716,
+        "p95_latency_ms": 391.3619
+      },
+      "stage_latency_ms": {
+        "context_packing": {
+          "p50": 0.9865,
+          "p95": 2.4609
+        },
+        "dedupe": {
+          "p50": 0.8099,
+          "p95": 1.9983
+        },
+        "dense_recall": {
+          "p50": 3.6246,
+          "p95": 5.3009
+        },
+        "expansion": {
+          "p50": 0.0226,
+          "p95": 0.0434
+        },
+        "fusion": {
+          "p50": 0.3612,
+          "p95": 0.7567
+        },
+        "query_embedding": {
+          "p50": 133.1671,
+          "p95": 159.3213
+        },
+        "query_normalization": {
+          "p50": 0.0044,
+          "p95": 0.0084
+        },
+        "recall": {
+          "p50": 35.3711,
+          "p95": 56.6282
+        },
+        "recall_and_fusion": {
+          "p50": 171.8551,
+          "p95": 209.3173
+        },
+        "rerank": {
+          "p50": 140.2778,
+          "p95": 191.5538
+        },
+        "retrieval_total": {
+          "p50": 316.7328,
+          "p95": 387.7189
+        },
+        "search_total": {
+          "p50": 314.9667,
+          "p95": 386.4409
+        },
+        "sparse_recall": {
+          "p50": 31.5958,
+          "p95": 50.8059
+        }
+      }
+    },
+    "old_dev": {
+      "warmup_query": "number-06-nmt-bleu",
+      "warmup_latency_ms": 404.5361,
+      "warmup_excluded": true,
+      "repeat_count": 5,
+      "random_seed": 31,
+      "fixed_case_order": [
+        "number-06-nmt-bleu",
+        "term-05-lstm-dependency",
+        "cross-11-order-method-result",
+        "term-06-cell-state",
+        "number-03-resnet-error",
+        "term-02-multi-head",
+        "number-04-gpipe-amoeba",
+        "number-09-dilated-iou",
+        "number-01-transformer-bleu",
+        "number-10-vlae-nll",
+        "method-08-deepspeech-bn",
+        "cross-01-transformer-nmt",
+        "method-04-preactivation",
+        "cross-09-dilated-method-result",
+        "method-06-rmc",
+        "method-09-mdl-selection",
+        "cross-05-rn-rmc",
+        "term-12-rnn-dropout",
+        "method-12-vlae-information",
+        "method-11-read-process-write",
+        "method-10-alexnet-relu",
+        "number-08-deepspeech-wer",
+        "term-11-ntm-memory",
+        "method-01-transformer-encoder",
+        "cross-12-coffee-complexity",
+        "cross-04-pointer-ntm",
+        "number-12-pointer-accuracy",
+        "method-07-nmt-alignment",
+        "term-07-pointer-network",
+        "method-02-gpipe-microbatch",
+        "method-05-relation-network",
+        "number-05-rnn-penn",
+        "cross-03-rnn-lstm",
+        "cross-02-resnet-identity",
+        "term-04-positional-encoding",
+        "cross-07-gpipe-method-result",
+        "cross-08-scaling-allocation",
+        "cross-06-alexnet-resnet",
+        "method-03-resnet-bottleneck",
+        "number-11-rmc-accuracy",
+        "cross-10-mdl-intro-selection",
+        "term-09-dilated-convolution",
+        "term-03-scaled-dot-product",
+        "term-10-mpnn",
+        "number-02-alexnet-error",
+        "term-08-residual-learning",
+        "number-07-relation-clevr",
+        "term-01-transformer"
+      ],
+      "sample_count": 240,
+      "first_round": {
+        "p50_latency_ms": 299.2809,
+        "p95_latency_ms": 358.8281
+      },
+      "warm_rounds": {
+        "p50_latency_ms": 314.7155,
+        "p95_latency_ms": 447.9794
+      },
+      "stage_latency_ms": {
+        "context_packing": {
+          "p50": 0.9755,
+          "p95": 2.0833
+        },
+        "dedupe": {
+          "p50": 0.7722,
+          "p95": 1.9061
+        },
+        "dense_recall": {
+          "p50": 3.4269,
+          "p95": 5.0417
+        },
+        "expansion": {
+          "p50": 0.0248,
+          "p95": 0.0465
+        },
+        "fusion": {
+          "p50": 0.3597,
+          "p95": 0.7705
+        },
+        "query_embedding": {
+          "p50": 134.1462,
+          "p95": 157.1752
+        },
+        "query_normalization": {
+          "p50": 0.0049,
+          "p95": 0.0092
+        },
+        "recall": {
+          "p50": 37.1608,
+          "p95": 57.338
+        },
+        "recall_and_fusion": {
+          "p50": 172.8628,
+          "p95": 209.5905
+        },
+        "rerank": {
+          "p50": 135.4953,
+          "p95": 231.0113
+        },
+        "retrieval_total": {
+          "p50": 309.7387,
+          "p95": 423.5799
+        },
+        "search_total": {
+          "p50": 308.3364,
+          "p95": 422.4682
+        },
+        "sparse_recall": {
+          "p50": 33.6306,
+          "p95": 53.0403
+        }
+      }
+    }
+  },
+  "strategy_candidate_passed": false,
+  "selection_reason": "S1 failed at least one frozen M3.2 gate; B1 remains the fixed baseline.",
+  "m3_1_core_passed": false,
+  "m3_strategy_closed": true,
+  "m4_entry_ready": true
+}

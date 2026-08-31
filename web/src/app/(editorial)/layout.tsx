@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import EditorialNav from "@/components/EditorialNav";
 import { text } from "@/lib/i18n";
 
 export default function EditorialLayout({
@@ -15,17 +16,7 @@ export default function EditorialLayout({
             <span className="brand-name">{text.nav.brand}</span>
             <span className="brand-caption">LOCAL PAPER LIBRARY</span>
           </Link>
-          <nav aria-label="主导航" className="masthead-nav">
-            <Link href="/library" className="nav-link">
-              {text.nav.library}
-            </Link>
-            <Link href="/search" className="nav-link">
-              {text.nav.search}
-            </Link>
-            <Link href="/chat" className="nav-link">
-              {text.nav.chat}
-            </Link>
-          </nav>
+          <EditorialNav />
         </div>
       </header>
       {children}

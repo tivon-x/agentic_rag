@@ -1,0 +1,689 @@
+{
+  "benchmark_name": "kite-ai-papers",
+  "case_count": 15,
+  "corpus_file_count": 134,
+  "corpus_file_sha256": "f33a3154a0a65d76dbfd10e599a7c5d640ac025ebadb76d80e2a5536c57240c8",
+  "corpus_manifest": [
+    {
+      "file_name": "base-models/BERT.pdf",
+      "sha256": "5692a5514787a8c6727b4ff3b726a3385798bc68e12138d1d4af83947e2acf6e",
+      "size_bytes": 775166
+    },
+    {
+      "file_name": "base-models/DeBERTa-v3.pdf",
+      "sha256": "7a9419d3335150cd96797b02672e682916b08129aad40b90198bb325432e6baf",
+      "size_bytes": 760596
+    },
+    {
+      "file_name": "base-models/DeBERTa.pdf",
+      "sha256": "3d3d9c91ee5c9bb5795cbbd39479ff8f34e092a5d15ae899436f94a5be0df5ca",
+      "size_bytes": 953834
+    },
+    {
+      "file_name": "base-models/ELECTRA.pdf",
+      "sha256": "6219a802dca3be0027fc88bb2ecd56806e6610ebfe4d083a4c18dd896f45b9ae",
+      "size_bytes": 497999
+    },
+    {
+      "file_name": "base-models/FlanT5.pdf",
+      "sha256": "771f758c1b711c2a63ca2439e80ab90751351d721632897a058c0205ba9e2a22",
+      "size_bytes": 1557309
+    },
+    {
+      "file_name": "base-models/GPT-2.pdf",
+      "sha256": "d9d852e2894556e73f53cb22b7c605a9643d6f0b19bf604b429ed6192fa24f4e",
+      "size_bytes": 582775
+    },
+    {
+      "file_name": "base-models/GPT-3.pdf",
+      "sha256": "97fd272f1fdfc18677462d0292f5fbf26ca86b4d1b485c2dba03269b643a0e83",
+      "size_bytes": 6768044
+    },
+    {
+      "file_name": "base-models/GPT.pdf",
+      "sha256": "eb81a65e0856bd38e855e1f1de6ee12e7c3eb92ae05c8270d345a475beb631d0",
+      "size_bytes": 541036
+    },
+    {
+      "file_name": "base-models/InstructGPT.pdf",
+      "sha256": "c1984bb50a5b90fddb895fdc3a0f72e5bc977148c9f63ef6040cbe7a3e1f0d98",
+      "size_bytes": 1797405
+    },
+    {
+      "file_name": "base-models/LLaMA.pdf",
+      "sha256": "775ff8d09b6e5b06314135d87c194ce3535a821eeaee4be9051b331162c5fefd",
+      "size_bytes": 621427
+    },
+    {
+      "file_name": "base-models/LaMDA.pdf",
+      "sha256": "c2b9f7d10729fe742326a7b4ff41430899e2455700920ab464f8974e7ffcb718",
+      "size_bytes": 1509689
+    },
+    {
+      "file_name": "base-models/Llama2.pdf",
+      "sha256": "65b3012cf391b882cc06c0c7370b80c3bb83d0431d99fe6fd93f8839ad88d4c6",
+      "size_bytes": 12488920
+    },
+    {
+      "file_name": "base-models/METRO.pdf",
+      "sha256": "4c106179170803cbc71426dcdf2f7cc7ef2fda28e2cdc7e80d8678eebaf8fe21",
+      "size_bytes": 656957
+    },
+    {
+      "file_name": "base-models/Pythia.pdf",
+      "sha256": "9b506dd9272b093c4c85971fead4892ba20e40bee7e98e9227a985227bfde92c",
+      "size_bytes": 1094777
+    },
+    {
+      "file_name": "base-models/ReLoRA.pdf",
+      "sha256": "3d610d4ec955f8dd4fa3913b40d5da9da66710306925bba64c988f2d2ab3a9b5",
+      "size_bytes": 589359
+    },
+    {
+      "file_name": "base-models/RoBERTa.pdf",
+      "sha256": "76a3872d244793563a5b000b818cbaf0ca8972ab1145d32be474c05b2a8f3070",
+      "size_bytes": 209675
+    },
+    {
+      "file_name": "base-models/SurveyOfLLMs.pdf",
+      "sha256": "ef35e490db3f39ea9c43eb5db84b048cf24c4bf6ced9e02b6067a09443f33052",
+      "size_bytes": 2395727
+    },
+    {
+      "file_name": "base-models/T5.pdf",
+      "sha256": "d46e6a73fe3621cc68480ab5fc89f05ee52f94707b56373087cbbb51808eab97",
+      "size_bytes": 1158848
+    },
+    {
+      "file_name": "base-models/UL2.pdf",
+      "sha256": "196d190c953ed61105908a202ba2b026b57e5b7951ed8bc20d17f474785959c4",
+      "size_bytes": 909320
+    },
+    {
+      "file_name": "fine-tuning/ClinicalLanguageModels.pdf",
+      "sha256": "e4521a4552ba7be12935e945b3898beb2a5194a1e458c7c3d3e662a5e49bf811",
+      "size_bytes": 429946
+    },
+    {
+      "file_name": "fine-tuning/ConstitutionalAI.pdf",
+      "sha256": "9a456a07ad346e3372f9867d346f69f5b0f68b4c65f060aca0b8a13fa9d98e83",
+      "size_bytes": 2088111
+    },
+    {
+      "file_name": "fine-tuning/DAPT_TAPT_German.pdf",
+      "sha256": "e8e554b5826e41c6071820ed3fe040b93620dd800f01360df9bfe98f56537984",
+      "size_bytes": 344996
+    },
+    {
+      "file_name": "fine-tuning/DontStopPretraining.pdf",
+      "sha256": "a1dfe1375e615814f6b78c0d431c27e85a1559640c755c6f513eb2dd7b87db41",
+      "size_bytes": 1758388
+    },
+    {
+      "file_name": "fine-tuning/IntrinsicDimension.pdf",
+      "sha256": "e3205485a4222770dd73705495cbce0a27afdec63d6c21fa27f2a165e7f805f1",
+      "size_bytes": 383666
+    },
+    {
+      "file_name": "fine-tuning/LMSI.pdf",
+      "sha256": "a17d3b26831f8c5a3b6461b3a9d852a387d1f2c384da3f11b772afeef6545cff",
+      "size_bytes": 544319
+    },
+    {
+      "file_name": "fine-tuning/LoRA.pdf",
+      "sha256": "e9a0d3128767db616085dc0f4e6e455e672e89af823e8ed1282793682787395a",
+      "size_bytes": 1609513
+    },
+    {
+      "file_name": "fine-tuning/Orca.pdf",
+      "sha256": "f4b50e2de151fbf5f0ad9b7b790496152739d9caf10e2dcc7be6bf033ff36ffa",
+      "size_bytes": 1458242
+    },
+    {
+      "file_name": "fine-tuning/QLoRA.pdf",
+      "sha256": "33a4e757c19d6ea8d3cca8958fce8fe405e290272e135c99ee66065c775d5bd1",
+      "size_bytes": 1065470
+    },
+    {
+      "file_name": "fine-tuning/SelfInstruct.pdf",
+      "sha256": "08dba30c0ff241ac17b2f7ac31d4202faca0f847d77bc215f9e03dc905da8553",
+      "size_bytes": 2035036
+    },
+    {
+      "file_name": "inference-compute/CoT.pdf",
+      "sha256": "68681c195e0a16284815f414f37c0246c8e39078fedf5b3a98738143d40b743e",
+      "size_bytes": 891875
+    },
+    {
+      "file_name": "inference-compute/LeastToMostPrompting.pdf",
+      "sha256": "4f2a64ed53e8173391421c04f42fe97ba06ca333fac78a7d28eb287740d205c9",
+      "size_bytes": 659623
+    },
+    {
+      "file_name": "inference-compute/LetsVerifyStepByStep.pdf",
+      "sha256": "fbd170e2042c32950c3fe97d3a558d89e8a8dffaadc942e774ccb4b751abc123",
+      "size_bytes": 4384742
+    },
+    {
+      "file_name": "inference-compute/MemoryAugmentedLLM.pdf",
+      "sha256": "e9bf6ba2ddd30fffc029171157ab6bd32beda1241b1992d3a30f17138cc17461",
+      "size_bytes": 171216
+    },
+    {
+      "file_name": "inference-compute/Re3.pdf",
+      "sha256": "dd8ce0000a217f31ae55e107f66fab4608a1972319c9d7999609a9fdc1ccdcb4",
+      "size_bytes": 1531892
+    },
+    {
+      "file_name": "inference-compute/ToT.pdf",
+      "sha256": "1f1a8cc4069ce2a5fa462d39405a7eda63b3145a310114662325439ba6859c84",
+      "size_bytes": 766323
+    },
+    {
+      "file_name": "knowledge-retrieval/BEIR.pdf",
+      "sha256": "682da185b92b4d04f906de2a59f4b5152c1a1f15433cc7da812d1f522756c1bc",
+      "size_bytes": 1214175
+    },
+    {
+      "file_name": "knowledge-retrieval/BERTandBeyond.pdf",
+      "sha256": "45517e237075f18dae9e4c7238cec9377e10d92142483f95bde5dd33eb268c4b",
+      "size_bytes": 4517250
+    },
+    {
+      "file_name": "knowledge-retrieval/BeerQA.pdf",
+      "sha256": "b5fdf470cbe81d2ba82f6c26b90fe2f896f79f543c0f3ae3a48bc410fe1df6e3",
+      "size_bytes": 843036
+    },
+    {
+      "file_name": "knowledge-retrieval/ColBERTv2.pdf",
+      "sha256": "46e0a2712eabf9e0b9486120356a2110f65516fa7e0d75c35e9ee3eef9ea78c0",
+      "size_bytes": 1081592
+    },
+    {
+      "file_name": "knowledge-retrieval/CrossEncodersZeroShot.pdf",
+      "sha256": "8bcea2445c6c5b01c7dd815d4cf5b43ca92ef14887c5a410ccf92f4cc55874f9",
+      "size_bytes": 1595169
+    },
+    {
+      "file_name": "knowledge-retrieval/DPR.pdf",
+      "sha256": "3e67fc1a9977715acf722d85f0b7d124b03715e975f6310a4d6c12094190912f",
+      "size_bytes": 383508
+    },
+    {
+      "file_name": "knowledge-retrieval/DSP.pdf",
+      "sha256": "b4b9b30f0dc74db9df978009269e9b11a204d8f721264da7f0e77cc2b8ac1fa8",
+      "size_bytes": 1263987
+    },
+    {
+      "file_name": "knowledge-retrieval/E5.pdf",
+      "sha256": "4af180187db44aa7e655b942f70618e81fac7a7c12539ed229c1eb212a98bc59",
+      "size_bytes": 472213
+    },
+    {
+      "file_name": "knowledge-retrieval/ExaRanker.pdf",
+      "sha256": "0ba1e5eee844195c60981b7799aa6382900ad540675a67e3bbd917fb34b38969",
+      "size_bytes": 581761
+    },
+    {
+      "file_name": "knowledge-retrieval/FiD.pdf",
+      "sha256": "f1ee7e927c3fb31beb2146f8c205692a91b40dadd65d80e025c6686e4d430953",
+      "size_bytes": 326612
+    },
+    {
+      "file_name": "knowledge-retrieval/GPL.pdf",
+      "sha256": "7aa2a27bfa303bdedbba10a0542e8acdb6c78cfdcff0e872d3024973a08e2b1e",
+      "size_bytes": 421136
+    },
+    {
+      "file_name": "knowledge-retrieval/GWS.pdf",
+      "sha256": "edc1b52df78cabe968ddc9e7d8fd082fb8b066b3a0b4d01cc48a17acbcce0fb8",
+      "size_bytes": 1217522
+    },
+    {
+      "file_name": "knowledge-retrieval/HyDE.pdf",
+      "sha256": "dc0ae3c5584ed146beee122e6a9ad9c48547dde048d53e9be8435d8f1d354531",
+      "size_bytes": 424964
+    },
+    {
+      "file_name": "knowledge-retrieval/InPars-Light.pdf",
+      "sha256": "340af4bd049260cd5282ff2c75166b032f4c939c125d9cdcdeab7ae302f6bec1",
+      "size_bytes": 222096
+    },
+    {
+      "file_name": "knowledge-retrieval/InPars-v2.pdf",
+      "sha256": "01339308b532540d34f1a426fe6fb460104dad4f4320863e40ace044ef5be754",
+      "size_bytes": 62840
+    },
+    {
+      "file_name": "knowledge-retrieval/InPars.pdf",
+      "sha256": "b2e1e7be17b723b0959110ceb9ae155e16b9e443f9915b3da87c10f54cbe2b92",
+      "size_bytes": 555448
+    },
+    {
+      "file_name": "knowledge-retrieval/InParsToolkit.pdf",
+      "sha256": "4ffe749c5c0e025cb67203c1482c11b56a3e64529286cf570113104dafc1a825",
+      "size_bytes": 165285
+    },
+    {
+      "file_name": "knowledge-retrieval/InstructOR.pdf",
+      "sha256": "5958609b2b143baf6c61c7b0a5a88a06a77db7d5896694156c795e47c6887c76",
+      "size_bytes": 1319198
+    },
+    {
+      "file_name": "knowledge-retrieval/LLMEmbedder.pdf",
+      "sha256": "06d1317d3178699bd7b3a95f16d3d12a270e684495f7cf6edc9b403f498af2b3",
+      "size_bytes": 869366
+    },
+    {
+      "file_name": "knowledge-retrieval/MTEB.pdf",
+      "sha256": "bfd15786180a6546e5bf1361fe42356a884517a6497c27ef6994f444be75e91f",
+      "size_bytes": 769075
+    },
+    {
+      "file_name": "knowledge-retrieval/MiniLM.pdf",
+      "sha256": "f2c36bbb2be0ff92d7700a9f46b8998c35eeaf316326a6971acab7e4265c80b5",
+      "size_bytes": 583637
+    },
+    {
+      "file_name": "knowledge-retrieval/MiniLMv2.pdf",
+      "sha256": "e4f84a5eaaf5c020bfbe1ea599e91e37b489ea6ac4ff4fde5b6bf6acb166f075",
+      "size_bytes": 537362
+    },
+    {
+      "file_name": "knowledge-retrieval/MonoBERT.pdf",
+      "sha256": "965b33b6ae391eb381d592947dd70c9347aad393f31db6bf65c591f4c10abfc2",
+      "size_bytes": 356755
+    },
+    {
+      "file_name": "knowledge-retrieval/MultiPassageBERT.pdf",
+      "sha256": "edad274a3db98eee3a81d72d3ab557b70bd4772a317993cc257876b3fea8951b",
+      "size_bytes": 259305
+    },
+    {
+      "file_name": "knowledge-retrieval/NoParameterLeftBehind.pdf",
+      "sha256": "f6ab01b5ba1c3f4a973bbe020ebe0b421cf86270afcb79b5478d9a35365780ab",
+      "size_bytes": 1639340
+    },
+    {
+      "file_name": "knowledge-retrieval/PretrainingWithRetrieval.pdf",
+      "sha256": "fc44c81cd379c4a973fd19a86d5dcc4a511c361fd1cb055122478086b1cfd464",
+      "size_bytes": 1061717
+    },
+    {
+      "file_name": "knowledge-retrieval/Promptagator.pdf",
+      "sha256": "c2dec45d0b2d4c9393a5e8f51a52628897e511960a253d9dcfc00348fae93457",
+      "size_bytes": 1761373
+    },
+    {
+      "file_name": "knowledge-retrieval/RAG.pdf",
+      "sha256": "23e3249e9a1e75418d82efecab0ea8c4d033b89c93742f63208d47ce01f21233",
+      "size_bytes": 885323
+    },
+    {
+      "file_name": "knowledge-retrieval/RETRO.pdf",
+      "sha256": "1b3e89b589b73d51ca76cb7d98f22fa5438f8b13e05363613bc6b3199f9777f4",
+      "size_bytes": 1566448
+    },
+    {
+      "file_name": "knowledge-retrieval/RankGPT.pdf",
+      "sha256": "1ed60eb20b567b3c747bfe1c248248fe7c38592f5eab793192b0334948f57d84",
+      "size_bytes": 521708
+    },
+    {
+      "file_name": "knowledge-retrieval/RankT5.pdf",
+      "sha256": "bf1ad25834c2957d8581d9cdbe9eafeb6ecf25d2e418368ef6d6b2321232bcfb",
+      "size_bytes": 2853250
+    },
+    {
+      "file_name": "knowledge-retrieval/RetrievalMeetsLongContext.pdf",
+      "sha256": "d71995a0f28a97eadec2bfedc68a3bcd1b6181360a9e299334aa680cc6f91545",
+      "size_bytes": 652665
+    },
+    {
+      "file_name": "knowledge-retrieval/SBERT.pdf",
+      "sha256": "92366d22fc0521350d6cbe0ad72bcee754f90e88181d7b4a8e2adb1e7e594fec",
+      "size_bytes": 548961
+    },
+    {
+      "file_name": "knowledge-retrieval/SGPT.pdf",
+      "sha256": "9e054cc2e5438c8fde458cc520ba89718ed922df6172b31a8003d9b16aa649ea",
+      "size_bytes": 757198
+    },
+    {
+      "file_name": "knowledge-retrieval/Sphere.pdf",
+      "sha256": "15744d3edbc4e0797f22d17c3b5aa5d117a7ea23df9b51e36fb29bd730f62c1e",
+      "size_bytes": 1452700
+    },
+    {
+      "file_name": "knowledge-retrieval/SqueezingWater.pdf",
+      "sha256": "c443825f7f8796817efd23b32719d6c1f79989edb9c497085f2bb07163fb0ab6",
+      "size_bytes": 299351
+    },
+    {
+      "file_name": "knowledge-retrieval/TART.pdf",
+      "sha256": "e3780dcbd6481c40c44ca9008e1eec15681c05f098084d31a41dd730c7d548e9",
+      "size_bytes": 1279716
+    },
+    {
+      "file_name": "knowledge-retrieval/Visconde.pdf",
+      "sha256": "2dbddb76885d7f592927d432984904aaa3f3f732530ff3860aaeac06b9c20e02",
+      "size_bytes": 1548458
+    },
+    {
+      "file_name": "knowledge-retrieval/mMARCO.pdf",
+      "sha256": "d432f411eb6593a9697521aa83cdefd55f5fb49aa5cdf2bb400f53a12753a735",
+      "size_bytes": 237177
+    },
+    {
+      "file_name": "knowledge-retrieval/monoT5.pdf",
+      "sha256": "e07c97f1fb6f20a84ece2500581ba7e1414210e55142a31e4a7e756432e57788",
+      "size_bytes": 277082
+    },
+    {
+      "file_name": "knowledge-retrieval/vector-databases/CompressingVectors.pdf",
+      "sha256": "6616151a4803f2b5cc972680ee792de7c526981d4348be57f4aa764bda4a8951",
+      "size_bytes": 258144
+    },
+    {
+      "file_name": "knowledge-retrieval/vector-databases/DiskANN.pdf",
+      "sha256": "15ee6136e41eb70d05692ca5f5af18b47fc63754c3a5004de686d8b1be2c6d2c",
+      "size_bytes": 1972220
+    },
+    {
+      "file_name": "knowledge-retrieval/vector-databases/FAISS_GPU.pdf",
+      "sha256": "89b2371b261846059d416bdf1423b15a6e3cc7d1b2d5dc2729ee5f6c3399049a",
+      "size_bytes": 1233821
+    },
+    {
+      "file_name": "knowledge-retrieval/vector-databases/FilteredDiskANN.pdf",
+      "sha256": "fba3befdc6cdb568d8945d14bd1be9b31331001145a97a63333cddf01e236d29",
+      "size_bytes": 2223932
+    },
+    {
+      "file_name": "knowledge-retrieval/vector-databases/FreshDiskANN.pdf",
+      "sha256": "804f770207593c46cb47b8fbbed7fe5bb6191b3afae72595aa1217736d2d29b5",
+      "size_bytes": 1300909
+    },
+    {
+      "file_name": "knowledge-retrieval/vector-databases/HNSW.pdf",
+      "sha256": "f78da128a3ea9ac08d37cfe6c4b641f371f88adb677d6d2bf637d90bad8d414a",
+      "size_bytes": 2636958
+    },
+    {
+      "file_name": "knowledge-retrieval/vector-databases/OPQ.pdf",
+      "sha256": "69d5cf3688964f61e1b162afd6d227c2b7d8ede1c155ca54f786070ddeae324c",
+      "size_bytes": 481624
+    },
+    {
+      "file_name": "knowledge-retrieval/vector-databases/PQ.pdf",
+      "sha256": "cf5d7dd3feabd66ab08d4bf0ff7a5d6be2178c8468cb879dd085abd10241bc3a",
+      "size_bytes": 564722
+    },
+    {
+      "file_name": "knowledge-retrieval/vector-databases/SurveyOfPQ.pdf",
+      "sha256": "849b3cf6fcd7ed84938788a7fb20c70f9c9dbddc1c8a67acc613d969996f2096",
+      "size_bytes": 444860
+    },
+    {
+      "file_name": "knowledge-retrieval/vector-databases/Zoom.pdf",
+      "sha256": "7fe6dab588af5c2e8424669c7a4472e04ccd984982a61d03921701207f85b195",
+      "size_bytes": 780925
+    },
+    {
+      "file_name": "tool-use/AugmentedLanguageModels.pdf",
+      "sha256": "8038f38f60af0a778e3385944a6f54febe1c205e5395af1d770cfc334041992e",
+      "size_bytes": 533444
+    },
+    {
+      "file_name": "tool-use/MRKL.pdf",
+      "sha256": "50496293f221729999f03d17867bd0b7a84dba7275196684a1aa6fe06cca7257",
+      "size_bytes": 766926
+    },
+    {
+      "file_name": "tool-use/ReAct.pdf",
+      "sha256": "4430bc2c4450bd25047dc6e5c189296d59663e2a378c12557c7773752c8a369b",
+      "size_bytes": 538934
+    },
+    {
+      "file_name": "tool-use/Toolformer.pdf",
+      "sha256": "6d7483d94653008e40c2058a1c22441c92e3713dae278b6361e8efc447c99522",
+      "size_bytes": 657966
+    },
+    {
+      "file_name": "tool-use/WebGPT.pdf",
+      "sha256": "acad8d9fd55a30b94de9dfdae413e10b21e07bde54d767b2405b31341739cedb",
+      "size_bytes": 1486858
+    },
+    {
+      "file_name": "uncategorized/APE.pdf",
+      "sha256": "74666b291dd75ec6795ef5b00fc5f36e2cea9ac84a8c0968b5d43243abb57e02",
+      "size_bytes": 3696250
+    },
+    {
+      "file_name": "uncategorized/AlphaCodium.pdf",
+      "sha256": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
+      "size_bytes": 475308
+    },
+    {
+      "file_name": "uncategorized/BloombergGPT.pdf",
+      "sha256": "2d2df0cd63ec14bc10f6a4c4770f50231ce834100284e96df0c0b429af065246",
+      "size_bytes": 2262658
+    },
+    {
+      "file_name": "uncategorized/ChatGPTPerformance.pdf",
+      "sha256": "5b103f2c36b8afa7ab71f9025966381d75aa009bea603e342db210031063b603",
+      "size_bytes": 1115640
+    },
+    {
+      "file_name": "uncategorized/CoALA.pdf",
+      "sha256": "27deccbfc78223b1eb3fe9b952136a7dfede130734c619bbd4e824565c3781be",
+      "size_bytes": 2720136
+    },
+    {
+      "file_name": "uncategorized/CoVe.pdf",
+      "sha256": "644d73511170fc7f6bdd14c62279259c39c79c87564f7d74c1033cf04c7900c9",
+      "size_bytes": 1121859
+    },
+    {
+      "file_name": "uncategorized/ContinualPretraining.pdf",
+      "sha256": "4177e534f593bc497847d4d9bd4338e253f1d5b5424d5afa34f680810c708f59",
+      "size_bytes": 469603
+    },
+    {
+      "file_name": "uncategorized/ConversationalUI.pdf",
+      "sha256": "466d5043b85c57fcce669761a4a972d50ae09a220ac215a284e4dac33ad5b1b8",
+      "size_bytes": 9165346
+    },
+    {
+      "file_name": "uncategorized/DecisionMaking.pdf",
+      "sha256": "17700a31ea9e197216887d66ea9d29e233ad99b55733ceab71109bb120188ffa",
+      "size_bytes": 2601782
+    },
+    {
+      "file_name": "uncategorized/Disassociating.pdf",
+      "sha256": "052db13bee274a6334b7057eeb5c5844a32af5218189aace4280f7e15b32c337",
+      "size_bytes": 1191063
+    },
+    {
+      "file_name": "uncategorized/Donut.pdf",
+      "sha256": "ad9c20523c37f53fc6d31ccb4c63dcc7b916c7340d6bb16033c9924ce70c7668",
+      "size_bytes": 7105978
+    },
+    {
+      "file_name": "uncategorized/DreamCoder.pdf",
+      "sha256": "547027556f1220f22555c35f91d2527d78d825553a1b24201f58d56274ec0e80",
+      "size_bytes": 4869773
+    },
+    {
+      "file_name": "uncategorized/FinanceBench.pdf",
+      "sha256": "17300ab2316144111bcc878f91f9f35606367cae1cec3fca7c56ae9f87067e2f",
+      "size_bytes": 457088
+    },
+    {
+      "file_name": "uncategorized/GPQA.pdf",
+      "sha256": "58a85a21b653a01d5794f84952936f58e6a5218d781588f44ae183bb749bf023",
+      "size_bytes": 617128
+    },
+    {
+      "file_name": "uncategorized/GPTQ.pdf",
+      "sha256": "35e339171cd48bbf8dda246bd018b11aa33a5cda0c4a1587cdae574208f56396",
+      "size_bytes": 521818
+    },
+    {
+      "file_name": "uncategorized/Hindsight.pdf",
+      "sha256": "1b8549cf532dbbb29099184b3429c67de323818a4a803b1daafd3e9fa09e064d",
+      "size_bytes": 1287506
+    },
+    {
+      "file_name": "uncategorized/HolisticEvaluation.pdf",
+      "sha256": "eb365cc3cbb46cfb36fb272261c017a6456de54d9d96138ef39f3d647fd232f1",
+      "size_bytes": 6099449
+    },
+    {
+      "file_name": "uncategorized/InContextGD.pdf",
+      "sha256": "f4541e1fa479877a0e0552283e15cb5240b243cc67aaa9a404c3135f23e5d9ac",
+      "size_bytes": 1981970
+    },
+    {
+      "file_name": "uncategorized/KnowledgeSelfAwareness.pdf",
+      "sha256": "1d861f7732f65769703cb2731dc085f3c9e69771b1b6196d074646d1473c3fbf",
+      "size_bytes": 2616253
+    },
+    {
+      "file_name": "uncategorized/LLMs_and_KGs.pdf",
+      "sha256": "6c78ef676eb57d4612165b10db286e53a32bd00aa1f7afccddd35adea4ee66eb",
+      "size_bytes": 3347785
+    },
+    {
+      "file_name": "uncategorized/LatentKnowledge.pdf",
+      "sha256": "7c966a854c05ca6ff8e4e59cf9a1aa5823a763795229eca71eafc5df871f959f",
+      "size_bytes": 2010870
+    },
+    {
+      "file_name": "uncategorized/LevelsOfAGI.pdf",
+      "sha256": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
+      "size_bytes": 467849
+    },
+    {
+      "file_name": "uncategorized/LostInTheMiddle.pdf",
+      "sha256": "c8070998fc12d9652d4f3b2e3094a4d6f438ed47a18539e04f07e5dbb9891f9e",
+      "size_bytes": 804284
+    },
+    {
+      "file_name": "uncategorized/Mamba.pdf",
+      "sha256": "83044ebdd02276f922b6d0915a344f0c501fc7c214d1b88622c33971bb149199",
+      "size_bytes": 1293868
+    },
+    {
+      "file_name": "uncategorized/MemGPT.pdf",
+      "sha256": "03723007dae7c2bde235893864a3282d4c41af7ecad85277f935360658dc4d43",
+      "size_bytes": 602501
+    },
+    {
+      "file_name": "uncategorized/MemPrompt.pdf",
+      "sha256": "ff680f23d33ab1e99b766ce8a8fb96c31c45f3f6fc958c028723f6ba873b16b1",
+      "size_bytes": 2670512
+    },
+    {
+      "file_name": "uncategorized/MiniPile.pdf",
+      "sha256": "d4231adcd560bf7e755c12ad0842dbd68213895ecbd0eb95c62f33a28909fb0c",
+      "size_bytes": 246510
+    },
+    {
+      "file_name": "uncategorized/PAL.pdf",
+      "sha256": "5bbe4865a52547105e046d26a0d04d39fe0c9d6f9789b9c7cf9f5d6c38e03b93",
+      "size_bytes": 1306602
+    },
+    {
+      "file_name": "uncategorized/PretrainingWithHumanPreferences.pdf",
+      "sha256": "aef6c861984ad1178ed076f50358861e7afa2524e3da4efc29c607dc2f4cde48",
+      "size_bytes": 1403604
+    },
+    {
+      "file_name": "uncategorized/ProgrammersAssistant.pdf",
+      "sha256": "d31fd8b87313ac9ca943a480eae244a2bdbeea8458af153a0bb5fc7c9cc50e25",
+      "size_bytes": 1173184
+    },
+    {
+      "file_name": "uncategorized/PromptingVsFineTuning.pdf",
+      "sha256": "4c0832e1092c64aef7497e48b848a3383964bdfe799938c0f4953826524b60a9",
+      "size_bytes": 1103969
+    },
+    {
+      "file_name": "uncategorized/ProteinBERT.pdf",
+      "sha256": "a737fae5236273280c1b81cb0cc97c0ff7f7eaf65c5b32f84aeec2be6e3b0c03",
+      "size_bytes": 2096518
+    },
+    {
+      "file_name": "uncategorized/Raptor.pdf",
+      "sha256": "01319e2e6e6ecfd504ee1bbda41d023f9e060bd3505ab3c161baa1d6d696cf75",
+      "size_bytes": 2547113
+    },
+    {
+      "file_name": "uncategorized/Reflexion.pdf",
+      "sha256": "965a720f42e0318facf0de5d1b9d7a135ded227284fc615ca5b3ec1763c46066",
+      "size_bytes": 760808
+    },
+    {
+      "file_name": "uncategorized/RoboticNavigation.pdf",
+      "sha256": "e515d6c00f511094972cde6881a356a678d9e2101603fe0db93fe302fc88ec5a",
+      "size_bytes": 4432948
+    },
+    {
+      "file_name": "uncategorized/SelfAsk.pdf",
+      "sha256": "5e97e81623a38db8cd13d76a3fd4b92c043f36e9de2d4855fa1ec01399b57e10",
+      "size_bytes": 1038023
+    },
+    {
+      "file_name": "uncategorized/SemDeDup.pdf",
+      "sha256": "2bb0ab3f969ff0c441aece8c9983671b8cb1bf87d6904225f6bc2ec5aaa3c6b5",
+      "size_bytes": 18814320
+    },
+    {
+      "file_name": "uncategorized/SimCTG.pdf",
+      "sha256": "f58aed18df6e11f91e7f7d5d1da1a7a3ee4ae6ef87321334e4f10e2e45f2d1a3",
+      "size_bytes": 2697813
+    },
+    {
+      "file_name": "uncategorized/SparksOfAGI.pdf",
+      "sha256": "e2b4e167cf2dc820679314db112d8d333e53bc45ae4e7355a49537a364fa5e4e",
+      "size_bytes": 7313689
+    },
+    {
+      "file_name": "uncategorized/TextbooksAreAllYouNeed.pdf",
+      "sha256": "35144e4c99923c4c0806115cf313d7cf08e2f2a6444c823014a4122e153c890a",
+      "size_bytes": 1439522
+    },
+    {
+      "file_name": "uncategorized/ThePile.pdf",
+      "sha256": "f75f972e587cd9dc1ebdc69d11bab0c966fe75a3b0a9b7314abfd7d53cef2f5f",
+      "size_bytes": 1528989
+    },
+    {
+      "file_name": "uncategorized/TinyStories.pdf",
+      "sha256": "e9d2d82534b4ccb7163559f00e68556988c49192a1433f860481544bc7dc2445",
+      "size_bytes": 4069571
+    },
+    {
+      "file_name": "uncategorized/Transformers.pdf",
+      "sha256": "bfaaec89262875f927cf1b38b2da2d775f3309b7bea3537f29b606ca67e79065",
+      "size_bytes": 2201700
+    },
+    {
+      "file_name": "uncategorized/VoE.pdf",
+      "sha256": "308a66582a14ba4c0471973b27c32bb774f12bb23994ad7aef40d00c8f12493d",
+      "size_bytes": 588496
+    }
+  ],
+  "corpus_root": "knowledge-base-content/ai-papers",
+  "created_at": "2026-08-30T12:21:13.049024+00:00",
+  "empty_rubric_count": 6,
+  "normalization_version": "structure-v1",
+  "parser_name": "pymupdf4llm",
+  "parser_version": "0.3.4",
+  "query_path": "queries/ai_papers.json",
+  "query_sha256": "6f242828e2e96b34e152af16afabf981f938eec5f3d11522c205ef635cae57d3",
+  "schema_version": 1,
+  "upstream_commit": "85e71ad63db9ea410eccbb0158f94e7d72462b99",
+  "upstream_repository": "https://github.com/D-Star-AI/KITE"
+}

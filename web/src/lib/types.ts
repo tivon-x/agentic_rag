@@ -203,3 +203,58 @@ export type SearchResponse = {
   results: SearchResult[];
   degraded_reason: string | null;
 };
+
+export const KITE_PIPELINE_KEYS = ["b0", "b1", "b2", "b3"] as const;
+export type KitePipelineKey = (typeof KITE_PIPELINE_KEYS)[number];
+
+export const KITE_PAIRWISE_KEYS = ["b0", "b2", "b3"] as const;
+export type KitePairwiseKey = (typeof KITE_PAIRWISE_KEYS)[number];
+
+export type KitePipelineSummary = {
+  mean_score: number | null;
+  valid_count: number | null;
+  case_count: number | null;
+  p95_latency_ms: number | null;
+  mean_context_tokens: number | null;
+  report: string | null;
+};
+
+export type KitePairwiseSummary = {
+  candidate_wins: number | null;
+  ties: number | null;
+  candidate_losses: number | null;
+  win_case_ids: string[] | null;
+  tie_case_ids: string[] | null;
+  loss_case_ids: string[] | null;
+};
+
+export type KiteCaseReview = {
+  case_id: string;
+  score: number | null;
+  summary: string;
+  severity: "watch" | "regression" | "failure";
+};
+
+export type KiteEvaluationSummary = {
+  schema_version: number;
+  formal_run: boolean;
+  benchmark_name: string;
+  upstream_repository: string;
+  upstream_commit: string;
+  query_sha256: string;
+  corpus_file_count: number;
+  corpus_file_sha256: string;
+  generation_model: string;
+  judge_model: string;
+  judge_prompt_version: string;
+  pipelines: Record<KitePipelineKey, KitePipelineSummary>;
+  pairwise_vs_b1: Record<KitePairwiseKey, KitePairwiseSummary>;
+  promotion_candidates: KitePipelineKey[];
+  production_decision: {
+    default_pipeline: KitePipelineKey;
+    default_name: string | null;
+    auto_switch: boolean;
+    rationale: string | null;
+  };
+  case_reviews: KiteCaseReview[];
+};

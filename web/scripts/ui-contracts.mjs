@@ -51,6 +51,22 @@ const inputSource = await readFile(
   new URL("../src/components/ui/input.tsx", import.meta.url),
   "utf8",
 );
+const evaluationSource = await readFile(
+  new URL("../src/app/(editorial)/evaluation/page.tsx", import.meta.url),
+  "utf8",
+);
+const evaluationDataSource = await readFile(
+  new URL("../src/lib/kite-evaluation.ts", import.meta.url),
+  "utf8",
+);
+const typesSource = await readFile(
+  new URL("../src/lib/types.ts", import.meta.url),
+  "utf8",
+);
+const editorialNavSource = await readFile(
+  new URL("../src/components/EditorialNav.tsx", import.meta.url),
+  "utf8",
+);
 
 assert.match(chatSource, /setIsLongWait\(true\)/u);
 assert.match(chatSource, /clearTimeout\(timer\)/u);
@@ -63,5 +79,16 @@ assert.match(globalStyles, /outline: 2px solid var\(--ink-blue\)/u);
 assert.match(globalStyles, /font-size: 1rem/u);
 assert.match(buttonSource, /active:scale-\[0\.96\]/u);
 assert.match(inputSource, /text-base/u);
+assert.match(typesSource, /KITE_PIPELINE_KEYS = \["b0", "b1", "b2", "b3"\]/u);
+assert.match(typesSource, /pipelines: Record<KitePipelineKey, KitePipelineSummary>/u);
+assert.match(typesSource, /pairwise_vs_b1: Record<KitePairwiseKey, KitePairwiseSummary>/u);
+assert.match(evaluationDataSource, /formal_run: false/u);
+assert.match(evaluationSource, /decision\?\.default_pipeline/u);
+assert.match(evaluationSource, /formal_run=false/u);
+assert.match(evaluationSource, /未获生产批准/u);
+assert.doesNotMatch(evaluationSource, /pipelines\.b1/u);
+assert.doesNotMatch(evaluationSource, /key === "b1"/u);
+assert.match(editorialNavSource, /usePathname/u);
+assert.match(editorialNavSource, /aria-current=\{isCurrentPath\(pathname, href\) \? "page" : undefined\}/u);
 
 console.log("web UI contract checks passed");

@@ -976,17 +976,18 @@ def _capture_code_state(
         capture_output=True,
         text=True,
     ).stdout.strip()
-    status = subprocess.run(
-        ["git", "status", "--porcelain", "-uall"],
+    status_result = subprocess.run(
+        ["git", "status", "--porcelain", "-z", "-uall"],
         cwd=repo_root,
         check=True,
         capture_output=True,
-        text=True,
     ).stdout
+    status = status_result.decode("utf-8", errors="surrogateescape")
     untracked_files = [
-        line[3:]
-        for line in status.splitlines()
-        if line.startswith("?? ")
+        entry[3:]
+        for entry in status.split("\0")
+        if entry
+        and entry.startswith("?? ")
     ]
     patch_parts = [
         subprocess.run(

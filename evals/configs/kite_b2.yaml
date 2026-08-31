@@ -1,0 +1,40 @@
+schema_version: 1
+benchmark:
+  name: kite-ai-papers
+  upstream_repository: https://github.com/D-Star-AI/KITE
+  upstream_commit: 85e71ad63db9ea410eccbb0158f94e7d72462b99
+  query_path: ../../external/KITE/queries/ai_papers.json
+  corpus_root: ../../external/KITE/knowledge-base-content/ai-papers
+  query_sha256: 6f242828e2e96b34e152af16afabf981f938eec5f3d11522c205ef635cae57d3
+  case_count: 15
+  empty_rubric_count: 6
+  corpus_file_count: 134
+  corpus_sha256: f33a3154a0a65d76dbfd10e599a7c5d640ac025ebadb76d80e2a5536c57240c8
+pipeline:
+  name: b2
+embedding:
+  provider: openai
+  model: qwen3.7-text-embedding
+  dimension: 1024
+  batch_size: 20
+  input_mode: raw
+  check_embedding_ctx_length: false
+  max_input_chars: 6000
+generation:
+  strategy: fixed
+  model: qwen3.7-plus
+  task_models: {}
+judge:
+  task_type: kite_judge
+  model: qwen3.7-plus
+  prompt_version: kite-official-compatible-v1
+  temperature: 0
+  timeout_seconds: 60
+runtime:
+  concurrency: 1
+reranker:
+  backend: flashrank
+  model: ms-marco-TinyBERT-L-2-v2
+output:
+  dir: artifacts/evals/kite/b2
+  manifest: artifacts/evals/kite/manifest.json

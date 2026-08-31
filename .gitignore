@@ -35,7 +35,28 @@ pip-delete-this-directory.txt
 
 # Local indexes
 data/
-/artifacts/
+/artifacts/*
+!/artifacts/evals/
+/artifacts/evals/*
+!/artifacts/evals/v2_m3_2/
+/artifacts/evals/v2_m3_2/*
+!/artifacts/evals/v2_m3_2/m4_fixed_baseline.json
+!/artifacts/evals/kite/
+/artifacts/evals/kite/*
+!/artifacts/evals/kite/manifest.json
+!/artifacts/evals/kite/summary.json
+!/artifacts/evals/kite/b0/
+/artifacts/evals/kite/b0/*
+!/artifacts/evals/kite/b0/report.json
+!/artifacts/evals/kite/b1/
+/artifacts/evals/kite/b1/*
+!/artifacts/evals/kite/b1/report.json
+!/artifacts/evals/kite/b2/
+/artifacts/evals/kite/b2/*
+!/artifacts/evals/kite/b2/report.json
+!/artifacts/evals/kite/b3/
+/artifacts/evals/kite/b3/*
+!/artifacts/evals/kite/b3/report.json
 
 # IDE
 .vscode/
