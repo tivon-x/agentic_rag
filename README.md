@@ -51,7 +51,7 @@
 | B2 | 6.4000 | 15/15 | 187.1 s | 18256.0 |
 | B3 | 6.3333 | 15/15 | 176.6 s | 17182.7 |
 
-B2 相对 B1 提升 `0.4` 分但有 3 个逐题 loss，B3 提升 `0.3333` 分且有 4 个 loss，均未达到 promotion gate；因此没有 promotion candidate。生产默认继续为 `v1_flat_rerank`，不会由评测自动切换。逐题报告、失败案例和证据审计见 [KITE Benchmark 正式报告](docs/kite_benchmark_report.md)、[生产 Pipeline 决策记录](docs/production_pipeline_decision.md) 与 Web 的 [只读评测页](/evaluation)。M6B、M6C、M6D 已完成，M7 已获单独授权但尚未实施。
+B2 相对 B1 提升 `0.4` 分但有 3 个逐题 loss，B3 提升 `0.3333` 分且有 4 个 loss，均未达到 promotion gate；因此没有 promotion candidate。生产默认继续为 `v1_flat_rerank`，不会由评测自动切换。逐题报告、失败案例和证据审计见 [KITE Benchmark 正式报告](docs/kite_benchmark_report.md)、[生产 Pipeline 决策记录](docs/production_pipeline_decision.md) 与 Web 的 [只读评测页](/evaluation)。M6B、M6C、M6D 和 M7 已完成，M7 的项目设计与面试指南见 [M7 指南](docs/m7_project_design_and_interview_guide.md)。
 
 ## 项目结构
 
@@ -161,6 +161,7 @@ uv run pytest tests/test_retrieval_pipeline.py -v
 - [分层 RAG 设计任务](tasks.md)
 - [评测指南](docs/eval_guide.md)
 - [基线评测报告](docs/eval_baseline_report.md)
+- [M7 项目设计与面试指南](docs/m7_project_design_and_interview_guide.md)
 
 ## License
 

@@ -1,9 +1,9 @@
 ---
 project_status_schema: 1
 status_updated: "2026-08-31"
-completed_through: M6D
-next_planned_goal: M7
-implementation_authorized: true
+completed_through: M7
+next_planned_goal: M8
+implementation_authorized: false
 production_pipeline: v1_flat_rerank
 production_pipeline_config_hash: ee7c1306250ba487ee2ca54de776fc70cb584c3bb02d4aca38cf7028e4956c17
 answer_strategy: fixed
@@ -25,6 +25,7 @@ acceptance_evidence:
   - docs/implementation/m6b_kite_b1_acceptance.md
   - docs/implementation/m6c_kite_pipeline_acceptance.md
   - docs/implementation/m6d_evaluation_presentation_acceptance.md
+  - docs/implementation/m7_project_design_and_interview_guide_acceptance.md
 ---
 
 # Agentic RAG V2 升级方案
@@ -46,8 +47,8 @@ acceptance_evidence:
 | M4.2 | 终止 | 不为未通过的 Adaptive 增加持久 run、checkpoint、worker 或产品入口。 |
 | M5 / M5.1 | 已完成 | 证据优先的 Next.js 产品、结构化 Chat evidence、会话回看和 UI 修复已交付。 |
 | M6 | M6A 至 M6D 已完成 | B0 至 B3 在同一冻结 snapshot 和 clean evaluation commit 上完成 15 题正式比较；B2/B3 未满足 promotion gate，生产默认继续 `v1_flat_rerank`，README 与 `/evaluation` 已同步冻结结果。 |
-| M7 | 待开始（已获授权） | 可开始编写项目设计与面试指南；本轮不实施 M7。 |
-| M8 | 待单独规划和授权 | 部署到明确的平台，不默认分发 KITE PDF 或完整语料。 |
+| M7 | 已完成 | 项目设计与面试指南已落盘；只修改文档和事实漂移防护，不新增运行代码。 |
+| M8 | 暂缓，不实施 | 当前不做部署；如恢复，需要重新规划、明确平台并单独授权。 |
 
 开始任何新 Goal 时必须重新记录分支、HEAD、工作区和依赖状态；活动分支与提交快照不写入本计划。
 
@@ -778,7 +779,7 @@ git diff --check
 
 M7 在 M6D 完成后单独授权。它只编写文档，不新增运行代码。
 
-当前状态：已获单独授权、可以开始；本轮只开放 M7，不实施其文档工作。
+当前状态：已完成。本轮只实施 M7 文档，不新增运行代码。
 
 指南以当前代码、M1 至 M6 验收报告和冻结 artifacts 为事实来源，覆盖：
 
@@ -792,7 +793,11 @@ M7 在 M6D 完成后单独授权。它只编写文档，不新增运行代码。
 
 所有简历和面试数字只能引用正式报告。未知结果保留为空或使用非量化描述，不能预填收益。
 
+交付物：[`docs/m7_project_design_and_interview_guide.md`](../m7_project_design_and_interview_guide.md)，验收报告：[`docs/implementation/m7_project_design_and_interview_guide_acceptance.md`](../implementation/m7_project_design_and_interview_guide_acceptance.md)。
+
 ## 10. M8 部署边界
+
+当前决定：M8 暂缓，不实施部署。除非用户重新授权，否则不新增部署代码、平台配置或云端资源。
 
 部署需要明确平台、存储、密钥、网络和数据许可，因此不作为 M6 的完成条件，也不在未选平台时写通用部署脚手架。
 
