@@ -115,6 +115,7 @@ sandbox/
 
 # Misc
 .coverage
+/output/
 .pytest_cache/
 .playwright-cli/
 htmlcov/
