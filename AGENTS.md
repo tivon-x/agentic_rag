@@ -1,8 +1,5 @@
 # PROJECT KNOWLEDGE BASE
 
-**Updated:** 2026-07-30
-**Branch:** `codex/v2-core`
-
 ## OVERVIEW
 
 Python 3.12+ Agentic RAG system for a local-first paper library. The backend uses
@@ -10,36 +7,20 @@ FastAPI, SQLite, LangGraph, FAISS, BM25 and an OpenAI-compatible model provider.
 The product frontend is Next.js; the older Gradio UI remains available through
 `main.py ui`.
 
-The repository has completed M1 through M3.2. The current fixed retrieval baseline
-is `v1_flat_rerank`. M4 adaptive behavior, persistent runs and checkpoints are
-planned but not implemented.
+## CURRENT STATE PREFLIGHT
 
-## CURRENT MILESTONE STATE
+Do not copy milestone status, branch names, commit hashes or historical test totals
+into this file. Before starting a Goal:
 
-- M1: runtime, migrations, persistent indexing jobs and immutable index versions
-  completed.
-- M2: paper catalog, parser pipeline, page-addressable evidence, Library, Paper and
-  Search completed.
-- M3/M3.1: fixed retrieval evaluation completed; the original promotion gate did
-  not pass.
-- M3.2: strategy closure completed. S1 failed the holdout Context Passage Recall
-  gate, so B1 remains the fixed baseline.
-- Next authorized milestone: M4.1, adaptive quality loop. M4.2 persistent runs can
-  start only if M4.1 passes its frozen quality gate.
+1. Run `git status --short --branch` and `git log -1 --oneline`.
+2. Read the YAML status block and authorization boundary in
+   `docs/research/v2_upgrade_plan.md`.
+3. Verify affected defaults and contracts against current code and frozen artifacts.
+4. If those sources conflict, stop implementation and repair the drift first.
 
-Frozen M4 baseline:
-
-- pipeline: `v1_flat_rerank`
-- config hash:
-  `ee7c1306250ba487ee2ca54de776fc70cb584c3bb02d4aca38cf7028e4956c17`
-- contract:
-  `artifacts/evals/v2_m3_2/m4_fixed_baseline.json`
-- acceptance:
-  `docs/implementation/m3_2_strategy_acceptance.md`
-
-The M3.2 acceptance run reported 253 pytest tests, Ruff, parser gate and frontend
-lint/build passing. Treat that as a milestone snapshot, not a substitute for
-running current verification.
+Fact precedence is: current code/settings/frozen artifacts, the plan status block,
+acceptance reports, active plan sections, then historical plans and memory. Memory
+is only a lead and must be verified against the current checkout.
 
 ## STRUCTURE
 
@@ -77,7 +58,7 @@ Subdirectory instructions:
 | Prompts | `agent/prompts.py` | all system prompts live here |
 | Tool definitions | `agent/tools.py` | `ToolFactory.create_tools()` and retrieval tool |
 | Structured outputs | `agent/schemas.py` | Pydantic routing and query schemas |
-| Graph state | `agent/states.py` | current fixed graph state; M4 state is not implemented |
+| Graph state | `agent/states.py` | graph state contracts |
 | LLM router | `llms/llm.py` | cached `get_llm_by_type(task_type)` |
 | Settings | `core/settings.py` | frozen `AppSettings` and environment loading |
 | Dependency wiring | `core/factory.py` | settings to model, indexer and retriever |
@@ -102,8 +83,8 @@ Subdirectory instructions:
 | M3 evaluation | `evals/v2_runner.py` | fixed retrieval evaluation |
 | M3.1 experiments | `evals/m3_1_runner.py`, `evals/m3_1_experiments.py` | frozen candidate search |
 | M3.2 closure | `evals/m3_2_strategy.py` | strategy gate and baseline selection |
-| M4.1 handoff | `docs/implementation/m4_1_adaptive_handoff.md` | next execution contract |
-| M4.2 handoff | `docs/implementation/m4_2_durable_run_handoff.md` | persistence work after M4.1 passes |
+| Current milestone plan | `docs/research/v2_upgrade_plan.md` | status, authorization and execution boundaries |
+| Acceptance reports | `docs/implementation/` | immutable milestone evidence and historical conclusions |
 
 ## COMMANDS
 
@@ -196,30 +177,24 @@ from core.settings import AppSettings
 - Prompts stay in `agent/prompts.py`; do not inline system prompts elsewhere.
 - Structured model outputs use Pydantic schemas from `agent/schemas.py`.
 - Access models only through `get_llm_by_type(task_type)`.
-- M4.1 must add a separate bounded adaptive path without breaking the current fixed
-  graph. Do not add M4.2 persistence while implementing M4.1.
+- Preserve the fixed path unless the current plan explicitly authorizes a change.
 
 ### Settings
 
 - All runtime configuration flows through the frozen `AppSettings`.
 - Do not call `os.getenv()` outside `core/settings.py`.
 - `load_settings()` runs at startup and the result is passed down.
-- The current defaults include:
-  - `RETRIEVAL_PIPELINE=v1_flat_rerank`
-  - `INDEX_WRITE_MODE=versioned`
-  - `PAPER_PARSER=pymupdf4llm`
-  - `EMBEDDING_INPUT_MODE=raw`
-  - `EMBEDDING_MAX_INPUT_CHARS=6000`
+- Read current defaults from `AppSettings`; do not duplicate them in planning or
+  instruction files.
 
 ### Fixed retrieval
 
 - `indexing/retrieval_pipeline.py` is the source of truth for fixed pipeline
   definitions and index contracts.
-- B1, `v1_flat_rerank`, is the current default and frozen M4 baseline.
-- Do not switch the default to B2, B3 or S1 without a new frozen evaluation and
-  explicit promotion decision.
-- M4 retrieval calls must validate the baseline contract instead of reconstructing
-  B1 from remembered defaults.
+- The production selection is declared in the plan status block and must match
+  `AppSettings` plus its frozen evaluation artifact.
+- Do not switch the production default without a new frozen evaluation and explicit
+  promotion decision.
 - `retrieval_text` may contain retrieval metadata. User-visible context and
   citations must use source-faithful `quote_text`.
 - Query-time embedding settings must match the active index manifest. Fail on
@@ -229,8 +204,7 @@ from core.settings import AppSettings
 
 - Frozen test questions, labels, gold evidence, thresholds and graders cannot be
   changed after seeing formal results.
-- M3.2 holdout has already been opened once. Do not rerun it or reuse it as M4.1
-  final test data.
+- M3.2 holdout has already been opened once. Do not rerun, relabel or tune against it.
 - Record dataset, config, parser artifact, index manifest and code hashes for formal
   runs.
 - Preserve per-question wins, ties, losses, subset regressions, latency and bad
@@ -278,13 +252,11 @@ from core.settings import AppSettings
 
 ## MILESTONE BOUNDARIES
 
-- `docs/research/v2_upgrade_plan.md` is the implementation source of truth.
-- `docs/research/phase2_goal_prompts.md` defines executable Goal prompts.
-- M4.1 implements and evaluates only the adaptive quality loop.
-- M4.2 starts only when `m4_1_quality_passed=true` and
-  `m4_2_entry_ready=true`.
-- M4.2 owns run tables, worker, checkpoint, SSE recovery and basic run UI.
-- M5 owns full trace and technical debugging UI.
+- `docs/research/v2_upgrade_plan.md` is the only mutable milestone status and
+  implementation source of truth.
+- Documents marked `SUPERSEDED` are historical evidence, not executable plans.
+- A Goal is not complete until its code, acceptance report and plan status update
+  are reviewed together.
 - Complete one Goal, create its acceptance report and stop. Do not continue to the
   next Goal without user authorization.
 
@@ -299,6 +271,6 @@ from core.settings import AppSettings
 - Do not bypass `VectorStore` to access FAISS internals.
 - Do not add a second retrieval pipeline implementation outside the registry.
 - Do not tune against a formal holdout after opening it.
-- Do not describe planned M4 functionality as implemented.
+- Do not describe any planned milestone as implemented.
 - Do not introduce Redis, Celery, PostgreSQL, a vector database, GraphRAG, RAPTOR or
   multi-agent orchestration without a new approved plan.

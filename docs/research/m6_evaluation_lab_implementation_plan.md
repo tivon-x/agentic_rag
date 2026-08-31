@@ -1,5 +1,7 @@
 # M6 评测实验室实施计划
 
+> **SUPERSEDED — 仅供历史参考，禁止直接执行。** 本方案已被 KITE Benchmark 驱动的新版 `docs/research/v2_upgrade_plan.md` 取代。
+
 > 状态：待用户授权，且必须在 M5 验收完成后执行。
 >
 > 执行模型：`gpt-5.6-luna`，reasoning effort=`max`。

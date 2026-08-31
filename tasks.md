@@ -1,5 +1,7 @@
 # Agentic RAG 项目优化任务文档
 
+> **SUPERSEDED — 仅供历史参考，禁止据此判断当前里程碑。** 当前状态和执行边界以 `docs/research/v2_upgrade_plan.md` 为准。
+
 ## 目标：从平面 Chunk RAG 升级为分层化 Hierarchical Agentic RAG
 
 ## 1. 项目背景

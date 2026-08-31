@@ -1,5 +1,7 @@
 # Agentic RAG V2 第二阶段 Goal 提示词
 
+> **SUPERSEDED — 仅供历史参考，禁止直接执行。** 当前状态、授权边界和后续 Goal 以 `docs/research/v2_upgrade_plan.md` 顶部状态区块及正文为准。
+
 > 当前状态：M1 至 M3.2、M4.1、M4.1.1、M4.1.2 均已完成。M4.1 系列未通过质量门槛，`ANSWER_STRATEGY=fixed` 保持默认，M4.2 已终止且不得执行。
 
 ## 使用方式
