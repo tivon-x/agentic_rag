@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, replace
 import json
 from pathlib import Path
+import subprocess
 
 from langchain_core.documents import Document
 import pytest
@@ -368,13 +369,53 @@ def test_content_addressed_variant_path_matches_index_directory(tmp_path):
 
 
 def test_code_state_captures_dirty_and_untracked_files(tmp_path):
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    subprocess.run(
+        ["git", "init"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    tracked_file = repo_root / "tracked.txt"
+    tracked_file.write_text("before\n", encoding="utf-8")
+    subprocess.run(
+        ["git", "add", "tracked.txt"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=pytest",
+            "-c",
+            "user.email=pytest@example.com",
+            "commit",
+            "-m",
+            "initial",
+        ],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    tracked_file.write_text("after\n", encoding="utf-8")
+    (repo_root / "untracked.txt").write_text(
+        "untracked\n",
+        encoding="utf-8",
+    )
 
     state = _capture_code_state(repo_root, run_dir=tmp_path)
 
     assert state["commit"]
+    assert state["dirty"] is True
     assert len(state["working_tree_patch_sha256"]) == 64
-    assert Path(state["working_tree_patch_path"]).exists()
+    patch_path = state["working_tree_patch_path"]
+    assert patch_path is not None
+    patch = Path(patch_path).read_bytes()
+    assert b"tracked.txt" in patch
+    assert b"untracked.txt" in patch
 
 
 def test_pipeline_checkpoint_identity_is_deterministic_and_code_sensitive():
