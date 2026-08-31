@@ -98,14 +98,14 @@ export default function EvaluationPage() {
           <p className="editorial-kicker">Evaluation desk / read-only</p>
           <h1 className="page-title mt-5 max-w-4xl">哪条检索链路，值得继续作为默认路径？</h1>
           <p className="page-description mt-6">
-            这里展示同一套 KITE AI Papers snapshot 下的固定 Pipeline 对照。当前摘要是{runStatus}，只用于工程诊断，不是冻结正式结果，候选也不代表已获 promotion 批准。
+            这里展示同一套 KITE AI Papers snapshot 下的固定 Pipeline 对照。当前摘要是{runStatus}，已冻结用于工程决策；候选仍不代表已获 promotion 批准。
           </p>
         </div>
         <aside className="border-t-2 border-[var(--ink-blue)] pt-4">
           <p className="editorial-kicker">Decision</p>
           <p className="mt-4 font-serif text-3xl leading-tight">默认路径：{defaultPipelineLabel}</p>
           <p className="mt-3 text-sm leading-7 text-[var(--muted-ink)]">
-            {defaultName}。当前状态：{runStatus}。诊断候选：{promotionCandidates.map(pipelineLabel).join("、") || "暂无数据"}，未获生产批准。评测页只读，不提供参数编辑、索引操作或 Pipeline 切换。
+            {defaultName}。当前状态：{runStatus}。候选：{promotionCandidates.map(pipelineLabel).join("、") || "暂无"}，未获生产批准。评测页只读，不提供参数编辑、索引操作或 Pipeline 切换。
           </p>
         </aside>
       </header>

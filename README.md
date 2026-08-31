@@ -40,18 +40,18 @@
 - `citation_precision` 从 `0.2833` 提升到 `0.4333`，说明重排后证据命中质量更稳定。
 - 当前离线基线里 `hierarchical` 仍弱于 `flat_rerank`，因此它在这个仓库中不是“已经最优”，而是下一轮重点优化对象。
 
-### M6 KITE AI Papers 非正式诊断
+### M6 KITE AI Papers 正式结果
 
-当前仅完成 M6A 数据与可复现准备。以下 B0 至 B3 结果来自固定 KITE snapshot（15 个问题、134 个 PDF）的本机诊断运行，复用了产品 fixed answer path；四份报告均为 `formal_run=false`，且工作区 patch 不一致，因此分数不是正式冻结基线、生产决策或已交付 M6 的证明，也不与 KITE README 的官方绝对分数直接比较：
+以下结果来自固定 KITE snapshot（15 个问题、134 个 PDF），四条 Pipeline 均在 clean commit `787d75580e3950f15981c2b138dc9942dff75014` 上完成正式运行（`formal_run=true`），复用了产品 fixed answer path。分数是本项目固定 judge 协议的结果，不与 KITE README 的官方绝对分数直接比较：
 
 | Pipeline | 平均分 | 有效题数 | p95 latency | 平均 context tokens |
 |---|---:|---:|---:|---:|
-| B0 | 3.8667 | 15/15 | 402.2 s | 16474.3 |
-| B1（当前默认） | 6.1333 | 15/15 | 166.2 s | 16599.6 |
-| B2 | 6.8667 | 15/15 | 170.0 s | 16935.5 |
-| B3 | 6.5333 | 15/15 | 177.8 s | 17810.4 |
+| B0 | 4.2667 | 15/15 | 173.3 s | 14450.6 |
+| B1（当前默认） | 6.0000 | 15/15 | 207.9 s | 15810.1 |
+| B2 | 6.4000 | 15/15 | 187.1 s | 18256.0 |
+| B3 | 6.3333 | 15/15 | 176.6 s | 17182.7 |
 
-B2 仅作为非正式诊断候选保留，B3 因逐题 3 个 loss 且分数提升不足 0.5 未通过诊断门槛；M6B 至 M6D 尚未通过正式验收。生产默认仍为 `v1_flat_rerank`，不会由评测自动切换。逐题报告、失败案例和证据审计见 [KITE Benchmark 诊断报告](docs/kite_benchmark_report.md)、[生产 Pipeline 诊断记录](docs/production_pipeline_decision.md) 与 Web 的 [只读评测页](/evaluation)。
+B2 相对 B1 提升 `0.4` 分但有 3 个逐题 loss，B3 提升 `0.3333` 分且有 4 个 loss，均未达到 promotion gate；因此没有 promotion candidate。生产默认继续为 `v1_flat_rerank`，不会由评测自动切换。逐题报告、失败案例和证据审计见 [KITE Benchmark 正式报告](docs/kite_benchmark_report.md)、[生产 Pipeline 决策记录](docs/production_pipeline_decision.md) 与 Web 的 [只读评测页](/evaluation)。M6B、M6C、M6D 已完成，M7 已获单独授权但尚未实施。
 
 ## 项目结构
 

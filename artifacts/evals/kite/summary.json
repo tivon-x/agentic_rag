@@ -1,0 +1,141 @@
+{
+  "benchmark_name": "kite-ai-papers",
+  "corpus_file_count": 134,
+  "corpus_file_sha256": "f33a3154a0a65d76dbfd10e599a7c5d640ac025ebadb76d80e2a5536c57240c8",
+  "generation_model": "qwen3.7-plus",
+  "judge_model": "qwen3.7-plus",
+  "judge_prompt_version": "kite-official-compatible-v1",
+  "pairwise_vs_b1": {
+    "b0": {
+      "candidate_losses": 7,
+      "candidate_wins": 2,
+      "loss_case_ids": [
+        "ai-papers-003",
+        "ai-papers-005",
+        "ai-papers-006",
+        "ai-papers-008",
+        "ai-papers-009",
+        "ai-papers-014",
+        "ai-papers-015"
+      ],
+      "tie_case_ids": [
+        "ai-papers-001",
+        "ai-papers-004",
+        "ai-papers-007",
+        "ai-papers-010",
+        "ai-papers-011",
+        "ai-papers-012"
+      ],
+      "ties": 6,
+      "win_case_ids": [
+        "ai-papers-002",
+        "ai-papers-013"
+      ]
+    },
+    "b2": {
+      "candidate_losses": 3,
+      "candidate_wins": 5,
+      "loss_case_ids": [
+        "ai-papers-003",
+        "ai-papers-006",
+        "ai-papers-010"
+      ],
+      "tie_case_ids": [
+        "ai-papers-001",
+        "ai-papers-004",
+        "ai-papers-005",
+        "ai-papers-007",
+        "ai-papers-012",
+        "ai-papers-014",
+        "ai-papers-015"
+      ],
+      "ties": 7,
+      "win_case_ids": [
+        "ai-papers-002",
+        "ai-papers-008",
+        "ai-papers-009",
+        "ai-papers-011",
+        "ai-papers-013"
+      ]
+    },
+    "b3": {
+      "candidate_losses": 4,
+      "candidate_wins": 5,
+      "loss_case_ids": [
+        "ai-papers-003",
+        "ai-papers-006",
+        "ai-papers-010",
+        "ai-papers-015"
+      ],
+      "tie_case_ids": [
+        "ai-papers-001",
+        "ai-papers-004",
+        "ai-papers-007",
+        "ai-papers-008",
+        "ai-papers-012",
+        "ai-papers-014"
+      ],
+      "ties": 6,
+      "win_case_ids": [
+        "ai-papers-002",
+        "ai-papers-005",
+        "ai-papers-009",
+        "ai-papers-011",
+        "ai-papers-013"
+      ]
+    }
+  },
+  "pipelines": {
+    "b0": {
+      "case_count": 15,
+      "mean_context_tokens": 14450.6,
+      "mean_score": 4.2667,
+      "p95_latency_ms": 173270.2967,
+      "report": "b0/report.json",
+      "valid_count": 15
+    },
+    "b1": {
+      "case_count": 15,
+      "mean_context_tokens": 15810.1333,
+      "mean_score": 6,
+      "p95_latency_ms": 207923.746,
+      "report": "b1/report.json",
+      "valid_count": 15
+    },
+    "b2": {
+      "case_count": 15,
+      "mean_context_tokens": 18256.0,
+      "mean_score": 6.4,
+      "p95_latency_ms": 187091.5157,
+      "report": "b2/report.json",
+      "valid_count": 15
+    },
+    "b3": {
+      "case_count": 15,
+      "mean_context_tokens": 17182.7333,
+      "mean_score": 6.3333,
+      "p95_latency_ms": 176588.074,
+      "report": "b3/report.json",
+      "valid_count": 15
+    }
+  },
+  "production_decision": {
+    "auto_switch": false,
+    "default_name": "v1_flat_rerank",
+    "default_pipeline": "b1",
+    "rationale": "KITE is evidence for a decision; it does not mutate the product default."
+  },
+  "promotion_candidates": [],
+  "promotion_gate": {
+    "evidence_contract_checked": true,
+    "max_context_multiplier": 1.5,
+    "max_p95_multiplier": 1.5,
+    "maximum_losses": 2,
+    "minimum_score_delta": 0.5,
+    "minimum_wins": 4
+  },
+  "query_sha256": "6f242828e2e96b34e152af16afabf981f938eec5f3d11522c205ef635cae57d3",
+  "schema_version": 1,
+  "upstream_commit": "85e71ad63db9ea410eccbb0158f94e7d72462b99",
+  "upstream_repository": "https://github.com/D-Star-AI/KITE"
+}

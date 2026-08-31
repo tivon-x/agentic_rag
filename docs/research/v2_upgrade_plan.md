@@ -1,8 +1,8 @@
 ---
 project_status_schema: 1
 status_updated: "2026-08-31"
-completed_through: M6B
-next_planned_goal: M6C
+completed_through: M6D
+next_planned_goal: M7
 implementation_authorized: true
 production_pipeline: v1_flat_rerank
 production_pipeline_config_hash: ee7c1306250ba487ee2ca54de776fc70cb584c3bb02d4aca38cf7028e4956c17
@@ -23,6 +23,8 @@ acceptance_evidence:
   - docs/implementation/m5_1_web_ui_fix_acceptance.md
   - docs/implementation/m6a_kite_data_acceptance.md
   - docs/implementation/m6b_kite_b1_acceptance.md
+  - docs/implementation/m6c_kite_pipeline_acceptance.md
+  - docs/implementation/m6d_evaluation_presentation_acceptance.md
 ---
 
 # Agentic RAG V2 升级方案
@@ -43,8 +45,8 @@ acceptance_evidence:
 | M4.1 / M4.1.1 / M4.1.2 | 已完成，未通过 | Adaptive 两次复验均未证明净收益，`ANSWER_STRATEGY=fixed` 保持默认。 |
 | M4.2 | 终止 | 不为未通过的 Adaptive 增加持久 run、checkpoint、worker 或产品入口。 |
 | M5 / M5.1 | 已完成 | 证据优先的 Next.js 产品、结构化 Chat evidence、会话回看和 UI 修复已交付。 |
-| M6 | M6A、M6B 已完成；M6C 被外部 embedding 权限阻塞；M6D 未开始 | B1 已在 clean commit 上完成 15 题正式基线；B0 正式尝试完成，B2/B3 在建索引时收到 `403 AccessDenied.Unpurchased`，因此尚未形成四 Pipeline 冻结比较。 |
-| M7 | 被 M6C/M6D 阻塞 | 当前授权用于恢复并完成 M6C；M6D 和 M7 均未开始，不把未完成的评测或展示写成已交付。 |
+| M6 | M6A 至 M6D 已完成 | B0 至 B3 在同一冻结 snapshot 和 clean evaluation commit 上完成 15 题正式比较；B2/B3 未满足 promotion gate，生产默认继续 `v1_flat_rerank`，README 与 `/evaluation` 已同步冻结结果。 |
+| M7 | 待开始（已获授权） | 可开始编写项目设计与面试指南；本轮不实施 M7。 |
 | M8 | 待单独规划和授权 | 部署到明确的平台，不默认分发 KITE PDF 或完整语料。 |
 
 开始任何新 Goal 时必须重新记录分支、HEAD、工作区和依赖状态；活动分支与提交快照不写入本计划。
@@ -775,6 +777,8 @@ git diff --check
 ## 9. M7 项目设计与面试指南
 
 M7 在 M6D 完成后单独授权。它只编写文档，不新增运行代码。
+
+当前状态：已获单独授权、可以开始；本轮只开放 M7，不实施其文档工作。
 
 指南以当前代码、M1 至 M6 验收报告和冻结 artifacts 为事实来源，覆盖：
 

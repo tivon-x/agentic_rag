@@ -502,6 +502,9 @@ def test_kite_report_validation_recomputes_and_checks_comparability() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     kite_runner._validate_reports(reports, repo_root)
 
+    json_roundtripped = json.loads(json.dumps(reports))
+    kite_runner._validate_reports(json_roundtripped, repo_root)
+
     reports["b2"]["metrics"]["mean_score"] = 9  # type: ignore[index]
     with pytest.raises(KiteDataError, match="metrics"):
         kite_runner._validate_reports(reports, repo_root)

@@ -793,7 +793,10 @@ def _validate_reports(
         }
         if (
             report.get("benchmark") != expected_benchmark
-            or report.get("pipeline", {}).get("config") != asdict(pipeline)
+            or json.loads(
+                json.dumps(report.get("pipeline", {}).get("config"))
+            )
+            != json.loads(json.dumps(asdict(pipeline)))
             or report.get("pipeline", {}).get("config_hash") != pipeline.config_hash()
             or report.get("generation")
             != {

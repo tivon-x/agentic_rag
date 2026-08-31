@@ -82,7 +82,7 @@ assert.match(inputSource, /text-base/u);
 assert.match(typesSource, /KITE_PIPELINE_KEYS = \["b0", "b1", "b2", "b3"\]/u);
 assert.match(typesSource, /pipelines: Record<KitePipelineKey, KitePipelineSummary>/u);
 assert.match(typesSource, /pairwise_vs_b1: Record<KitePairwiseKey, KitePairwiseSummary>/u);
-assert.match(evaluationDataSource, /formal_run: false/u);
+assert.match(evaluationDataSource, /formal_run: true/u);
 assert.match(evaluationSource, /decision\?\.default_pipeline/u);
 assert.match(evaluationSource, /formal_run=false/u);
 assert.match(evaluationSource, /未获生产批准/u);

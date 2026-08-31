@@ -14,9 +14,11 @@
 
 Smoke 固定使用 `ai-papers-001/005/010/015`，4/4 有效，平均分 `7.75`。
 
-B1 全量 15/15 有效，KITE-protocol 平均分 `5.7333`，p50 `134311.8399 ms`，p95 `179770.5466 ms`，平均 context `16863.2667` tokens，平均 evidence `3.7333`，judge retry 0。
+B1 全量 15/15 有效，KITE-protocol 平均分 `6`，p50 `134755.3933 ms`，p95 `207923.746 ms`，平均 context `15810.1333` tokens，平均 evidence `3.8`，judge retry 0。
 
-报告：`artifacts/evals/kite/b1/report.json`，SHA-256 `becdd4acbf0b816a29d5ba7b639ebd464db1adedf71c751411f9901837276608`。
+报告：`artifacts/evals/kite/b1/report.json`，SHA-256 `01a1e50b47b0619097df4b89d9a0d564cb7ac42ec335c11822ac801cc72091cd`。
+
+本轮正式报告统一绑定 parser artifact SHA-256 `c6477f7f2044140739d1786ab06aa72295ef47e7fb991ce51c4c10fec0c4c7bc` 和 KITE manifest SHA-256 `716539e41b03e94b6a98546e20ff7283a7ee4a421ae1d57a515df2b4c40ca415`。
 
 Smoke 报告归档于 `artifacts/evals/kite/nonformal/b1_smoke_report.json`，SHA-256 `4522e62d9f49910e73da01c39ec4ea065e6ee9559ed44deaa5644a17a0fbbdc4`。
 
@@ -35,7 +37,7 @@ uv run python -m evals.kite_runner run --config evals/configs/kite_b1_smoke.yaml
 4/4 valid
 
 uv run python -m evals.kite_runner run --config evals/configs/kite_b1.yaml
-15/15 valid, mean_score=5.7333
+15/15 valid, mean_score=6
 ```
 
 报告明确标记 `formal_run=true`、`dirty=false`，并绑定 manifest、parser artifact、index manifest、配置和 clean commit。证据输出不包含 `retrieval_text`，没有向产品默认值写入任何变更。真实 embedding、generation 和 judge 调用均成功，judge 错误和重试为 0。

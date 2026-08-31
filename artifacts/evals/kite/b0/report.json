@@ -9,20 +9,20 @@
   },
   "cases": [
     {
-      "answer": "The authors chose a matrixed, leveled ontology for the Levels of AGI framework to facilitate nuanced discussions regarding the breadth (generality) and depth (performance) of AI capabilities. This design was directly influenced by two of their six proposed principles: Principle 2 (Generality and Performance) and Principle 6 (Focus on the Path to AGI). The resulting framework classifies progress by considering generality (Narrow or General) in tandem with five specific levels of performance: Emerging, Competent, Expert, Virtuoso, and Superhuman.",
+      "answer": "The authors chose a matrixed, leveled ontology to facilitate nuanced discussions of both the breadth (generality) and depth (performance) of AI capabilities. This design was directly influenced by two of their six principles for defining AGI: Principle 2 (Generality and Performance) and Principle 6 (Focus on the Path to AGI). The framework classifies systems by combining generality (Narrow or General) with five specific levels of performance (Emerging, Competent, Expert, Virtuoso, and Superhuman), while also treating autonomy as a separate dimension that is unlocked but not determined by AGI progression.",
       "case_id": "ai-papers-001",
       "context": {
-        "message_count": 44,
+        "message_count": 45,
         "packed_context_count": 23,
         "passage_count": 184,
-        "total_tokens": 20640
+        "total_tokens": 18492
       },
-      "context_tokens": 20640,
+      "context_tokens": 18492,
       "error": null,
       "evidence": [
         {
           "doc_id": "uncategorized/LevelsOfAGI.pdf",
-          "node_id": "be220d5c58b15964fcfe5a77549f713df51d767b0deefaa785504cdbd6c2f063",
+          "node_id": "7431396f61371469eb0a1b25e7dd3876627628004c1fcd302c72e322f00b1658",
           "page": 8,
           "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
           "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
@@ -31,17 +31,32 @@
           "score": null,
           "section_path": [
             "4 Focus on Potential, not Deployment. Demonstrating that a system can perform a requisite",
-            "Testing for AGI"
+            "Levels of AGI"
           ],
           "source": "uncategorized/LevelsOfAGI.pdf"
         },
         {
           "doc_id": "uncategorized/LevelsOfAGI.pdf",
-          "node_id": "6213301c8880cbf4d7a43bd1bf375dd3eb41f2a743e5cf1a2b9bd5b3e1398fd0",
+          "node_id": "57402222869aac4def09f050d28c80ba5e1132798eae1a02208aa58e24450c2b",
           "page": 13,
           "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
           "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
           "quote": "With these principles in mind, we introduced our Levels of AGI ontology, which offers a more\nnuanced way to define our progress toward AGI by considering generality (either Narrow or General)\nin tandem with five levels of performance (Emerging, Competent, Expert, Virtuoso, and Superhuman).\nWe reflected on how current AI systems and AGI definitions fit into this framing. Further, we discussed\nthe implications of our principles for developing a living, ecologically valid AGI benchmark, and argue\nthat such an endeavor (while sure to be challenging) is a vital one for our community to engage with.",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "5 Narrow AI (“Superhuman Narrow AI”) under our taxonomy [6], the same considerations regarding",
+            "Conclusion"
+          ],
+          "source": "uncategorized/LevelsOfAGI.pdf"
+        },
+        {
+          "doc_id": "uncategorized/LevelsOfAGI.pdf",
+          "node_id": "961d70e96dd3be0f936161b1ffbafe4ef3949ad343a1d88230984a15e5101bb9",
+          "page": 13,
+          "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
+          "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
+          "quote": "Finally, we considered how our principles and ontology can reshape discussions around the risks\nassociated with AGI. Notably, we observed that AGI is not necessarily synonymous with autonomy.\nWe introduced Levels of Autonomy that are unlocked, but not determined by, progression through\nthe Levels of AGI. We illustrated how considering AGI Level jointly with Autonomy Level can provide\nmore nuanced insights into likely risks associated with AI systems, underscoring the importance of\ninvesting in human-AI interaction research in tandem with model improvements.",
           "relevance": null,
           "score": null,
           "section_path": [
@@ -58,7 +73,7 @@
       "judge_prompt_version": "kite-official-compatible-v1",
       "judge_score": 10,
       "kite_score": 10,
-      "latency_ms": 136988.9922,
+      "latency_ms": 138294.4384,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -70,20 +85,20 @@
       "source_index": 0
     },
     {
-      "answer": "The provided evidence does not explicitly state which specific level of AGI has been achieved by current systems. It describes the framework for classification, which includes five levels of performance (Emerging, Competent, Expert, Virtuoso, and Superhuman) and two types of generality (Narrow or General). The text notes that example systems in the classification table are \"approximations based on current descriptions\" and that the authors \"reflected on how current AI systems... fit into this framing,\" but it does not provide the specific conclusion of that reflection regarding the highest achieved level.",
+      "answer": "The \"Levels of AGI\" paper does not explicitly state a single definitive level of AGI that has been fully achieved by current systems. Instead, it proposes a framework for classification based on **generality** (Narrow vs. General) and five levels of **performance** (Emerging, Competent, Expert, Virtuoso, and Superhuman). The paper notes that example systems in its classification table are \"approximations based on current descriptions in the literature or experiences interacting with deployed systems,\" implying that current AI systems can be mapped to various cells within this matrix (e.g., Narrow AI at different performance levels), but unambiguous classification requires standardized benchmarks which are not yet fully established.",
       "case_id": "ai-papers-002",
       "context": {
-        "message_count": 46,
-        "packed_context_count": 23,
-        "passage_count": 184,
-        "total_tokens": 20792
+        "message_count": 37,
+        "packed_context_count": 19,
+        "passage_count": 152,
+        "total_tokens": 14003
       },
-      "context_tokens": 20792,
+      "context_tokens": 14003,
       "error": null,
       "evidence": [
         {
           "doc_id": "uncategorized/LevelsOfAGI.pdf",
-          "node_id": "6213301c8880cbf4d7a43bd1bf375dd3eb41f2a743e5cf1a2b9bd5b3e1398fd0",
+          "node_id": "57402222869aac4def09f050d28c80ba5e1132798eae1a02208aa58e24450c2b",
           "page": 13,
           "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
           "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
@@ -98,7 +113,7 @@
         },
         {
           "doc_id": "uncategorized/LevelsOfAGI.pdf",
-          "node_id": "f56fccda7519ae2c10154ebaf0fd510644c30767ea51202cd433ced05ed2bb84",
+          "node_id": "52cc9723950e07bcbdb3581079733898069da0297b521fddfd0af009cf959f02",
           "page": 6,
           "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
           "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
@@ -117,9 +132,9 @@
       "judge_error": null,
       "judge_model": "qwen3.7-plus",
       "judge_prompt_version": "kite-official-compatible-v1",
-      "judge_score": 0,
-      "kite_score": 0,
-      "latency_ms": 112389.7079,
+      "judge_score": 1,
+      "kite_score": 1,
+      "latency_ms": 133536.0988,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -131,20 +146,20 @@
       "source_index": 1
     },
     {
-      "answer": "The provided evidence explicitly identifies one of the six principles used to create the Levels of AGI framework: \"Focus on the Path to AGI, not a Single Endpoint.\" The evidence indicates that there are six principles in total which guided the creation of the ontology, but the specific titles or descriptions of the other five principles (such as those potentially related to capabilities, performance, generality, or potential) are not fully quoted or listed in the available text snippets.",
+      "answer": "The authors explicitly list one principle in the provided evidence: \"Focus on the Path to AGI, not a Single Endpoint.\" They also state that the Levels of AGI ontology was introduced \"With these principles in mind,\" implying a set of guiding principles informed the framework. The framework itself is built on considering generality (Narrow or General) in tandem with five levels of performance (Emerging, Competent, Expert, Virtuoso, and Superhuman), and it introduces separate Levels of Autonomy that are unlocked by, but not determined by, AGI capability progression. Another key distinction highlighted is that AGI is not necessarily synonymous with autonomy. However, the full list of specific principles used to create the levels is not fully enumerated in the provided excerpts.",
       "case_id": "ai-papers-003",
       "context": {
-        "message_count": 31,
-        "packed_context_count": 13,
-        "passage_count": 104,
-        "total_tokens": 13221
+        "message_count": 40,
+        "packed_context_count": 20,
+        "passage_count": 160,
+        "total_tokens": 20340
       },
-      "context_tokens": 13221,
+      "context_tokens": 20340,
       "error": null,
       "evidence": [
         {
           "doc_id": "uncategorized/LevelsOfAGI.pdf",
-          "node_id": "c1ccd5d41380c8c27b8a89f69c9bc1043718cc7e841a7bcf8f62f46103f1befe",
+          "node_id": "c5c24ef3bb38fe57b4e957fb7afdcd46ca4fa988cda35d04af0e2d72fa1ef423",
           "page": 5,
           "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
           "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
@@ -158,11 +173,26 @@
         },
         {
           "doc_id": "uncategorized/LevelsOfAGI.pdf",
-          "node_id": "6213301c8880cbf4d7a43bd1bf375dd3eb41f2a743e5cf1a2b9bd5b3e1398fd0",
+          "node_id": "57402222869aac4def09f050d28c80ba5e1132798eae1a02208aa58e24450c2b",
           "page": 13,
           "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
           "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
           "quote": "With these principles in mind, we introduced our Levels of AGI ontology, which offers a more\nnuanced way to define our progress toward AGI by considering generality (either Narrow or General)\nin tandem with five levels of performance (Emerging, Competent, Expert, Virtuoso, and Superhuman).\nWe reflected on how current AI systems and AGI definitions fit into this framing. Further, we discussed\nthe implications of our principles for developing a living, ecologically valid AGI benchmark, and argue\nthat such an endeavor (while sure to be challenging) is a vital one for our community to engage with.",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "5 Narrow AI (“Superhuman Narrow AI”) under our taxonomy [6], the same considerations regarding",
+            "Conclusion"
+          ],
+          "source": "uncategorized/LevelsOfAGI.pdf"
+        },
+        {
+          "doc_id": "uncategorized/LevelsOfAGI.pdf",
+          "node_id": "961d70e96dd3be0f936161b1ffbafe4ef3949ad343a1d88230984a15e5101bb9",
+          "page": 13,
+          "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
+          "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
+          "quote": "Finally, we considered how our principles and ontology can reshape discussions around the risks\nassociated with AGI. Notably, we observed that AGI is not necessarily synonymous with autonomy.\nWe introduced Levels of Autonomy that are unlocked, but not determined by, progression through\nthe Levels of AGI. We illustrated how considering AGI Level jointly with Autonomy Level can provide\nmore nuanced insights into likely risks associated with AI systems, underscoring the importance of\ninvesting in human-AI interaction research in tandem with model improvements.",
           "relevance": null,
           "score": null,
           "section_path": [
@@ -179,7 +209,7 @@
       "judge_prompt_version": "kite-official-compatible-v1",
       "judge_score": 1,
       "kite_score": 1,
-      "latency_ms": 101696.3297,
+      "latency_ms": 133039.8169,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -191,20 +221,20 @@
       "source_index": 2
     },
     {
-      "answer": "According to the \"Levels of AGI\" paper, autonomy is not synonymous with AGI but is a distinct dimension that is correlated with AGI capability progression. The framework introduces specific \"Levels of Autonomy\" that are \"unlocked\" by higher levels of AGI performance and generality, meaning that as an AI system becomes more capable (progressing through Levels of AGI), it gains the potential for higher degrees of autonomy. However, the level of autonomy deployed is not determined solely by AGI capability; lower levels of autonomy may be intentionally chosen for safety or contextual reasons even when higher AGI levels are reached. Thus, autonomy factors into the definition as a separate, unlockable interaction paradigm rather than a defining characteristic of AGI itself.",
+      "answer": "According to the \"Levels of AGI\" paper, autonomy is not synonymous with AGI and is not a determining factor in the definition of AGI itself. Instead, the framework introduces separate \"Levels of Autonomy\" that are correlated with, but distinct from, Levels of AGI. Higher levels of autonomy are \"unlocked\" by AGI capability progression, meaning that as AGI capabilities increase, higher autonomy becomes possible. However, the level of autonomy deployed is a choice based on context, safety, and human-AI interaction considerations, rather than being automatically determined by the AGI level. The framework classifies AGI based on performance, generality, and autonomy as separate dimensions to provide a nuanced understanding of progress and risk.",
       "case_id": "ai-papers-004",
       "context": {
-        "message_count": 43,
-        "packed_context_count": 20,
-        "passage_count": 160,
-        "total_tokens": 15120
+        "message_count": 53,
+        "packed_context_count": 27,
+        "passage_count": 216,
+        "total_tokens": 20142
       },
-      "context_tokens": 15120,
+      "context_tokens": 20142,
       "error": null,
       "evidence": [
         {
           "doc_id": "uncategorized/LevelsOfAGI.pdf",
-          "node_id": "c1fe55dbfe82ec92de78e54474444fe0e0b1de2cb1a464fe9eda406ccabd5bb6",
+          "node_id": "961d70e96dd3be0f936161b1ffbafe4ef3949ad343a1d88230984a15e5101bb9",
           "page": 13,
           "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
           "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
@@ -219,7 +249,7 @@
         },
         {
           "doc_id": "uncategorized/LevelsOfAGI.pdf",
-          "node_id": "f770506057c227947acb112e5edb026481c3be1962ffc3e72286204bbc2d68e2",
+          "node_id": "72fc5104057bdcb793300bab6bda0b0671ccbc7a9ba0c402379efad21303338f",
           "page": 10,
           "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
           "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
@@ -228,7 +258,7 @@
           "score": null,
           "section_path": [
             "4 Focus on Potential, not Deployment. Demonstrating that a system can perform a requisite",
-            "Risk in Context: Autonomy and Human-AI Interaction"
+            "Levels of AGI"
           ],
           "source": "uncategorized/LevelsOfAGI.pdf"
         },
@@ -245,6 +275,20 @@
             "Levels of AGI: Operationalizing Progress on the Path to AGI"
           ],
           "source": "uncategorized/LevelsOfAGI.pdf"
+        },
+        {
+          "doc_id": "uncategorized/LevelsOfAGI.pdf",
+          "node_id": "e2e2a224e7ba1a73f03d91f83bf84649b8b4584607f266d9e1a4afe2a838915d",
+          "page": 12,
+          "paper_id": "c914615dc6d999040fdce9a4e28c6586973f4c210ff9bbb98aed620c2d8941fc",
+          "paper_title": "Levels of AGI: Operationalizing Progress on the Path to AGI",
+          "quote": "human vs. computer autonomy apply to AGIs. We may develop an AGI, but choose not to deploy it\nautonomously (or choose to deploy it with differentiated autonomy levels in distinct circumstances as\ndictated by contextual considerations).",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "5 Narrow AI (“Superhuman Narrow AI”) under our taxonomy [6], the same considerations regarding"
+          ],
+          "source": "uncategorized/LevelsOfAGI.pdf"
         }
       ],
       "input_tokens": null,
@@ -254,7 +298,7 @@
       "judge_prompt_version": "kite-official-compatible-v1",
       "judge_score": 10,
       "kite_score": 10,
-      "latency_ms": 105902.1378,
+      "latency_ms": 119144.348,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -266,20 +310,20 @@
       "source_index": 3
     },
     {
-      "answer": "At a high level, AlphaCodium operates through a structured flow consisting of two main phases:\n\n1.  **Pre-processing Phase**: This is a linear flow where AlphaCodium reasons about the problem using natural language.\n2.  **Code Iterations Phase**: This phase includes iterative stages where AlphaCodium generates, runs, and fixes solution code against specific tests.\n\nThe specific numbered list of all individual stages within these phases (e.g., Stage 1, Stage 2, etc.) is referenced in the document (Section 3.2, Figure 1(a)), but the provided evidence does not contain the detailed descriptions or names of each specific stage beyond the two main phases described above.",
+      "answer": "AlphaCodium operates through a structured flow that transitions from prompt engineering to flow engineering. At a high level, it consists of two main phases:\n\n1.  **Pre-processing Phase**: This is a linear flow where AlphaCodium reasons about the problem using natural language.\n2.  **Code Iterations Phase**: This phase includes iterative stages where AlphaCodium generates, runs, and fixes solution code against specific tests.\n\nThe specific detailed stages of the flow are reviewed in Section 3.2 (\"Flow stages\") of the proposed method, which references Figure 1(a) for the visual overview of the AlphaCodium flow.",
       "case_id": "ai-papers-005",
       "context": {
-        "message_count": 73,
-        "packed_context_count": 72,
-        "passage_count": 576,
-        "total_tokens": 11992
+        "message_count": 72,
+        "packed_context_count": 55,
+        "passage_count": 440,
+        "total_tokens": 10596
       },
-      "context_tokens": 11992,
+      "context_tokens": 10596,
       "error": null,
       "evidence": [
         {
           "doc_id": "uncategorized/AlphaCodium.pdf",
-          "node_id": "0bad40898b5458df7d3c167109b921e1f104776920b5af6985f12793672bbb1b",
+          "node_id": "c76cec07d4e96bd586a689313c18b9ecb4a95f795c47c5d3f7f0c95f515b300a",
           "page": 3,
           "paper_id": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
           "paper_title": "Code Generation with AlphaCodium: From Prompt Engineering to Flow Engineering",
@@ -294,7 +338,7 @@
         },
         {
           "doc_id": "uncategorized/AlphaCodium.pdf",
-          "node_id": "cf82c4a538e504f4a45aa7108a718bd70f86cf3d9c6a19d2c8b038d5cbb7b887",
+          "node_id": "f1ee3dbe795c51e188b2a605bc964723b7ae69a8f4c5ae5e94140fdef0f924c7",
           "page": 3,
           "paper_id": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
           "paper_title": "Code Generation with AlphaCodium: From Prompt Engineering to Flow Engineering",
@@ -309,7 +353,7 @@
         },
         {
           "doc_id": "uncategorized/AlphaCodium.pdf",
-          "node_id": "acbfe110520bd1a65eb387ccda8a8a82db698d2d66533f3a9918e412f89834da",
+          "node_id": "2deee6227560183e70f388c4471d0d7eda6ce7ebb6021f7d5bc25a64a383061e",
           "page": 3,
           "paper_id": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
           "paper_title": "Code Generation with AlphaCodium: From Prompt Engineering to Flow Engineering",
@@ -330,7 +374,7 @@
       "judge_prompt_version": "kite-official-compatible-v1",
       "judge_score": 2,
       "kite_score": 2,
-      "latency_ms": 226838.5921,
+      "latency_ms": 180313.936,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -342,15 +386,15 @@
       "source_index": 4
     },
     {
-      "answer": "The AlphaCodium paper uses the CodeContests dataset for evaluation. The dataset was chosen because real-world code problems are often nuanced and defined by long natural language task descriptions (specs) containing multiple details and rules, which differ from simple programming tasks that previous models could solve. CodeContests is curated from competitive programming sources, providing these complex, spec-heavy problems.",
+      "answer": "The AlphaCodium paper used the CodeContests dataset for evaluation. This dataset was chosen because real-world code problems are often more nuanced than simple programming tasks, typically defined by long natural language task descriptions (specs) containing multiple details and rules that the solution code must address, which CodeContests captures by curating problems from competitive programming.",
       "case_id": "ai-papers-006",
       "context": {
-        "message_count": 37,
-        "packed_context_count": 17,
-        "passage_count": 136,
-        "total_tokens": 16626
+        "message_count": 33,
+        "packed_context_count": 14,
+        "passage_count": 112,
+        "total_tokens": 13916
       },
-      "context_tokens": 16626,
+      "context_tokens": 13916,
       "error": null,
       "evidence": [
         {
@@ -373,9 +417,9 @@
       "judge_error": null,
       "judge_model": "qwen3.7-plus",
       "judge_prompt_version": "kite-official-compatible-v1",
-      "judge_score": 8,
-      "kite_score": 8,
-      "latency_ms": 147615.7796,
+      "judge_score": 6,
+      "kite_score": 6,
+      "latency_ms": 82385.1399,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -387,20 +431,20 @@
       "source_index": 5
     },
     {
-      "answer": "The \"soft decision with double validation\" concept in AlphaCodium is a design strategy used to address the tendency of Large Language Models (LLMs) to generate incorrect outputs when making strict, non-trivial decisions, such as generating additional tests for a coding problem. \n\nThis concept is incorporated into the system by adding an extra validation step. Specifically, when the model generates items that may be prone to error (like AI-generated tests), the system does not accept them immediately. Instead, it employs a \"double validation\" process where the generated content is subjected to an additional verification step to ensure correctness before being used in subsequent stages of the code generation flow. This approach helps mitigate the risk of propagating errors from flawed AI-generated components.",
+      "answer": "The \"soft decision with double validation\" concept in AlphaCodium addresses the tendency of Large Language Models (LLMs) to struggle with strict, non-trivial decisions in code tasks, such as generating additional tests which are often incorrect. To mitigate this, AlphaCodium incorporates an extra validation step where generated outputs (like tests) are subjected to a double validation process before being accepted or used in subsequent iterations. This is one of several novel code-oriented design concepts utilized by the AlphaCodium flow, alongside YAML structured output and bullet point analysis.",
       "case_id": "ai-papers-007",
       "context": {
-        "message_count": 29,
+        "message_count": 25,
         "packed_context_count": 11,
         "passage_count": 88,
-        "total_tokens": 6809
+        "total_tokens": 7348
       },
-      "context_tokens": 6809,
+      "context_tokens": 7348,
       "error": null,
       "evidence": [
         {
           "doc_id": "uncategorized/AlphaCodium.pdf",
-          "node_id": "97c4723e3157aff12be888a7ae3ea3ca11970f04e9f975bf6bab4e8ce06b8493",
+          "node_id": "9f5be6ab7faf065175f1d5479c776c75eed8efa691fb2bc70700d320b796d3bf",
           "page": 5,
           "paper_id": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
           "paper_title": "Code Generation with AlphaCodium: From Prompt Engineering to Flow Engineering",
@@ -414,7 +458,7 @@
         },
         {
           "doc_id": "uncategorized/AlphaCodium.pdf",
-          "node_id": "eee250ea8dfdc7f1932c47c786e337e16e9f11e25a9aa84858823aca28bb1d25",
+          "node_id": "679dfac1ae175f5006f4d6ef1f711df6de9524978a2c42f1687e080b5424a343",
           "page": 2,
           "paper_id": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
           "paper_title": "Code Generation with AlphaCodium: From Prompt Engineering to Flow Engineering",
@@ -432,9 +476,9 @@
       "judge_error": null,
       "judge_model": "qwen3.7-plus",
       "judge_prompt_version": "kite-official-compatible-v1",
-      "judge_score": 4,
-      "kite_score": 4,
-      "latency_ms": 86760.699,
+      "judge_score": 5,
+      "kite_score": 5,
+      "latency_ms": 107070.5374,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -446,20 +490,20 @@
       "source_index": 6
     },
     {
-      "answer": "The AlphaCodium paper argues that YAML is better suited for code generation tasks than JSON because generated code often contains single quotes, double quotes, and special characters. LLMs struggle to validly place these characters inside a JSON format, as JSON output requires surrounding strings with double quotes, which can lead to formatting errors when the content itself contains quotes.",
+      "answer": "The AlphaCodium paper argues that YAML is better suited for code generation tasks than JSON because generated code often contains single quotes, double quotes, and special characters. LLMs struggle to validly place these characters inside a JSON format, as JSON output requires surrounding the content with initial double quotes, which can lead to formatting errors or invalid outputs when such characters are present in the code.",
       "case_id": "ai-papers-008",
       "context": {
         "message_count": 17,
         "packed_context_count": 5,
         "passage_count": 40,
-        "total_tokens": 2511
+        "total_tokens": 2490
       },
-      "context_tokens": 2511,
+      "context_tokens": 2490,
       "error": null,
       "evidence": [
         {
           "doc_id": "uncategorized/AlphaCodium.pdf",
-          "node_id": "a6fc9783bc8a913cd7d7f938296893a22a5051972e42745151154c7f5abfe69d",
+          "node_id": "a926b053a4db2235bb580f54050be3371d82609187ae428b336ae5172a4467b9",
           "page": 9,
           "paper_id": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
           "paper_title": "Code Generation with AlphaCodium: From Prompt Engineering to Flow Engineering",
@@ -473,15 +517,15 @@
         },
         {
           "doc_id": "uncategorized/AlphaCodium.pdf",
-          "node_id": "eee250ea8dfdc7f1932c47c786e337e16e9f11e25a9aa84858823aca28bb1d25",
-          "page": 2,
+          "node_id": "42c9e5af4e4f0e745e7df6d66dad37ec5fe79fb74350e37e55aece78fe7e80f7",
+          "page": 9,
           "paper_id": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
           "paper_title": "Code Generation with AlphaCodium: From Prompt Engineering to Flow Engineering",
-          "quote": "AlphaCodium flow also utilizes novel code-oriented design concepts, tricks, and best practices, such as: (1) YAML\nstructured output; (2) bullet point analysis to encourage semantic reasoning; (3) generating modular code; (4) soft decisions with double validation; (5) encouraging exploration\nand postponing direct decisions; (6) test anchors.",
+          "quote": "**B. Why YAML output is better suited for code generation tasks than JSON output**",
           "relevance": null,
           "score": null,
           "section_path": [
-            "1 Introduction"
+            "Appendices"
           ],
           "source": "uncategorized/AlphaCodium.pdf"
         }
@@ -493,7 +537,7 @@
       "judge_prompt_version": "kite-official-compatible-v1",
       "judge_score": 3,
       "kite_score": 3,
-      "latency_ms": 81144.918,
+      "latency_ms": 69113.7502,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -505,24 +549,24 @@
       "source_index": 7
     },
     {
-      "answer": "The AlphaCodium paper reports that the proposed code-oriented flow achieves a 29% result metric (specific context not fully detailed in snippets, but presented in comparison tables). When compared to CodeChain using the same model (GPT-3.5) and metric (pass@5), AlphaCodium consistently performs better. The paper also notes comparisons to AlphaCode, highlighting that AlphaCode uses a different generation methodology involving fine-tuning an unknown model. The results are presented in tables comparing AlphaCodium flow results to direct prompts on various models and to other works from the literature.",
+      "answer": "The provided evidence indicates that the AlphaCodium paper presents results comparing its code generation flow against direct prompting and other methods from the literature, but it does not contain the specific numerical data or detailed performance metrics.\n\nKey findings supported by the evidence include:\n1. **Comparison to Direct Prompting:** Table 1 in the \"Results\" section compares AlphaCodium flow results to direct prompts on various models.\n2. **Comparison to Other Works:** Table 2 compares AlphaCodium to other methods. Specifically, when compared to CodeChain using the same model (GPT-3.5) and metric (pass@5), AlphaCodium \"consistently does better.\"\n3. **Comparison to AlphaCode:** The paper notes that comparing AlphaCodium to AlphaCode requires accounting for different methodologies, as AlphaCode uses fine-tuning on an unknown model.\n\nThe evidence confirms the existence of these comparisons and the general outcome that AlphaCodium outperforms CodeChain under specific conditions, but the actual tables containing the detailed numbers for models like GPT-4, Claude, Llama, etc., are not included in the provided text snippets.",
       "case_id": "ai-papers-009",
       "context": {
-        "message_count": 62,
-        "packed_context_count": 33,
-        "passage_count": 264,
-        "total_tokens": 17969
+        "message_count": 64,
+        "packed_context_count": 34,
+        "passage_count": 272,
+        "total_tokens": 18606
       },
-      "context_tokens": 17969,
+      "context_tokens": 18606,
       "error": null,
       "evidence": [
         {
           "doc_id": "uncategorized/AlphaCodium.pdf",
-          "node_id": "f0004c6081c830825bcb522dd9cde83b81ce2ecd492fb92562a17669133de591",
+          "node_id": "f184cfd00da2848d0a820d5e809feeea47b509d75f42bd4a57cf1b19f94b931c",
           "page": 7,
           "paper_id": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
           "paper_title": "Code Generation with AlphaCodium: From Prompt Engineering to Flow Engineering",
-          "quote": "AlphaCodium **29%**",
+          "quote": "Table 1: **Comparison of AlphaCodium flow results to di-**\n**rect prompt on various models.**",
           "relevance": null,
           "score": null,
           "section_path": [
@@ -533,7 +577,7 @@
         },
         {
           "doc_id": "uncategorized/AlphaCodium.pdf",
-          "node_id": "20958b3e701d822e144a70480e934c6fdaaf7dc7856feacf5a78aef97a6c5098",
+          "node_id": "e89f648c41adcf9f79035422349587a0f775f97c0596ec8082a6ea7ac40003da",
           "page": 7,
           "paper_id": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
           "paper_title": "Code Generation with AlphaCodium: From Prompt Engineering to Flow Engineering",
@@ -548,16 +592,16 @@
         },
         {
           "doc_id": "uncategorized/AlphaCodium.pdf",
-          "node_id": "321007618402249fe669728bb6e37d2864ed44b2e201b425a8eb1af395f48c9b",
+          "node_id": "514eee861dd192b885d1fbc685466ca2e2ff8665c1e73ab54104a67c5d2a1218",
           "page": 7,
           "paper_id": "b7e6422424c482e7002c19a6d7ba18220b7610a16047aeb46f1c235d836d96f0",
           "paper_title": "Code Generation with AlphaCodium: From Prompt Engineering to Flow Engineering",
-          "quote": "Table 1: **Comparison of AlphaCodium flow results to di-**\n**rect prompt on various models.**",
+          "quote": "Table 2: **Comparison** **of** **AlphaCodium** **to** **other** **works**\n**from the literature.**",
           "relevance": null,
           "score": null,
           "section_path": [
             "5 Results",
-            "5.1 Direct prompt vs. AlphaCodium flow"
+            "5.2 Comparison to previous works"
           ],
           "source": "uncategorized/AlphaCodium.pdf"
         }
@@ -567,9 +611,9 @@
       "judge_error": null,
       "judge_model": "qwen3.7-plus",
       "judge_prompt_version": "kite-official-compatible-v1",
-      "judge_score": 2,
-      "kite_score": 2,
-      "latency_ms": 136018.6575,
+      "judge_score": 0,
+      "kite_score": 0,
+      "latency_ms": 165418.5842,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -581,20 +625,49 @@
       "source_index": 8
     },
     {
-      "answer": "MINILMv2 introduces a layer selection strategy that involves distilling self-attention knowledge from an \"upper middle layer\" of the teacher model, which was found to achieve better performance, particularly for large-size teachers. This contrasts with the original MINILM, which employed \"deep self-attention distillation\" generally but did not specify this upper-middle-layer preference in the provided evidence. Additionally, MINILMv2 generalizes the distillation method by using multi-head self-attention relations (scaled dot-products of query, key, and value pairs), which eliminates the restriction in MINILM that required the student's number of attention heads to match the teacher's.",
+      "answer": "MINILMv2 employs a layer selection strategy that distills self-attention knowledge from an \"upper middle layer\" of the teacher model, which was found to achieve better performance, particularly for large-size teachers. In contrast, the original MINILM approach distilled knowledge from the teacher's \"last Transformer layer.\" Additionally, MINILMv2 generalizes the distillation method by using multi-head self-attention relations (scaled dot-products of query, key, and value pairs), which eliminates the restriction that the student must have the same number of attention heads as the teacher, offering more flexibility compared to the original MINILM.",
       "case_id": "ai-papers-010",
       "context": {
-        "message_count": 45,
-        "packed_context_count": 20,
-        "passage_count": 160,
-        "total_tokens": 16548
+        "message_count": 38,
+        "packed_context_count": 16,
+        "passage_count": 128,
+        "total_tokens": 16016
       },
-      "context_tokens": 16548,
+      "context_tokens": 16016,
       "error": null,
       "evidence": [
         {
           "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
-          "node_id": "e393b135c203b9163030edbfbafccde7570fe9141049326f5c401b4983e2f68a",
+          "node_id": "c2c3945c1eeafa1847fc3471a16825f7252d106778a358a02446b0cbacbab32a",
+          "page": 9,
+          "paper_id": "e4f84a5eaaf5c020bfbe1ea599e91e37b489ea6ac4ff4fde5b6bf6acb166f075",
+          "paper_title": "MINILMv2: Multi-Head Self-Attention Relation Distillation for Compressing Pretrained Transformers",
+          "quote": "We generalize deep self-attention distillation in\nMINILM by employing multi-head self-attention\nrelations to train the student. Our method introduces more fine-grained self-attention knowledge\nand eliminates the restriction of the number of student’s attention heads. Moreover, we show that\ntransferring the self-attention knowledge of an upper middle layer achieves better performance for\nlarge-size teachers. Our monolingual and multilingual models distilled from BERT, RoBERTa and\nXLM-R obtain competitive performance and outperform state-of-the-art methods. For future work,\nwe are exploring an automatic layer selection algorithm. We also would like to apply our method to\nlarger pretrained Transformers.",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "6 Conclusion"
+          ],
+          "source": "knowledge-retrieval/MiniLMv2.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/MiniLM.pdf",
+          "node_id": "890ef59b7bf171a58f5e0944b47f7936cad5be4f6a8d93518a08a38ef9028d3d",
+          "page": 7,
+          "paper_id": "f2c36bbb2be0ff92d7700a9f46b8998c35eeaf316326a6971acab7e4265c80b5",
+          "paper_title": "MiniLM: Deep Self-Attention Distillation for Task-Agnostic Compression of Pre-Trained Transformers",
+          "quote": "edge of the teacher’s last Transformer layer, we compare\nour method with layer-to-layer distillation. We transfer the\nsame knowledge and adopt a uniform strategy as in Jiao\net al. (2019) to map teacher and student layers to perform\nlayer-to-layer distillation. The dev results on three tasks are\npresented in Table 7. MINILM achieves better results. It\nalso alleviates the difficulties in layer mapping between the\nteacher and student. Besides, distilling the teacher’s last\nTransformer layer requires less computation than layer-tolayer distillation, results in faster training speed.",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "4 Experiments",
+            "4.4 Ablation Studies"
+          ],
+          "source": "knowledge-retrieval/MiniLM.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
+          "node_id": "ad2e502c16efeceb778b0ff5dd0b527478db1b379be3b52019861d6229aafab3",
           "page": 6,
           "paper_id": "e4f84a5eaaf5c020bfbe1ea599e91e37b489ea6ac4ff4fde5b6bf6acb166f075",
           "paper_title": "MINILMv2: Multi-Head Self-Attention Relation Distillation for Compressing Pretrained Transformers",
@@ -609,21 +682,7 @@
         },
         {
           "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
-          "node_id": "04b25fcb3d1b7c1b3a6793dbe4f0ea29f63f95c6647c9b3eacff6f513e7cc500",
-          "page": 9,
-          "paper_id": "e4f84a5eaaf5c020bfbe1ea599e91e37b489ea6ac4ff4fde5b6bf6acb166f075",
-          "paper_title": "MINILMv2: Multi-Head Self-Attention Relation Distillation for Compressing Pretrained Transformers",
-          "quote": "We generalize deep self-attention distillation in\nMINILM by employing multi-head self-attention\nrelations to train the student. Our method introduces more fine-grained self-attention knowledge\nand eliminates the restriction of the number of student’s attention heads. Moreover, we show that\ntransferring the self-attention knowledge of an upper middle layer achieves better performance for\nlarge-size teachers. Our monolingual and multilingual models distilled from BERT, RoBERTa and\nXLM-R obtain competitive performance and outperform state-of-the-art methods. For future work,\nwe are exploring an automatic layer selection algorithm. We also would like to apply our method to\nlarger pretrained Transformers.",
-          "relevance": null,
-          "score": null,
-          "section_path": [
-            "6 Conclusion"
-          ],
-          "source": "knowledge-retrieval/MiniLMv2.pdf"
-        },
-        {
-          "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
-          "node_id": "1ca55948e73539be8b963c81e668395aeb6687651c6f05300b8a8f3e1bea85b5",
+          "node_id": "c22d467309a411ac7d5d60f8ea88d37086fc94e4ed64c43af4377b12165ce5dc",
           "page": 4,
           "paper_id": "e4f84a5eaaf5c020bfbe1ea599e91e37b489ea6ac4ff4fde5b6bf6acb166f075",
           "paper_title": "MINILMv2: Multi-Head Self-Attention Relation Distillation for Compressing Pretrained Transformers",
@@ -634,21 +693,6 @@
             "3 Multi-Head Self-Attention Relation"
           ],
           "source": "knowledge-retrieval/MiniLMv2.pdf"
-        },
-        {
-          "doc_id": "knowledge-retrieval/MiniLM.pdf",
-          "node_id": "55f2b58a1428070ae7780c48aabc433952742d085ae3a8792bda1c413164815b",
-          "page": 8,
-          "paper_id": "f2c36bbb2be0ff92d7700a9f46b8998c35eeaf316326a6971acab7e4265c80b5",
-          "paper_title": "MiniLM: Deep Self-Attention Distillation for Task-Agnostic Compression of Pre-Trained Transformers",
-          "quote": "MINILM **69.4** **80.3** **90.2** **80.0**\n_M_ =4; _d_ _[′]_ _h_ [=][384]\n+Layer-to-Layer Distillation 67.6 79.9 89.6 79.0",
-          "relevance": null,
-          "score": null,
-          "section_path": [
-            "5 Discussion",
-            "5.2 MINILM for NLG Tasks"
-          ],
-          "source": "knowledge-retrieval/MiniLM.pdf"
         }
       ],
       "input_tokens": null,
@@ -656,9 +700,9 @@
       "judge_error": null,
       "judge_model": "qwen3.7-plus",
       "judge_prompt_version": "kite-official-compatible-v1",
-      "judge_score": 2,
-      "kite_score": 2,
-      "latency_ms": 125083.8532,
+      "judge_score": 5,
+      "kite_score": 5,
+      "latency_ms": 112932.0231,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -670,20 +714,34 @@
       "source_index": 9
     },
     {
-      "answer": "MINILMv2 introduces **Multi-Head Self-Attention Relation Distillation** to align teacher and student attention heads. Unlike previous methods that required strict alignment, this approach allows the number of relation heads to be flexible—it does not need to be a positive multiple of either the student's or teacher's attention head counts. A relation head can represent a fragment of a single attention head or contain fragments from multiple heads. This flexibility enables the student model to capture more fine-grained self-attention knowledge and deeply mimic the teacher's self-attention module, which is vital for capturing word dependencies in Transformers.",
+      "answer": "MiniLMv2 introduces **Multi-Head Self-Attention Relation Distillation** to align teacher and student attention heads. Unlike previous methods that may require strict alignment, this approach allows the number of relation heads to be flexible; it is not required to be a positive multiple of both the student's and teacher's attention head counts. A relation head can represent a fragment of a single attention head or contain fragments from multiple heads. This flexibility enables the student model to deeply mimic the teacher's self-attention module by capturing fine-grained self-attention knowledge through the use of more relation heads. The primary advantage over previous approaches (such as the original MiniLM) is this increased flexibility in handling different numbers of attention heads between the student and teacher, along with the ability to capture more detailed self-attention relationships.",
       "case_id": "ai-papers-011",
       "context": {
-        "message_count": 65,
-        "packed_context_count": 36,
-        "passage_count": 288,
-        "total_tokens": 14753
+        "message_count": 57,
+        "packed_context_count": 30,
+        "passage_count": 240,
+        "total_tokens": 11220
       },
-      "context_tokens": 14753,
+      "context_tokens": 11220,
       "error": null,
       "evidence": [
         {
           "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
-          "node_id": "cc70f0f35a405a13e0c7702f4ed8a3861a8b33e692252e7d302780ee908d0cfc",
+          "node_id": "e52304947cacf20d909a2a9c57bbed1be020bf22c427ae64d502ee1ed57c9a1e",
+          "page": 2,
+          "paper_id": "e4f84a5eaaf5c020bfbe1ea599e91e37b489ea6ac4ff4fde5b6bf6acb166f075",
+          "paper_title": "MINILMv2: Multi-Head Self-Attention Relation Distillation for Compressing Pretrained Transformers",
+          "quote": "- We generalize and simplify deep self-attention\ndistillation in MINILM by introducing multihead self-attention relation distillation, which\nbrings more fine-grained self-attention knowledge and allows more flexibility for the number of student’s attention heads.",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "1 Introduction"
+          ],
+          "source": "knowledge-retrieval/MiniLMv2.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
+          "node_id": "0fa69ed421e1799be0d3a98c8b262a0134a4b215dffc846bb62cdd7faa960aca",
           "page": 8,
           "paper_id": "e4f84a5eaaf5c020bfbe1ea599e91e37b489ea6ac4ff4fde5b6bf6acb166f075",
           "paper_title": "MINILMv2: Multi-Head Self-Attention Relation Distillation for Compressing Pretrained Transformers",
@@ -698,7 +756,7 @@
         },
         {
           "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
-          "node_id": "aa64f4378f8b5c39dbe95d245f31fa5ef623ca51fd429820d89c6d9ef8523f47",
+          "node_id": "690d7acf076e874d9eea576919a6f481ed655e1d8d8a753600d1b65ec52ea1f4",
           "page": 3,
           "paper_id": "e4f84a5eaaf5c020bfbe1ea599e91e37b489ea6ac4ff4fde5b6bf6acb166f075",
           "paper_title": "MINILMv2: Multi-Head Self-Attention Relation Distillation for Compressing Pretrained Transformers",
@@ -707,20 +765,6 @@
           "score": null,
           "section_path": [
             "3 Multi-Head Self-Attention Relation"
-          ],
-          "source": "knowledge-retrieval/MiniLMv2.pdf"
-        },
-        {
-          "doc_id": "knowledge-retrieval/MiniLMv2.pdf",
-          "node_id": "319976887598ad19a09e12b69a12407b122b9c46b5f4479d142141a45d47290c",
-          "page": 2,
-          "paper_id": "e4f84a5eaaf5c020bfbe1ea599e91e37b489ea6ac4ff4fde5b6bf6acb166f075",
-          "paper_title": "MINILMv2: Multi-Head Self-Attention Relation Distillation for Compressing Pretrained Transformers",
-          "quote": "- We generalize and simplify deep self-attention\ndistillation in MINILM by introducing multihead self-attention relation distillation, which\nbrings more fine-grained self-attention knowledge and allows more flexibility for the number of student’s attention heads.",
-          "relevance": null,
-          "score": null,
-          "section_path": [
-            "1 Introduction"
           ],
           "source": "knowledge-retrieval/MiniLMv2.pdf"
         }
@@ -732,7 +776,7 @@
       "judge_prompt_version": "kite-official-compatible-v1",
       "judge_score": 6,
       "kite_score": 6,
-      "latency_ms": 163904.9491,
+      "latency_ms": 151343.4864,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -744,20 +788,198 @@
       "source_index": 10
     },
     {
-      "answer": "The key advantages of the InPars method compared to directly using large language models (LLMs) for retrieval are:\n\n1. **Efficiency and Cost-Effectiveness**: InPars allows harnessing the information learned by large models in a \"more efficient and effective way\" by generating synthetic training data rather than relying on expensive, direct LLM inference for every retrieval task. Direct use of LLMs is noted as \"not cost effective.\"\n\n2. **Distillation into Smaller Rankers**: InPars uses few-shot prompting to distill the capabilities of large LLMs into smaller, more efficient rankers. This avoids the high computational cost of running large proprietary or instruction-finetuned LLMs during inference.\n\n3. **Controlled Training Procedure**: By generating synthetic data, researchers can train models whose procedures are controlled by the scientific community, addressing concerns about using proprietary LLMs with opaque training procedures.\n\n4. **Synthetic Data Generation**: InPars generates queries from documents in the corpus using LLMs in an unsupervised manner, creating synthetic in-domain training data that improves retrieval performance without requiring manual annotation.",
+      "answer": "The key advantages of the InPars method compared to directly using large language models (LLMs) for retrieval are:\n\n1. **Cost-Effectiveness**: InPars generates synthetic training data that allows for the training of smaller, more efficient retrievers and rankers, which is substantially more cost-effective than relying on proprietary LLMs for direct inference or query generation.\n2. **Performance Efficiency**: Models fine-tuned using InPars-generated data (e.g., monoT5 with 3B parameters) outperform larger proprietary LLMs available in APIs (such as Curie and Davinci) and other unsupervised models like Contriever.\n3. **Controlled Training**: Unlike proprietary LLMs whose training procedures are not controlled by the scientific community, InPars enables researchers to harness the knowledge of large models to train transparent, domain-specific models.\n4. **Data Augmentation**: It uses few-shot prompting to generate relevant queries for documents, creating synthetic query-document pairs that effectively augment training data for information retrieval tasks.",
       "case_id": "ai-papers-012",
       "context": {
-        "message_count": 47,
-        "packed_context_count": 23,
-        "passage_count": 184,
-        "total_tokens": 19537
+        "message_count": 28,
+        "packed_context_count": 13,
+        "passage_count": 104,
+        "total_tokens": 13158
       },
-      "context_tokens": 19537,
+      "context_tokens": 13158,
+      "error": null,
+      "evidence": [
+        {
+          "doc_id": "knowledge-retrieval/InPars-Light.pdf",
+          "node_id": "032bce13be3ae0f9f0ab4a2f3a9f6c8492859dfb19d4f062bd77946972d07650",
+          "page": 4,
+          "paper_id": "340af4bd049260cd5282ff2c75166b032f4c939c125d9cdcdeab7ae302f6bec1",
+          "paper_title": "InPars-Light: Cost-Eﬀective Unsupervised Training of Eﬀicient Rankers",
+          "quote": "The InPars-Light is a modification of the original InPars, but it is\nsubstantially more cost effective for generation of synthetic queries,\ntraining the models, and inference. InPars-Light has the following\nmain “ingredients”:",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "3 METHODS",
+            "3.3 InPars-Light Training Recipe"
+          ],
+          "source": "knowledge-retrieval/InPars-Light.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/InPars.pdf",
+          "node_id": "73aac3f609b32099a0a1c5d6b20d8963a24c8eeb11dd290e4ee3e11b015fecc6",
+          "page": 6,
+          "paper_id": "b2e1e7be17b723b0959110ceb9ae155e16b9e443f9915b3da87c10f54cbe2b92",
+          "paper_title": "InPars: Data Augmentation for Information Retrieval using Large Language Models",
+          "quote": "The main results are shown in Table 1. We observe that unsupervised models finetuned using our method (rows 7-8), outperform models of equivalent size available in OpenAI’s\nSearch API (rows 4-6). For instance, our\nmonoT5 with 3B parameters (row 8) is significantly better than the larger Curie and\nDavinci models (rows 5 and 6). InPars also\noutperforms Contriever (Izacard et al., 2021)\nand cpt-text (Neelakantan et al., 2022), two\nunsupervised methods. Neelakantan et al.\n(2022) (row 3) also use large LMs, but their\nnumbers are much lower than those achieved\nby InPars or OpenAI’s Search reranking documents from BM25 (rows 4-6).",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "5 Results"
+          ],
+          "source": "knowledge-retrieval/InPars.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/InPars-Light.pdf",
+          "node_id": "5e9bd0373a44e765839a89af1ea8c679de4e38bcb7649b2aea2cb29980c5b1e8",
+          "page": 1,
+          "paper_id": "340af4bd049260cd5282ff2c75166b032f4c939c125d9cdcdeab7ae302f6bec1",
+          "paper_title": "InPars-Light: Cost-Eﬀective Unsupervised Training of Eﬀicient Rankers",
+          "quote": "A recent trend to deal with this problem consists in generating synthetic in-domain training data via prompting of Large Language Models (LLMs) [4, 9, 43], However, proposed solutions are\nnot cost effective. Furthermore, because researchers used primarily\nproprietary LLMs—whose training procedure was not controlled\nby the scientific community—or instruction-finetuned LLMs there\nis a question of whether information retrieval capabilities emerge,\nindeed, from a large scale training with a next-token-prediction\nobjective.\nTo enable a practical solution for a large scale LLM-based generation of training data for IR systems, as well as to answer this\nkey scientific question, we carry out a reproducibility study of InPars [4] using medium-size (at most 7B parameters) open-source\nLLMs [44, 50]. In addition, our study employs more practical and\nmore commonly used BERT-based cross-encoder models having as\nlittle as 30 million parameters. In contrast, the original study employed large MonoT5 rankers of which only MonoT5-3B ranker\n(with 3 billion parameters) performed well [35].\nWe discover that in a purely unsupervised setting we can replace an impractical three-billion parameter MonoT5-3B model [35]\nwith a 7x smaller bi-directional BERT model while obtaining comparable results. Moreover, unlike the original InPars study where\na 220M million MonoT5 model fails to outperform BM25 on three\nout of five datasets, we show that a much smaller MiniLM model\nwith only 30 million parameters [53] can always outperform BM25\nby 7-30% in key metrics (nDCG@K or MRR).\nIn that, obtaining these good results required re-ranking only\n100 candidate documents compared to 1000 in the InPars study [4].\nCompared to InPars, our recipe—which we call InPars-Light—is\nsubstantially more cost effective in three dimensions: (a) synthetic\ndata generation, (b) model training, and (c) inference.\nIn our study we ask the following research questions:",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "1 INTRODUCTION"
+          ],
+          "source": "knowledge-retrieval/InPars-Light.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/InPars-v2.pdf",
+          "node_id": "4c76178c2e71e6aa57ff8d0a2ee1667029d73f2b7980bff193cbb3d7d63b986c",
+          "page": 1,
+          "paper_id": "01339308b532540d34f1a426fe6fb460104dad4f4320863e40ace044ef5be754",
+          "paper_title": "InPars-v2: Large Language Models as Efﬁcient Dataset Generators for Information Retrieval",
+          "quote": "Recently, InPars introduced a method to efficiently use large language models\n(LLMs) in information retrieval tasks: via few-shot examples, an LLM is induced\nto generate relevant queries for documents. These synthetic query-document\npairs can then be used to train a retriever. However, InPars and, more recently,\nPromptagator, rely on proprietary LLMs such as GPT-3 and FLAN to generate\nsuch datasets. In this work we introduce InPars-v2, a dataset generator that\nuses open-source LLMs and existing powerful rerankers to select synthetic\nquery-document pairs for training. A simple BM25 retrieval pipeline followed\nby a monoT5 reranker finetuned on InPars-v2 data achieves new state-of-the-art\nresults on the BEIR benchmark. To allow researchers to further improve\nour method, we open source the code, synthetic data, and finetuned models:\n[https://github.com/zetaalphavector/inPars/tree/master/legacy/inpars-v2](https://github.com/zetaalphavector/inPars/tree/master/legacy/inpars-v2)",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "InPars-v2: Large Language Models as Efficient Dataset Generators for Information Retrieval"
+          ],
+          "source": "knowledge-retrieval/InPars-v2.pdf"
+        }
+      ],
+      "input_tokens": null,
+      "judge_attempts": 1,
+      "judge_error": null,
+      "judge_model": "qwen3.7-plus",
+      "judge_prompt_version": "kite-official-compatible-v1",
+      "judge_score": 6,
+      "kite_score": 6,
+      "latency_ms": 143347.2551,
+      "llm_calls": null,
+      "output_tokens": null,
+      "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
+      "pipeline_name": "b0",
+      "query": "What are the key advantages of the InPars method compared to directly using large language models for retrieval, as described in the paper?",
+      "reference_answer": "The key advantages are: 1) It is more computationally efficient, avoiding the need to run large models at inference time. 2) It allows adaptation to any collection or IR task due to its few-shot nature. 3) It does not require expensive reranking of many documents per query. 4) It enables the use of smaller, faster models for actual retrieval after training on synthetic data. 5) It does not require any pretraining or loss function modifications.",
+      "rubric": "A complete answer should mention: computational efficiency, adaptability to different tasks/collections, avoiding expensive reranking, enabling use of smaller models, and not requiring pretraining or loss function changes. The answer should explain how these are advantages over direct use of large language models.",
+      "run_error": null,
+      "source_index": 11
+    },
+    {
+      "answer": "The InPars paper demonstrates effectiveness by evaluating the method on the BEIR benchmark, which comprises 18 information retrieval datasets across 9 diverse domains (including Bio-Medical, Finance, News, Twitter, Wikipedia, StackExchange, Quora, Scientific, and Misc) and various search intents. The evaluation reports performance metrics for InPars-v1 and InPars-v2, with specific nDCG scores provided for multiple datasets (e.g., InPars-v2 scores include 0.846, 0.385, 0.791, 0.509, 0.369, 0.291, 0.498, 0.208, 0.872, 0.323, 0.774, and 0.533). Additionally, the method involves re-ranking top-1000 BM25 passages, and results are averaged over three seeds to ensure robustness.",
+      "case_id": "ai-papers-013",
+      "context": {
+        "message_count": 59,
+        "packed_context_count": 31,
+        "passage_count": 248,
+        "total_tokens": 12524
+      },
+      "context_tokens": 12524,
+      "error": null,
+      "evidence": [
+        {
+          "doc_id": "knowledge-retrieval/Promptagator.pdf",
+          "node_id": "5d7d995182c69eb181722c86a727b97367d4cb13633b6640c822f3978c3e4333",
+          "page": 3,
+          "paper_id": "c2dec45d0b2d4c9393a5e8f51a52628897e511960a253d9dcfc00348fae93457",
+          "paper_title": "PROMPTAGATOR",
+          "quote": "BEIR has 18 information retrieval datasets across 9 domains, including _Bio-Medical_, _Finance_, _News_,\n_Twitter_, _Wikipedia_, _StackExchange_, _Quora_, _Scientific_, and _Misc_ . These datasets also cover a diverse\nrange of search intents: QA retrieval (question-to-document), duplicate question discovery (questionto-question), fact checking (claim-to-document), etc. Following Santhanam et al. (2022) and Formal\net al. (2021), we narrow our focus to the publicly-available datasets in BEIR. The original BEIR\nevaluation used a zero-shot set up, where no queries or relevant query-document pairs from the\nevaluation datasets can be used to train the retrievers.",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "2 FEW-SHOT RETRIEVAL TASK",
+            "2.2 FEW-SHOT BEIR SETTING"
+          ],
+          "source": "knowledge-retrieval/Promptagator.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/InParsToolkit.pdf",
+          "node_id": "ee21257696b0a8be2ebe9b26a5d4b397aa52c38bb4e6906c50b436c1fc3f3fe7",
+          "page": 5,
+          "paper_id": "4ffe749c5c0e025cb67203c1482c11b56a3e64529286cf570113104dafc1a825",
+          "paper_title": "InPars Toolkit: A Unified and Reproducible Synthetic Data Generation Pipeline for Neural Information Retrieval",
+          "quote": "(3a) InPars-v1 0.846 0.385 0.790 0.492 0.371 0.260 0.494 0.206 0.852 0.287 0.774 0.523\n(3b) InPars-v2 0.846 0.385 0.791 0.509 0.369 0.291 0.498 0.208 0.872 0.323 0.774 0.533",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "4 RESULTS"
+          ],
+          "source": "knowledge-retrieval/InParsToolkit.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/RankGPT.pdf",
+          "node_id": "9e985a927a51c1a51d4b6ec9e32eb59c0debf9d0857f620ce171f3d7030daa47",
+          "page": 5,
+          "paper_id": "1ed60eb20b567b3c747bfe1c248248fe7c38592f5eab793192b0334948f57d84",
+          "paper_title": "Is ChatGPT Good at Search? Investigating Large Language Models as Re-Ranking Agent",
+          "quote": "_†_ InPars re-rank top-1000 BM25 passages. We cite its results from original paper.",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "3 in our experiments:",
+            "3.3 Baselines"
+          ],
+          "source": "knowledge-retrieval/RankGPT.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/InPars-Light.pdf",
+          "node_id": "a0d45beb8c9b9d9c5863bb6ed78b5db03d1bbd1deea79022d60cb720421f53b1",
+          "page": 8,
+          "paper_id": "340af4bd049260cd5282ff2c75166b032f4c939c125d9cdcdeab7ae302f6bec1",
+          "paper_title": "InPars-Light: Cost-Eﬀective Unsupervised Training of Eﬀicient Rankers",
+          "quote": "**Table 4: Performance of InPars for Different Generating and Ranking Models (averaged over three seeds)**",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "5 RESULTS",
+            "5.1 Main Results"
+          ],
+          "source": "knowledge-retrieval/InPars-Light.pdf"
+        }
+      ],
+      "input_tokens": null,
+      "judge_attempts": 1,
+      "judge_error": null,
+      "judge_model": "qwen3.7-plus",
+      "judge_prompt_version": "kite-official-compatible-v1",
+      "judge_score": 3,
+      "kite_score": 3,
+      "latency_ms": 170251.5942,
+      "llm_calls": null,
+      "output_tokens": null,
+      "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
+      "pipeline_name": "b0",
+      "query": "How does the InPars paper demonstrate the effectiveness of the method across different information retrieval datasets?",
+      "reference_answer": "The paper demonstrates effectiveness by evaluating InPars on multiple datasets including MS MARCO, TREC-DL, Robust04, Natural Questions, and TREC-COVID. Results show InPars outperforms strong baselines like BM25 and other unsupervised methods in most cases. When combined with supervised fine-tuning, it achieves state-of-the-art results on some datasets. The method also shows good zero-shot transfer learning capabilities, especially on domain-specific datasets like TREC-COVID.",
+      "rubric": "A complete answer should mention: 1) Evaluation on multiple diverse datasets, 2) Comparison to baselines like BM25, 3) Performance in unsupervised settings, 4) Results when combined with supervised fine-tuning, 5) Demonstration of zero-shot transfer capabilities, especially on domain-specific data.",
+      "run_error": null,
+      "source_index": 12
+    },
+    {
+      "answer": "The InPars paper addresses computational cost by using large language models (LLMs) in a few-shot manner to generate synthetic training data, which allows for harnessing the information learned by large models more efficiently. However, subsequent work (InPars-Light) notes that the original InPars solutions were not cost-effective due to the use of proprietary LLMs and expensive API calls for query generation. InPars-Light was introduced as a modification to be substantially more cost-effective for generating synthetic queries, training models, and inference.",
+      "case_id": "ai-papers-014",
+      "context": {
+        "message_count": 55,
+        "packed_context_count": 29,
+        "passage_count": 232,
+        "total_tokens": 25695
+      },
+      "context_tokens": 25695,
       "error": null,
       "evidence": [
         {
           "doc_id": "knowledge-retrieval/InPars.pdf",
-          "node_id": "df6772e6dd53c8b7c5923285faac3e6b7d9af559a809d217bac50f1f57d4f768",
+          "node_id": "171616c8968f55646e90bcdda1c55d485950cf6e9554aa9627e153051b908146",
           "page": 8,
           "paper_id": "b2e1e7be17b723b0959110ceb9ae155e16b9e443f9915b3da87c10f54cbe2b92",
           "paper_title": "InPars: Data Augmentation for Information Retrieval using Large Language Models",
@@ -785,153 +1007,6 @@
         },
         {
           "doc_id": "knowledge-retrieval/InPars-Light.pdf",
-          "node_id": "27d43bb28191aa6ef9685fee3a1cb1c5b96d8c3dbef2e23ac8cb3fdf00165804",
-          "page": 2,
-          "paper_id": "340af4bd049260cd5282ff2c75166b032f4c939c125d9cdcdeab7ae302f6bec1",
-          "paper_title": "InPars-Light: Cost-Eﬀective Unsupervised Training of Eﬀicient Rankers",
-          "quote": "on the Natural Questions [19] collection, where it outperformed\nBM25 only by about 10%.\nBonifacio et al. [4] proposed an InPars method, which relied\non few-shot prompting. The study had a convincing evaluation\non five datasets where only one dataset, namely NQ, is a typical\nQA collection. Unlike Sachan et al. [43] Bonifacio et al. used fewshot prompting to distill an LLM into smaller rankers. To this end,\nfew-shot prompting was used to generate synthetic queries for\nrandomly sampled documents. For each collection they generated\n100K synthetic queries and retained only 10K with the highest average log-probabilities.\nHowever, they obtained good results only for a huge MonoT53B parameter model. Moreover, the used a proprietary GPT-3 model,\nwhich can be quite costly to use. In a follow-up study, which is concurrent with this work, Jeronymo et. al [18] introduced a modification of InPars—dubbed InPars v2—where GPT-3 Curie [6] was replaced with an open-source model GPT-J [50]. However, this model\nswap is “entangled” with at least two other modifications in the\ntraining recipe:",
-          "relevance": null,
-          "score": null,
-          "section_path": [
-            "1 INTRODUCTION"
-          ],
-          "source": "knowledge-retrieval/InPars-Light.pdf"
-        },
-        {
-          "doc_id": "knowledge-retrieval/InPars-v2.pdf",
-          "node_id": "2b3e69e56d3e0ccb299ff930e880c00e71745555046dfbee730a54af4c4b36cf",
-          "page": 1,
-          "paper_id": "01339308b532540d34f1a426fe6fb460104dad4f4320863e40ace044ef5be754",
-          "paper_title": "InPars-v2: Large Language Models as Efﬁcient Dataset Generators for Information Retrieval",
-          "quote": "Bonifacio et al. [1] propose InPars where they generate queries from documents in the corpus using\nLLMs. Similarly to Bonifacio et al. [1], the recently published Promptagator [2] model also feeds\nprompts to LLMs in order to generate alternative queries for a given document in an unsupervised\nmanner. It differs primarily from InPars in that it uses dataset-specific prompts, a larger LLM to\ngenerate queries, and a fully trainable retrieval pipeline with smaller models.",
-          "relevance": null,
-          "score": null,
-          "section_path": [
-            "InPars-v2: Large Language Models as Efficient Dataset Generators for Information Retrieval"
-          ],
-          "source": "knowledge-retrieval/InPars-v2.pdf"
-        }
-      ],
-      "input_tokens": null,
-      "judge_attempts": 1,
-      "judge_error": null,
-      "judge_model": "qwen3.7-plus",
-      "judge_prompt_version": "kite-official-compatible-v1",
-      "judge_score": 5,
-      "kite_score": 5,
-      "latency_ms": 160925.6359,
-      "llm_calls": null,
-      "output_tokens": null,
-      "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
-      "pipeline_name": "b0",
-      "query": "What are the key advantages of the InPars method compared to directly using large language models for retrieval, as described in the paper?",
-      "reference_answer": "The key advantages are: 1) It is more computationally efficient, avoiding the need to run large models at inference time. 2) It allows adaptation to any collection or IR task due to its few-shot nature. 3) It does not require expensive reranking of many documents per query. 4) It enables the use of smaller, faster models for actual retrieval after training on synthetic data. 5) It does not require any pretraining or loss function modifications.",
-      "rubric": "A complete answer should mention: computational efficiency, adaptability to different tasks/collections, avoiding expensive reranking, enabling use of smaller models, and not requiring pretraining or loss function changes. The answer should explain how these are advantages over direct use of large language models.",
-      "run_error": null,
-      "source_index": 11
-    },
-    {
-      "answer": "The InPars papers demonstrate effectiveness by reporting performance metrics (such as nDCG@10, MRR@10, and R@100) across multiple information retrieval datasets, including MS MARCO and BEIR benchmarks. Specifically, the InPars Toolkit paper presents comparative results for InPars-v1 and InPars-v2 against baselines like Promptagator in Table 3 and Table 4, showing numerical improvements in retrieval accuracy. The RankGPT paper also cites InPars results where it re-ranks top-1000 BM25 passages, further validating its utility in retrieval pipelines.",
-      "case_id": "ai-papers-013",
-      "context": {
-        "message_count": 73,
-        "packed_context_count": 53,
-        "passage_count": 424,
-        "total_tokens": 20683
-      },
-      "context_tokens": 20683,
-      "error": null,
-      "evidence": [
-        {
-          "doc_id": "knowledge-retrieval/InParsToolkit.pdf",
-          "node_id": "d08adda53f486a762761b132363617dbffc82330af43d5180b606c00a059a593",
-          "page": 5,
-          "paper_id": "4ffe749c5c0e025cb67203c1482c11b56a3e64529286cf570113104dafc1a825",
-          "paper_title": "InPars Toolkit: A Unified and Reproducible Synthetic Data Generation Pipeline for Neural Information Retrieval",
-          "quote": "(3a) InPars-v1 0.846 0.385 0.790 0.492 0.371 0.260 0.494 0.206 0.852 0.287 0.774 0.523\n(3b) InPars-v2 0.846 0.385 0.791 0.509 0.369 0.291 0.498 0.208 0.872 0.323 0.774 0.533",
-          "relevance": null,
-          "score": null,
-          "section_path": [
-            "4 RESULTS"
-          ],
-          "source": "knowledge-retrieval/InParsToolkit.pdf"
-        },
-        {
-          "doc_id": "knowledge-retrieval/InParsToolkit.pdf",
-          "node_id": "c0e0de0cbeb6af054420ab20f421075d477583e528d20bd3f77371fc19fbc58f",
-          "page": 5,
-          "paper_id": "4ffe749c5c0e025cb67203c1482c11b56a3e64529286cf570113104dafc1a825",
-          "paper_title": "InPars Toolkit: A Unified and Reproducible Synthetic Data Generation Pipeline for Neural Information Retrieval",
-          "quote": "(4a) Promptagator [3] 0.762 0.370 0.736 0.494 0.630 0.381 0.434 0.201 0.866 0.203 0.731 0.528\n(4b) InPars-v1 [†] 0.762 0.364 0.606 0.487 0.506 0.262 0.490 0.175 0.858 0.307 0.790 0.519\n(4c) InPars-v2 [†] 0.832 0.357 0.790 0.487 0.529 0.327 0.394 0.192 0.857 0.139 0.790 0.517",
-          "relevance": null,
-          "score": null,
-          "section_path": [
-            "4 RESULTS"
-          ],
-          "source": "knowledge-retrieval/InParsToolkit.pdf"
-        },
-        {
-          "doc_id": "knowledge-retrieval/RankGPT.pdf",
-          "node_id": "072b9b4bd0a85b605567e24cc4e23c7a23bf27e5fa07e8120d529e8215a4aa0d",
-          "page": 5,
-          "paper_id": "1ed60eb20b567b3c747bfe1c248248fe7c38592f5eab793192b0334948f57d84",
-          "paper_title": "Is ChatGPT Good at Search? Investigating Large Language Models as Re-Ranking Agent",
-          "quote": "_†_ InPars re-rank top-1000 BM25 passages. We cite its results from original paper.",
-          "relevance": null,
-          "score": null,
-          "section_path": [
-            "3 in our experiments:",
-            "3.3 Baselines"
-          ],
-          "source": "knowledge-retrieval/RankGPT.pdf"
-        }
-      ],
-      "input_tokens": null,
-      "judge_attempts": 1,
-      "judge_error": null,
-      "judge_model": "qwen3.7-plus",
-      "judge_prompt_version": "kite-official-compatible-v1",
-      "judge_score": 2,
-      "kite_score": 2,
-      "latency_ms": 238886.8829,
-      "llm_calls": null,
-      "output_tokens": null,
-      "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
-      "pipeline_name": "b0",
-      "query": "How does the InPars paper demonstrate the effectiveness of the method across different information retrieval datasets?",
-      "reference_answer": "The paper demonstrates effectiveness by evaluating InPars on multiple datasets including MS MARCO, TREC-DL, Robust04, Natural Questions, and TREC-COVID. Results show InPars outperforms strong baselines like BM25 and other unsupervised methods in most cases. When combined with supervised fine-tuning, it achieves state-of-the-art results on some datasets. The method also shows good zero-shot transfer learning capabilities, especially on domain-specific datasets like TREC-COVID.",
-      "rubric": "A complete answer should mention: 1) Evaluation on multiple diverse datasets, 2) Comparison to baselines like BM25, 3) Performance in unsupervised settings, 4) Results when combined with supervised fine-tuning, 5) Demonstration of zero-shot transfer capabilities, especially on domain-specific data.",
-      "run_error": null,
-      "source_index": 12
-    },
-    {
-      "answer": "The provided evidence does not contain specific details on how the original InPars paper addresses computational cost. It only states that InPars is a method to generate synthetic training data for Information Retrieval (IR) tasks using large language models (LLMs) in a \"few-shot manner,\" which allows harnessing information from large models in a \"more efficient and effective way.\" However, the evidence explicitly notes that a subsequent modification, \"InPars-Light,\" was developed to be \"substantially more cost effective\" for generating synthetic queries, training, and inference compared to the original InPars.",
-      "case_id": "ai-papers-014",
-      "context": {
-        "message_count": 71,
-        "packed_context_count": 51,
-        "passage_count": 408,
-        "total_tokens": 30574
-      },
-      "context_tokens": 30574,
-      "error": null,
-      "evidence": [
-        {
-          "doc_id": "knowledge-retrieval/InPars.pdf",
-          "node_id": "df6772e6dd53c8b7c5923285faac3e6b7d9af559a809d217bac50f1f57d4f768",
-          "page": 8,
-          "paper_id": "b2e1e7be17b723b0959110ceb9ae155e16b9e443f9915b3da87c10f54cbe2b92",
-          "paper_title": "InPars: Data Augmentation for Information Retrieval using Large Language Models",
-          "quote": "In this work, we presented _InPars_, a method\nto generate synthetic training data for IR tasks\nusing large LMs in a few-shot manner. This\nallows one to harness the information learned\nby large models in a more efficient and effective\nway.",
-          "relevance": null,
-          "score": null,
-          "section_path": [
-            "7 Conclusion and Future Work"
-          ],
-          "source": "knowledge-retrieval/InPars.pdf"
-        },
-        {
-          "doc_id": "knowledge-retrieval/InPars-Light.pdf",
           "node_id": "032bce13be3ae0f9f0ab4a2f3a9f6c8492859dfb19d4f062bd77946972d07650",
           "page": 4,
           "paper_id": "340af4bd049260cd5282ff2c75166b032f4c939c125d9cdcdeab7ae302f6bec1",
@@ -951,9 +1026,9 @@
       "judge_error": null,
       "judge_model": "qwen3.7-plus",
       "judge_prompt_version": "kite-official-compatible-v1",
-      "judge_score": 0,
-      "kite_score": 0,
-      "latency_ms": 181377.7831,
+      "judge_score": 2,
+      "kite_score": 2,
+      "latency_ms": 159017.9264,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -965,15 +1040,15 @@
       "source_index": 13
     },
     {
-      "answer": "The mMARCO study created the multilingual training set by first translating the original MS MARCO dataset into 13 target languages using machine translation (specifically Google Translate). The original dataset consists of 39 million triples, where each triple contains a query, a relevant passage, and a non-relevant passage. After translation, a multilingual training split was constructed by selecting an equal proportion of samples from each of the 13 languages. This balanced multilingual set was then used to fine-tune reranking models (such as MT5 and MMINILM) and dense retrieval models (such as mColBERT).",
+      "answer": "The mMARCO study created the multilingual training set by first translating the original MS MARCO dataset into 13 target languages. After translation, a multilingual training split was constructed using an equal proportion of samples from each language. This resulting dataset, consisting of query-relevant/non-relevant passage triples, was then used to fine-tune monolingual and multilingual reranking models, as well as multilingual dense retrieval models.",
       "case_id": "ai-papers-015",
       "context": {
-        "message_count": 49,
+        "message_count": 51,
         "packed_context_count": 24,
         "passage_count": 192,
-        "total_tokens": 13257
+        "total_tokens": 12213
       },
-      "context_tokens": 13257,
+      "context_tokens": 12213,
       "error": null,
       "evidence": [
         {
@@ -993,22 +1068,7 @@
         },
         {
           "doc_id": "knowledge-retrieval/mMARCO.pdf",
-          "node_id": "95ae474f0c336b65aaefbc3fd2a6afc1b6db156f87b7d2803e8b470dacd441d4",
-          "page": 5,
-          "paper_id": "d432f411eb6593a9697521aa83cdefd55f5fb49aa5cdf2bb400f53a12753a735",
-          "paper_title": "mMARCO: A Multilingual Version of the MS MARCO Passage Ranking Dataset",
-          "quote": "Table 2: Main results on the mMARCO passage ranking dataset. The rerankers MT5 and MMINILM and the dense\nretrieval model mColBERT were fine-tuned on mMARCO translated with Google Translate.",
-          "relevance": null,
-          "score": null,
-          "section_path": [
-            "3 Methodology",
-            "3.3 Experimental Setup"
-          ],
-          "source": "knowledge-retrieval/mMARCO.pdf"
-        },
-        {
-          "doc_id": "knowledge-retrieval/mMARCO.pdf",
-          "node_id": "cc3b63f217ecd9ecb3f28f2dd67292ad84adc11898d59a45ce47d625e698c325",
+          "node_id": "e9ff6af87f1983b9665eb1b753793ed348b61c73681e3d5ca63d8315648417f1",
           "page": 8,
           "paper_id": "d432f411eb6593a9697521aa83cdefd55f5fb49aa5cdf2bb400f53a12753a735",
           "paper_title": "mMARCO: A Multilingual Version of the MS MARCO Passage Ranking Dataset",
@@ -1019,6 +1079,20 @@
             "5 Conclusions and Future Work"
           ],
           "source": "knowledge-retrieval/mMARCO.pdf"
+        },
+        {
+          "doc_id": "knowledge-retrieval/mMARCO.pdf",
+          "node_id": "eac83db539485974b0e4f6985a2f50067b5b99ee98d5bbfe3712a8ea7e7b16c6",
+          "page": 1,
+          "paper_id": "d432f411eb6593a9697521aa83cdefd55f5fb49aa5cdf2bb400f53a12753a735",
+          "paper_title": "mMARCO: A Multilingual Version of the MS MARCO Passage Ranking Dataset",
+          "quote": "translation. We evaluated mMARCO by finetuning monolingual and multilingual reranking models, as well as a multilingual dense\nretrieval model on this dataset. We also evaluated models finetuned using the mMARCO\ndataset in a zero-shot scenario on Mr. TyDi\ndataset, demonstrating that multilingual models finetuned on our translated dataset achieve\nsuperior effectiveness to models finetuned on\nthe original English version alone. Our experiments also show that a distilled multilingual reranker is competitive with non-distilled\nmodels while having 5.4 times fewer parameters. Lastly, we show a positive correlation\nbetween translation quality and retrieval effectiveness, providing evidence that improvements in translation methods might lead to\nimprovements in multilingual information retrieval. The translated datasets and finetuned\nmodels are available at [https://github.](https://github.com/unicamp-dl/mMARCO)\n[com/unicamp-dl/mMARCO.](https://github.com/unicamp-dl/mMARCO)",
+          "relevance": null,
+          "score": null,
+          "section_path": [
+            "13 languages that was created using machine"
+          ],
+          "source": "knowledge-retrieval/mMARCO.pdf"
         }
       ],
       "input_tokens": null,
@@ -1026,9 +1100,9 @@
       "judge_error": null,
       "judge_model": "qwen3.7-plus",
       "judge_prompt_version": "kite-official-compatible-v1",
-      "judge_score": 2,
-      "kite_score": 2,
-      "latency_ms": 113770.7506,
+      "judge_score": 4,
+      "kite_score": 4,
+      "latency_ms": 123038.6937,
       "llm_calls": null,
       "output_tokens": null,
       "pipeline_config_hash": "5bcf9903980dca4567562e5cdcd6942d9ae287d236ab336de0bfcb745ea18784",
@@ -1040,7 +1114,7 @@
       "source_index": 14
     }
   ],
-  "completed_at": "2026-08-31T02:25:27.325105+00:00",
+  "completed_at": "2026-08-31T04:32:10.113106+00:00",
   "embedding": {
     "batch_size": 20,
     "check_embedding_ctx_length": false,
@@ -1069,11 +1143,11 @@
     "failed_case_ids": [],
     "judge_error_count": 0,
     "judge_retry_count": 0,
-    "mean_context_tokens": 16068.8,
-    "mean_evidence_count": 2.6,
-    "mean_score": 3.8,
-    "p50_latency_ms": 136018.6575,
-    "p95_latency_ms": 230453.0793,
+    "mean_context_tokens": 14450.6,
+    "mean_evidence_count": 2.9333,
+    "mean_score": 4.2667,
+    "p50_latency_ms": 133536.0988,
+    "p95_latency_ms": 173270.2967,
     "run_error_count": 0,
     "valid_count": 15
   },
@@ -1123,13 +1197,13 @@
       "working_tree_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "config_path": "evals/configs/kite_b0.yaml",
-    "config_sha256": "cdc78c6401c21e87ac32ba9b477ee4b56540d98a5b54d5d1f6b2cf0ae165565a",
-    "index_manifest_sha256": "7040988b9e742d0ecd6306570765a1408247ecbb0ecaf19466c0fd5db33723cb",
+    "config_sha256": "1a9ee9a111f3a0327f7e40e5b6ebfbb9dc44c33a9921d8f571cd01be66d10b09",
+    "index_manifest_sha256": "aeee67ed00e3e415d9626256c874eed66ec0d2e7ec4f631d70d07d2041297467",
     "index_path": "artifacts/evals/kite/indexes/b0",
     "manifest_path": "artifacts/evals/kite/manifest.json",
     "manifest_sha256": "716539e41b03e94b6a98546e20ff7283a7ee4a421ae1d57a515df2b4c40ca415",
     "parser_artifact_path": "artifacts/evals/kite/parser_artifact.json",
-    "parser_artifact_sha256": "779740466a328ae9137d2d6206fdae504bd77f24351574f9b46e735c82b5e149"
+    "parser_artifact_sha256": "c6477f7f2044140739d1786ab06aa72295ef47e7fb991ce51c4c10fec0c4c7bc"
   },
   "reranker": {
     "backend": "flashrank",
@@ -1139,5 +1213,5 @@
     "concurrency": 1
   },
   "schema_version": 1,
-  "started_at": "2026-08-31T01:50:08.007209+00:00"
+  "started_at": "2026-08-31T03:59:01.862290+00:00"
 }
